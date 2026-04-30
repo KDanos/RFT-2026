@@ -201,16 +201,16 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionactionNewProject"/>
-    <addaction name="actionactionOpenProject"/>
-    <addaction name="actionactionSaveProject"/>
-    <addaction name="actionactionSaveAs"/>
+    <addaction name="actionNewProject"/>
+    <addaction name="actionOpenProject"/>
+    <addaction name="actionSaveProject"/>
+    <addaction name="actionSaveAs"/>
    </widget>
    <widget class="QMenu" name="menuData">
     <property name="title">
      <string>Data</string>
     </property>
-    <addaction name="actionactionLoadData"/>
+    <addaction name="actionLoadData"/>
    </widget>
    <widget class="QMenu" name="menuEdit_Analysis_Setting">
     <property name="title">
@@ -226,13 +226,13 @@
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="actionactionChangeProjecUnits"/>
+    <addaction name="actionChangeProjecUnits"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionactionAbout"/>
+    <addaction name="actionAbout"/>
     <addaction name="actionContact_Us"/>
    </widget>
    <addaction name="menuFile_Data_Edit_Analysis_Setting_Help"/>
@@ -262,16 +262,16 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionactionNewProject"/>
-   <addaction name="actionactionOpenProject"/>
-   <addaction name="actionactionSaveProject"/>
-   <addaction name="actionactionSaveAs"/>
-   <addaction name="actionactionLoadData"/>
-   <addaction name="actionactionChangeProjecUnits"/>
-   <addaction name="actionactionAbout"/>
+   <addaction name="actionNewProject"/>
+   <addaction name="actionOpenProject"/>
+   <addaction name="actionSaveProject"/>
+   <addaction name="actionSaveAs"/>
+   <addaction name="actionLoadData"/>
+   <addaction name="actionChangeProjecUnits"/>
+   <addaction name="actionAbout"/>
    <addaction name="actionContact_Us"/>
   </widget>
-  <action name="actionactionNewProject">
+  <action name="actionNewProject">
    <property name="text">
     <string>New Project</string>
    </property>
@@ -279,7 +279,7 @@
     <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
-  <action name="actionactionOpenProject">
+  <action name="actionOpenProject">
    <property name="text">
     <string>Open Project</string>
    </property>
@@ -287,7 +287,7 @@
     <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
-  <action name="actionactionSaveProject">
+  <action name="actionSaveProject">
    <property name="text">
     <string>Save</string>
    </property>
@@ -295,7 +295,7 @@
     <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
-  <action name="actionactionSaveAs">
+  <action name="actionSaveAs">
    <property name="text">
     <string>Save As</string>
    </property>
@@ -303,7 +303,7 @@
     <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
-  <action name="actionactionLoadData">
+  <action name="actionLoadData">
    <property name="text">
     <string>Load Data</string>
    </property>
@@ -311,7 +311,7 @@
     <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
-  <action name="actionactionChangeProjecUnits">
+  <action name="actionChangeProjecUnits">
    <property name="text">
     <string>Change Project Units</string>
    </property>
@@ -319,7 +319,7 @@
     <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
-  <action name="actionactionAbout">
+  <action name="actionAbout">
    <property name="text">
     <string>About</string>
    </property>
