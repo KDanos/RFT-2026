@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1117</width>
+    <height>754</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>CyPRES RFT Plotter </string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QSplitter" name="mainSplitter">
+      <property name="orientation">
+       <enum>Qt::Orientation::Horizontal</enum>
+      </property>
+      <widget class="QFrame" name="projectPanelFrame">
+       <property name="minimumSize">
+        <size>
+         <width>220</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Shadow::Raised</enum>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QTreeWidget" name="projectTree">
+          <column>
+           <property name="text">
+            <string notr="true">1</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton">
+          <property name="text">
+           <string>Place holder Button</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="toolButton">
+          <property name="text">
+           <string>Plac holder Toll Button</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QFrame" name="analysisPanelFrame">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Shadow::Raised</enum>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QTabWidget" name="analysisTabWidget">
+          <property name="tabShape">
+           <enum>QTabWidget::TabShape::Triangular</enum>
+          </property>
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <property name="tabsClosable">
+           <bool>true</bool>
+          </property>
+          <property name="movable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="analysisTab">
+           <attribute name="title">
+            <string>+</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <widget class="QSplitter" name="analysisSplitter">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <widget class="QFrame" name="graphFrame">
+               <property name="frameShape">
+                <enum>QFrame::Shape::StyledPanel</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Shadow::Raised</enum>
+               </property>
+               <widget class="QSplitter" name="graphSpliter">
+                <property name="geometry">
+                 <rect>
+                  <x>20</x>
+                  <y>60</y>
+                  <width>0</width>
+                  <height>0</height>
+                 </rect>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Orientation::Vertical</enum>
+                </property>
+                <widget class="QFrame" name="chartWidgetFrame">
+                 <property name="frameShape">
+                  <enum>QFrame::Shape::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Shadow::Raised</enum>
+                 </property>
+                </widget>
+                <widget class="QFrame" name="graphWidgetFrame">
+                 <property name="frameShape">
+                  <enum>QFrame::Shape::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Shadow::Raised</enum>
+                 </property>
+                </widget>
+               </widget>
+              </widget>
+              <widget class="QFrame" name="tableFrame">
+               <property name="frameShape">
+                <enum>QFrame::Shape::StyledPanel</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Shadow::Raised</enum>
+               </property>
+               <widget class="QSplitter" name="tableSplitter">
+                <property name="geometry">
+                 <rect>
+                  <x>40</x>
+                  <y>70</y>
+                  <width>0</width>
+                  <height>0</height>
+                 </rect>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <widget class="QFrame" name="tableWidgetFrame">
+                 <property name="frameShape">
+                  <enum>QFrame::Shape::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Shadow::Raised</enum>
+                 </property>
+                </widget>
+                <widget class="QFrame" name="tableDataFrame">
+                 <property name="frameShape">
+                  <enum>QFrame::Shape::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Shadow::Raised</enum>
+                 </property>
+                </widget>
+               </widget>
+              </widget>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_2">
+           <attribute name="title">
+            <string>Tab 2</string>
+           </attribute>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1117</width>
+     <height>33</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile_Data_Edit_Analysis_Setting_Help">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionactionNewProject"/>
+    <addaction name="actionactionOpenProject"/>
+    <addaction name="actionactionSaveProject"/>
+    <addaction name="actionactionSaveAs"/>
+   </widget>
+   <widget class="QMenu" name="menuData">
+    <property name="title">
+     <string>Data</string>
+    </property>
+    <addaction name="actionactionLoadData"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit_Analysis_Setting">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menut_Analysis">
+    <property name="title">
+     <string>Analysis</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionactionChangeProjecUnits"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionactionAbout"/>
+    <addaction name="actionContact_Us"/>
+   </widget>
+   <addaction name="menuFile_Data_Edit_Analysis_Setting_Help"/>
+   <addaction name="menuData"/>
+   <addaction name="menuEdit_Analysis_Setting"/>
+   <addaction name="menut_Analysis"/>
+   <addaction name="menuSettings"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>32</width>
+     <height>32</height>
+    </size>
+   </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonStyle::ToolButtonTextUnderIcon</enum>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionactionNewProject"/>
+   <addaction name="actionactionOpenProject"/>
+   <addaction name="actionactionSaveProject"/>
+   <addaction name="actionactionSaveAs"/>
+   <addaction name="actionactionLoadData"/>
+   <addaction name="actionactionChangeProjecUnits"/>
+   <addaction name="actionactionAbout"/>
+   <addaction name="actionContact_Us"/>
+  </widget>
+  <action name="actionactionNewProject">
+   <property name="text">
+    <string>New Project</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionactionOpenProject">
+   <property name="text">
+    <string>Open Project</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionactionSaveProject">
+   <property name="text">
+    <string>Save</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionactionSaveAs">
+   <property name="text">
+    <string>Save As</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionactionLoadData">
+   <property name="text">
+    <string>Load Data</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionactionChangeProjecUnits">
+   <property name="text">
+    <string>Change Project Units</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionactionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionContact_Us">
+   <property name="text">
+    <string>Contact Us</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
