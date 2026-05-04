@@ -1,5 +1,5 @@
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QSpinBox, QTextEdit, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QRadioButton, QSpinBox, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout
 import csv
 from io import StringIO
 
@@ -7,11 +7,22 @@ class DataLoaderDialog(QDialog):
     def __init__(self):
         super().__init__()
         self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
-        self.setWindowTitle("Data Loader")
+        self.setWindowTitle("Data Loader")       
         self.build_ui()
+        self._connect_signals()
         self.show()
         
+    def _connect_signals(self):
+        self.paste_clipboard_btn.clicked.connect(self._parse_data)
+        self.row_limit_spin.valueChanged.connect(self._update_preview)
+        self.show_all_data_radio.toggled.connect(self._on_show_all_toggled)
+    
     def build_ui(self):
+        #Initilise with empty attributes
+        self.headers =[]
+        self.units = []
+        self.data_rows = []
+        
         mainLayout = QHBoxLayout()
         self.setLayout(mainLayout)
 
@@ -20,27 +31,33 @@ class DataLoaderDialog(QDialog):
         controlsLayout = QVBoxLayout()
         self.controlsFrame.setLayout(controlsLayout)
         
+        self.paste_clipboard_btn = QPushButton("Update Clipboard")
+        
+
+        controlsLayout.addWidget(self.paste_clipboard_btn)
+
         rowsContainer = QHBoxLayout()
         rowLabel = QLabel("Show max rows")
-        rowSpinBox = QSpinBox()
-        rowSpinBox.setValue(12)
-        rowSpinBox.setMaximum(100)
+        self.row_limit_spin = QSpinBox()
+        self.row_limit_spin.setValue(12)
+        self.row_limit_spin.setMaximum(10000)
         rowsContainer.addWidget(rowLabel)
-        rowsContainer.addWidget(rowSpinBox)
+        rowsContainer.addWidget(self.row_limit_spin)
         controlsLayout.addLayout(rowsContainer)
 
-        btnPasteClipboard = QPushButton("Testing Button")
-        btnPasteClipboard.clicked.connect(self._parse_data)
+        self.show_all_data_radio = QRadioButton("Show All")
+        controlsLayout.addWidget(self.show_all_data_radio)
+        
 
-        controlsLayout.addWidget(btnPasteClipboard)
         
         #Right-top: column mapping
         #data preview
-        self.previewBox=QTextEdit()
+        self.preview_table=QTableWidget()
         
-
+        #Main Layout
         mainLayout.addWidget(self.controlsFrame)
-        mainLayout.addWidget(self.previewBox)
+        mainLayout.addWidget(self.preview_table)
+        self._update_preview()
     
     def _parse_data(self):
         clipboard = QApplication.clipboard()
@@ -48,9 +65,8 @@ class DataLoaderDialog(QDialog):
     
         if not text:
             QMessageBox.warning(self, "Clipboard is empty", "No tabular text found in clipboard.")
-            return [], [],[]
+            return 
 
-        
         QMessageBox.about(self,"Testing Message Box","There exists data")
 
         #Identify the delimiter
@@ -65,19 +81,52 @@ class DataLoaderDialog(QDialog):
         reader = csv.reader(StringIO(text), delimiter = delimiter)
         try:
             parsed_rows = [[cell.strip() for cell in row] for row in reader if row]
-            headers = parsed_rows[0]
-            units = parsed_rows [1]
-            data_rows = parsed_rows[2:]
-            return headers, units, data_rows
-        
+            self.headers = parsed_rows[0]
+            self.units = parsed_rows [1]
+            self.data_rows = parsed_rows[2:]
+            self._update_preview()
         except Exception as e: 
             QMessageBox.warning(self,"Invalid Clipboard Data", f"Could not parse data from clipboard. \n {e}")
-            return [],[],[]
+            return 
             
+    def _update_preview(self):
+        column_count = 5
+        
+        #Show all data is the radio button is checked
+        if self.show_all_data_radio.isChecked():
+            self.row_limit_spin.setValue(len(self.data_rows))
+        max_rows = self.row_limit_spin.value()
 
+        if self.headers:
+            column_count = len(self.headers)
+        if self.data_rows:
+            max_rows = min(self.row_limit_spin.value(),len(self.data_rows))
+        
+        self.preview_table.setColumnCount(column_count)
+        self.preview_table.setRowCount(max_rows+1)
+        
+        #Create Headers
+        self.preview_table.setHorizontalHeaderLabels(self.headers)
+        for c in range(column_count):
+            text = self.units[c] if c <len(self.units) else ""
+            self.preview_table.setItem(0,c,QTableWidgetItem(text))
 
-            
+        #Pastew the values in the table
+        for r in range (max_rows):
+            try: 
+                row_values = self.data_rows[r]
+                table_row = r+1
+                for c in range(column_count):
+                    text = row_values[c] if c<len(row_values) else ""
+                    self.preview_table.setItem(table_row,c,QTableWidgetItem(text))
+            except:
+                return
+         #Correct the numbering on the rows
+        v_header = ["Units"]+[str(i+1) for i in range (max_rows)]
+        self.preview_table.setVerticalHeaderLabels(v_header)
 
-
-
-
+    def _on_show_all_toggled(self): 
+        if self.show_all_data_radio.isChecked() and self.data_rows:
+            self.row_limit_spin.setValue(len(self.data_rows))
+        else: 
+            self.row_limit_spin.setValue(12)
