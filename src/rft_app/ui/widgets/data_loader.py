@@ -1,5 +1,5 @@
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QRadioButton, QSpinBox, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QListWidget, QMessageBox, QPushButton, QRadioButton, QSpinBox, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout
 import csv
 from io import StringIO
 
@@ -27,14 +27,12 @@ class DataLoaderDialog(QDialog):
         self.setLayout(mainLayout)
 
         #Left: import controls
-        self.controlsFrame = QFrame()
-        controlsLayout = QVBoxLayout()
-        self.controlsFrame.setLayout(controlsLayout)
+        self.controls_frame = QFrame()
+        controls_layout = QVBoxLayout()
+        self.controls_frame.setLayout(controls_layout)
         
-        self.paste_clipboard_btn = QPushButton("Update Clipboard")
-        
-
-        controlsLayout.addWidget(self.paste_clipboard_btn)
+        self.paste_clipboard_btn = QPushButton("Update Clipboard")      
+        controls_layout.addWidget(self.paste_clipboard_btn)
 
         rowsContainer = QHBoxLayout()
         rowLabel = QLabel("Show max rows")
@@ -43,21 +41,30 @@ class DataLoaderDialog(QDialog):
         self.row_limit_spin.setMaximum(10000)
         rowsContainer.addWidget(rowLabel)
         rowsContainer.addWidget(self.row_limit_spin)
-        controlsLayout.addLayout(rowsContainer)
+        controls_layout.addLayout(rowsContainer)
 
         self.show_all_data_radio = QRadioButton("Show All")
-        controlsLayout.addWidget(self.show_all_data_radio)
+        controls_layout.addWidget(self.show_all_data_radio)
         
-
+        #Right: preview controls
+        self.preview_frame = QFrame()
+        preview_layout = QVBoxLayout()
         
-        #Right-top: column mapping
-        #data preview
+        #Right-top:column mapping
+        self.mapping_table = QTableWidget()
+        preview_layout.addWidget(self.mapping_table)
+        
+        #Right-bottom: data preview
         self.preview_table=QTableWidget()
+        preview_layout.addWidget(self.preview_table)
         
         #Main Layout
-        mainLayout.addWidget(self.controlsFrame)
-        mainLayout.addWidget(self.preview_table)
+        mainLayout.addWidget(self.controls_frame)
+        mainLayout.addLayout(preview_layout)
+        
+        #Update tables
         self._update_preview()
+        self._update_mapping()
     
     def _parse_data(self):
         clipboard = QApplication.clipboard()
@@ -66,8 +73,6 @@ class DataLoaderDialog(QDialog):
         if not text:
             QMessageBox.warning(self, "Clipboard is empty", "No tabular text found in clipboard.")
             return 
-
-        QMessageBox.about(self,"Testing Message Box","There exists data")
 
         #Identify the delimiter
         sample = text[:1000]
@@ -88,7 +93,13 @@ class DataLoaderDialog(QDialog):
         except Exception as e: 
             QMessageBox.warning(self,"Invalid Clipboard Data", f"Could not parse data from clipboard. \n {e}")
             return 
-            
+
+    def _on_show_all_toggled(self): 
+        if self.show_all_data_radio.isChecked() and self.data_rows:
+            self.row_limit_spin.setValue(len(self.data_rows))
+        else: 
+            self.row_limit_spin.setValue(12)
+
     def _update_preview(self):
         column_count = 5
         
@@ -125,8 +136,25 @@ class DataLoaderDialog(QDialog):
         v_header = ["Units"]+[str(i+1) for i in range (max_rows)]
         self.preview_table.setVerticalHeaderLabels(v_header)
 
-    def _on_show_all_toggled(self): 
-        if self.show_all_data_radio.isChecked() and self.data_rows:
-            self.row_limit_spin.setValue(len(self.data_rows))
-        else: 
-            self.row_limit_spin.setValue(12)
+    def _update_mapping(self):
+        column_count = 5
+        
+        if self.headers:
+            column_count = len(self.headers)
+        
+        self.mapping_table.setColumnCount(column_count)
+        self.mapping_table.setRowCount(3)
+        self.mapping_table.horizontalHeader().setVisible(False)
+
+        #Define the row names
+        v_header = ["Quantity", "Units", "Column Name"]
+        self.mapping_table.setVerticalHeaderLabels(v_header)
+
+        quantity_combo = QComboBox()
+        quantity_combo.addItems(["one","two2","three"])
+        for c in range(column_count):
+            quantity_combo = QComboBox()
+            quantity_combo.addItems(["one","two2","three"])
+            self.mapping_table.setCellWidget(0,c,quantity_combo)
+
+
