@@ -7,6 +7,7 @@ Create two classes, QuanityType and UnitSystem
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, Tuple
 
+
 @dataclass (frozen = True)
 class QuantityType:
     key:str

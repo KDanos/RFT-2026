@@ -2,6 +2,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QListWidget, QMessageBox, QPushButton, QRadioButton, QSpinBox, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout
 import csv
 from io import StringIO
+import units.units_manager as um
 
 class DataLoaderDialog(QDialog):
     def __init__(self):
@@ -64,7 +65,7 @@ class DataLoaderDialog(QDialog):
         
         #Update tables
         self._update_preview()
-        self._update_mapping()
+        self._update_mapping_table()
     
     def _parse_data(self):
         clipboard = QApplication.clipboard()
@@ -136,7 +137,7 @@ class DataLoaderDialog(QDialog):
         v_header = ["Units"]+[str(i+1) for i in range (max_rows)]
         self.preview_table.setVerticalHeaderLabels(v_header)
 
-    def _update_mapping(self):
+    def _update_mapping_table(self):
         column_count = 5
         
         if self.headers:
@@ -150,11 +151,41 @@ class DataLoaderDialog(QDialog):
         v_header = ["Quantity", "Units", "Column Name"]
         self.mapping_table.setVerticalHeaderLabels(v_header)
 
-        quantity_combo = QComboBox()
-        quantity_combo.addItems(["one","two2","three"])
+        #Parse  quantities and units to the imported data
+        quantity_list = sorted(q.label for q in um.STANDARD_QUANTITIES.values())
+        
         for c in range(column_count):
+            
+            #Select a quantity type
             quantity_combo = QComboBox()
-            quantity_combo.addItems(["one","two2","three"])
+            for q in um.STANDARD_QUANTITIES.values():
+                quantity_combo.addItem(q.label, q.key)
+                quantity_combo.currentIndexChanged.connect(
+                    lambda _, col=c: self._refresh_units_for_column(col)
+                )
             self.mapping_table.setCellWidget(0,c,quantity_combo)
+            
+
+            #Selct the units associated with the quantity
+            quantity_chosen = quantity_combo.currentData()
+            quantity_object = um.STANDARD_QUANTITIES[quantity_chosen]
+            units_list = quantity_object.units
+            units_combo = QComboBox()
+            units_combo.addItems(units_list)
+            self.mapping_table.setCellWidget(1,c,units_combo)
+        
+    def _refresh_units_for_column(self, col:int):
+        quantity_combo = self.mapping_table.cellWidget(0,col)
+        units_combo = self.mapping_table.cellWidget(1,col)
+        if not quantity_combo or not units_combo:
+            return
+        
+        qkey = quantity_combo.currentData()
+        qobj = um.STANDARD_QUANTITIES[qkey]
+
+        units_combo.blockSignals(True)
+        units_combo.clear()
+        units_combo.addItems(qobj.units)
+        units_combo.blockSignals(False)
 
 
