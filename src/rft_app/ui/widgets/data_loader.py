@@ -17,13 +17,14 @@ class DataLoaderDialog(QDialog):
         
         self._connect_signals()
         self.show()
+        
 
     def _connect_signals(self):
         self.paste_clipboard_btn.clicked.connect(self._parse_data)
         self.row_limit_spin.valueChanged.connect(self._update_preview_table)
         self.show_all_data_radio.toggled.connect(self._on_show_all_toggled)
-        self.mapping_table.horizontalHeader().sectionResized.connect(self._sync_mapping_to_preview)
-        self.preview_table.horizontalHeader().sectionResized.connect(self._sync_preview_to_mapping)
+        # self.mapping_table.horizontalHeader().sectionResized.connect(self._sync_mapping_to_preview)
+        # self.preview_table.horizontalHeader().sectionResized.connect(self._sync_preview_to_mapping)
 
     def build_ui(self):
         #Initilise with empty attributes
@@ -109,6 +110,8 @@ class DataLoaderDialog(QDialog):
             
             self._update_mapping_table()
             self._update_preview_table()
+            self._sync_initial_table_column_width()
+
         except Exception as e: 
             QMessageBox.warning(self,"Invalid Clipboard Data", f"Could not parse data from clipboard. \n {e}")
             return 
@@ -214,8 +217,19 @@ class DataLoaderDialog(QDialog):
         item.setCheckState(Qt.CheckState.Unchecked)
         return item
 
-    def _sync_mapping_to_preview(self, logical_index:int, old_size:int, new_size:int):
-        pass
+    def _sync_initial_table_column_width(self):
+        for c in range(self.preview_table.columnCount()):
+                width = max(self.preview_table.columnWidth(c),self.mapping_table.columnWidth(c))
+                self.mapping_table.setColumnWidth(c,width)
+                self.preview_table.setColumnWidth(c,width)
+        v_header_width = max(self.preview_table.verticalHeader().width(),self.mapping_table.verticalHeader().width())
+        self.mapping_table.verticalHeader().setFixedWidth(v_header_width)
+        self.preview_table.verticalHeader().setFixedWidth(v_header_width)
+        
+
+
 
     def _sync_preview_to_mapping(self, logical_index:int, old_size:int, new_size:int ):
         pass
+
+    
