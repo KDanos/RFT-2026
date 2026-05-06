@@ -82,6 +82,18 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
         units=("m³", "cm³", "bbl", "Imp gal"),
         symbols=("V",),
     ),
+    "undefined": QuantityType(
+        key = "undefined",
+        label = "Undefined",
+        units = (),
+        symbols = ()
+    ),
+    "mobility": QuantityType(
+        key = "mobility",
+        label = "Mobility",
+        units = ("m²/(Pa.s)","D/P","mD/cP"),
+        symbols = ("λ",),
+    )
 }
 
 @dataclass(frozen=True)
@@ -103,6 +115,8 @@ SI_UNITS = UnitSystem(
         "volume_gas": "m³",
         "permeability": "m²",
         "viscosity": "Pa·s",
+        "undefined": "",
+        "mobility": "m²/(Pa.s)",
     },
 )
 
@@ -119,6 +133,8 @@ METRIC_UNITs = UnitSystem(
         "volume_gas": "cm³",
         "permeability": "D",
         "viscosity": "P",
+        "undefined": "",
+        "mobility": "D/P",
     },
 )
 
@@ -135,6 +151,8 @@ FIELD_UNITS = UnitSystem(
         "volume_gas": "scf",
         "permeability": "mD",
         "viscosity": "cP",
+        "undefined": "",
+        "mobility": "mD/cP",
     },
 )
 
@@ -151,5 +169,7 @@ IMPERIAL_UNITS = UnitSystem(
         "volume_gas": "scf",
         "permeability": "mD",
         "viscosity": "cP",
+        "undefined": "",
+        "mobility": "mD/cP",
     },
 )
