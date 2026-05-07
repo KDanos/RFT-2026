@@ -1,36 +1,47 @@
+from typing import Optional
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QListWidget, QMessageBox, QPushButton, QRadioButton, QSpacerItem, QSpinBox, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget, QWidgetItem
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel,  QMessageBox, QPushButton, QRadioButton,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  
 import csv
 from io import StringIO
+from project import ColumnSpec
 import units.units_manager as um
+import pandas as pd
 
 class DataLoaderDialog(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaces when the _create_dataframe function is run
+        self.imported_column_specs: list[ColumnSpec] = []
         self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
         self.setWindowTitle("Data Loader")       
+        self.setWindowFlags(
+            self.windowFlags()
+            |Qt.WindowType.WindowMinimizeButtonHint
+            |Qt.WindowType.WindowMaximizeButtonHint
+        )
+        
         self.build_ui()
         
         # Create a sync guard flag to prevent column resizing ping-pong loops
         self._is_syncing_columns = False
         
         self._connect_signals()
-        self.show()
 
     def _connect_signals(self):
         self.paste_clipboard_btn.clicked.connect(self._parse_data)
         self.row_limit_spin.valueChanged.connect(self._update_spin_box_manually)
-        self.show_all_data_radio.toggled.connect(self._on_show_all_toggled)
-        self.mapping_table.horizontalHeader().sectionResized.connect(self._sync_resizing_table_column_width)
+        self.show_all_data_radio.toggled.connect(self._on_show_all_toggled)     
+        self.import_data_btn.clicked.connect(self._create_dataframe)
         self.preview_table.horizontalHeader().sectionResized.connect(self._sync_resizing_table_column_width)
-        self.delete_row_btn.clicked.connect(self._delete_selected_rows)
         self.preview_table.itemChanged.connect(self._deletion_selection_changed)
+        self.mapping_table.horizontalHeader().sectionResized.connect(self._sync_resizing_table_column_width)
 
     def build_ui(self):
         #Initilise with empty attributes
         self.data_rows = []
-        self.rows_to_delete = []
+        self.rows_to_ignore = []
 
         #Left: import controls
         self.controls_frame = QFrame()
@@ -59,8 +70,8 @@ class DataLoaderDialog(QDialog):
         self.show_all_data_radio = QRadioButton("Show All")
         controls_layout.addWidget(self.show_all_data_radio)
         controls_layout.addStretch()
-        self.delete_row_btn = QPushButton("Delete selected rows")
-        controls_layout.addWidget(self.delete_row_btn)
+        self.import_data_btn = QPushButton("Import Data")
+        controls_layout.addWidget(self.import_data_btn)
         
         #Right: preview controls
         self.preview_frame = QFrame()
@@ -155,9 +166,9 @@ class DataLoaderDialog(QDialog):
                 #Block any change signals during build
                 self.preview_table.blockSignals(True)
                 
-                #Create the "delete" checkbox
+                #Create the "Ignore" checkbox
                 if r<len(self.data_rows): #to capture the case of empty clipboard data, otherwise cell(0,0) creates a checkbox when one is not wanted
-                    self.preview_table.setItem(r,0,self._make_checkbox_item("Delete"))
+                    self.preview_table.setItem(r,0,self._make_checkbox_item("Ignore"))
                 else:
                     self.preview_table.setItem(r,0,QTableWidgetItem(""))
                 
@@ -179,7 +190,7 @@ class DataLoaderDialog(QDialog):
         self.preview_table.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
 
         #Check any rows that have been previously selected for deletion
-        self._recheck_rows_to_delete()
+        self._recheck_rows_to_ignore()
 
     def _update_mapping_table(self):
         data_column_count = len(self.data_rows[0]) if self.data_rows else 5
@@ -288,25 +299,25 @@ class DataLoaderDialog(QDialog):
             #Remore the guard to allow entry into the function again
             self._is_syncing_columns = False
 
-    def _select_rows_to_delete(self):
-        self.rows_to_delete =[]
+    def _select_rows_to_ignore(self):
+        self.rows_to_ignore =[]
         for r in range(self.preview_table.rowCount()):
            item = self.preview_table.item(r,0)
            if item and item.checkState()==Qt.CheckState.Checked:
-                self.rows_to_delete.append(r)
+                self.rows_to_ignore.append(r)
        
     def _deletion_selection_changed(self, item:QTableWidgetItem):
         if item.column()!= 0 or not (item.flags() & Qt.ItemFlag.ItemIsUserCheckable):
             return
-        self._select_rows_to_delete()
+        self._select_rows_to_ignore()
 
-    def _recheck_rows_to_delete(self):     
-        if not self.rows_to_delete:
+    def _recheck_rows_to_ignore(self):     
+        if not self.rows_to_ignore:
             return
         
         self.preview_table.blockSignals(True)   
         try:
-            for r in self.rows_to_delete:
+            for r in self.rows_to_ignore:
                 if r < self.preview_table.rowCount():    
                     self.preview_table.item(r,0).setCheckState(Qt.CheckState.Checked)
         finally: 
@@ -317,11 +328,11 @@ class DataLoaderDialog(QDialog):
         self._update_preview_table()
 
     def _delete_selected_rows(self):
-        if not self.rows_to_delete:
+        if not self.rows_to_ignore:
             return
-        for r in sorted ((self.rows_to_delete), reverse= True):
+        for r in sorted ((self.rows_to_ignore), reverse= True):
             del self.data_rows[r]
-        self.rows_to_delete = []
+        self.rows_to_ignore = []
         self._update_preview_table()
 
     def _import_headers_from_preview_table (self, checked:bool):
@@ -333,3 +344,137 @@ class DataLoaderDialog(QDialog):
                 self.mapping_table.setItem(2,c,QTableWidgetItem(text))
             else: 
                 self.mapping_table.setItem(2,c,QTableWidgetItem(""))
+
+    def _create_dataframe(self)-> Optional[pd.DataFrame]:
+        #Ensure the rows to ingore is alligned with the preview_table at its current state
+        self._select_rows_to_ignore()
+        
+        #Exit the function if there is no data from the clipboard
+        if not self.data_rows:
+            QMessageBox.information(self, "Data Import", "No data was selected for import")
+            return 
+
+        #Define the Column names and assign the units (ColumnSpec)
+        col_names = []
+        
+        #Ensure that the column specs are empty before appending 
+        self.imported_column_specs = []
+        
+        for c in range(1,self.preview_table.columnCount()):
+            item = self.mapping_table.item(2,c)
+            name = item.text().strip() if item and item.text().strip() else f"col_{c}"
+            col_names.append(name)
+
+            #Create the column specs, to hold the units
+            quantity_combo = self.mapping_table.cellWidget(0,c)
+            quantity_key = (
+                quantity_combo.currentData()
+                if quantity_combo is not None and quantity_combo.currentData()
+                else "undefined"
+            )
+            units_combo = self.mapping_table.cellWidget(1,c)
+            units = units_combo.currentText() if units_combo is not None else ""
+   
+            current_spec = ColumnSpec(name,quantity_key, units )
+            self.imported_column_specs.append(current_spec)
+
+        #Collect values in the data rows, ignoring the appropriate ones from the preview table
+        rows = []
+        for r in range(len(self.data_rows)):  
+            #Skip any rows that have been clicked to ignore
+            if r in self.rows_to_ignore:
+                continue
+
+            row_values_to_import = self.data_rows[r]
+            row_vals_for_df = []
+            for c in range(len(col_names)):
+                value = row_values_to_import[c] if c<len(row_values_to_import) else ""
+                row_vals_for_df.append(value)
+            rows.append(row_vals_for_df)
+
+        mydf =  pd.DataFrame(rows, columns=col_names)
+        self.imported_df = mydf
+        print (mydf)
+#################################################################################################
+        # #Load Preview Widget
+        # preview_dialog = QDialog(self)
+        # preview_table = QTableWidget()
+        
+        # layout = QVBoxLayout()
+        # layout.addWidget(preview_table)
+        # preview_dialog.setLayout(layout)
+        
+        # preview_table.setRowCount(len(mydf)+1)
+        # preview_table.setColumnCount(len(mydf.columns))
+        # preview_table.setHorizontalHeaderLabels([str(c) for c in mydf.columns])
+        
+        # for r in range (preview_table.rowCount()):
+        #     for c in range(len(mydf.columns)):
+        #         #Place the units:
+        #         if r == 0:
+        #            spec = self.imported_column_specs[c]
+        #            item = QTableWidgetItem(spec.unit)
+        #         else:
+        #             item = QTableWidgetItem(str(mydf.iat[r-1,c]))
+        #         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        #         preview_table.setItem(r,c,item)
+        # v_labels = ["Units"]+[str (i+1) for i in range (len(mydf))]
+        # preview_table.setVerticalHeaderLabels(v_labels)
+
+        
+        
+        # preview_dialog.exec()
+#################################################################################################
+        #Call the preview window of the dataframe
+        result = self._create_the_dataframe_preview_table(mydf)
+        if result != QDialog.DialogCode.Accepted:
+            self.imported_df = None
+            self.imported_column_specs = []
+            return None
+        
+        self.accept()
+        return mydf
+
+    def _create_the_dataframe_preview_table(self, dataframe:pd.DataFrame) -> int:
+        mydf = dataframe
+        
+        #Load Preview Widget
+        preview_dialog = QDialog(self)
+        preview_table = QTableWidget()
+        layout = QVBoxLayout()
+        layout.addWidget(preview_table)
+        
+        #Create a button box
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok |
+            QDialogButtonBox.StandardButton.Cancel,
+            parent = preview_dialog
+        )
+        button_box.button(QDialogButtonBox.StandardButton.Ok).setText("Import")
+        button_box.button(QDialogButtonBox.StandardButton.Cancel).setText("Back to mapping")
+        button_box.accepted.connect(preview_dialog.accept)
+        button_box.rejected.connect(preview_dialog.reject)
+
+        #Complete the layout
+        layout.addWidget(button_box)
+        preview_dialog.setLayout(layout)
+        
+        #Define the dimensions of the table
+        preview_table.setRowCount(len(mydf)+1)
+        preview_table.setColumnCount(len(mydf.columns))
+        preview_table.setHorizontalHeaderLabels([str(c) for c in mydf.columns])
+        
+        for r in range (preview_table.rowCount()):
+            for c in range(len(mydf.columns)):
+                #Place the units:
+                if r == 0:
+                   spec = self.imported_column_specs[c]
+                   item = QTableWidgetItem(spec.unit)
+                else:
+                    item = QTableWidgetItem(str(mydf.iat[r-1,c]))
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                preview_table.setItem(r,c,item)
+        v_labels = ["Units"]+[str (i+1) for i in range (len(mydf))]
+        preview_table.setVerticalHeaderLabels(v_labels)
+        
+        return preview_dialog.exec()

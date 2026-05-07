@@ -1,7 +1,6 @@
 import sys
-from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QMainWindow,QLabel
+from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow,QLabel
 from ui.main_window import Ui_MainWindow
 from ui.widgets.data_loader import DataLoaderDialog
 
@@ -19,7 +18,9 @@ class MainWindow(QMainWindow,Ui_MainWindow):
         self.actionLoadData.triggered.connect(self.loadData)
     
     def loadData(self):
-        self.data_load_window = DataLoaderDialog()
+        dlg = DataLoaderDialog(self)
+        if dlg.exec()==QDialog.DialogCode.Accepted and dlg.imported_df is not None:
+            df = dlg.imported_df
 
 
 if __name__=="__main__":
