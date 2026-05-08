@@ -1,0 +1,28 @@
+
+QToolBar {
+    spacing: 4px;
+    padding: 4px;
+}
+QToolButton {
+    border: 1px solid transparent;     /* frame appears only on hover/press */
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: transparent;
+}
+QToolButton:hover {
+    background: #eaf2fa;               /* light blue tint */
+    border: 1px solid #c8d8e8;
+}
+QToolButton:pressed {
+    background: #d4e4f4;               /* slightly darker on click */
+    border: 1px solid #9fbcd6;
+    padding-top: 7px;                  /* 1 px nudge = pressed feel */
+    padding-bottom: 5px;
+}
+QToolButton:checked {                  /* for toggle actions, if any */
+    background: #d4e4f4;
+    border: 1px solid #9fbcd6;
+}
+QToolButton:disabled {
+    color: #bbbbbb;
+}

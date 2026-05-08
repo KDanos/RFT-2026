@@ -127,7 +127,7 @@ SI_UNITS = UnitSystem(
     },
 )
 
-METRIC_UNITs = UnitSystem(
+METRIC_UNITS = UnitSystem(
     key="metric_cgs",
     label="Metric",
     units_by_quantity={
@@ -182,4 +182,11 @@ IMPERIAL_UNITS = UnitSystem(
         "mobility": "mD/cP",
         "text": "",
     },
+)
+
+BUILT_IN_UNIT_SYSTEMS: Tuple[UnitSystem,...]= (
+    SI_UNITS,
+    METRIC_UNITS,
+    FIELD_UNITS,
+    IMPERIAL_UNITS
 )

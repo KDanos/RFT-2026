@@ -5,6 +5,7 @@ from ui.main_window import Ui_MainWindow
 from ui.widgets.data_loader import DataLoaderDialog
 
 
+
 class MainWindow(QMainWindow,Ui_MainWindow):
     def __init__(self):
         super().__init__()

@@ -1,7 +1,7 @@
 from typing import Optional
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel,  QMessageBox, QPushButton, QRadioButton,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel,  QMessageBox, QPushButton, QRadioButton, QSizePolicy,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  
 import csv
 from io import StringIO
 from project import ColumnSpec
@@ -99,7 +99,7 @@ class DataLoaderDialog(QDialog):
         preview_layout = QVBoxLayout()
         
         #Right-top:column mapping
-        self.mapping_table = QTableWidget()
+        self.mapping_table = QTableWidget()       
         mapping_hdr = self.mapping_table.horizontalHeader()
         mapping_hdr.setVisible(True)
         mapping_hdr.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
@@ -110,8 +110,8 @@ class DataLoaderDialog(QDialog):
         preview_hdr.setVisible(True)
         preview_hdr.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         
-        preview_layout.addWidget(self.mapping_table)
-        preview_layout.addWidget(self.preview_table)
+        preview_layout.addWidget(self.mapping_table,0)
+        preview_layout.addWidget(self.preview_table,1)
 
         #Main Layout
         mainLayout = QHBoxLayout()

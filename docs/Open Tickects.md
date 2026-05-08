@@ -1,7 +1,7 @@
-1. Create a limit on decimal points at import
-2. Create a "project units" widget on the main window
-3. Add icons to the buttons of the main window
-4. On data loader, make the mapping window to have no empty space underneath it
+1. Closed: Create a limit on decimal points at import
+2. Closed: Create a "project units" widget on the main window
+3. Closed: Add icons to the buttons of the main window
+4. Ignore: On data loader, make the mapping window to have no empty space underneath it
 5. Closed: On data loader, replace all "delete rows" functionality and naming with "ignore rows"
 6. On the data loader, create an "ignore" option for the data columns. Remember to adjust the dataframe creation to account for the ignored columns
 7. Closed: On the data loader, in the quantities options create a "text" option
@@ -59,3 +59,6 @@ Bob, resume the Project Import Pipeline. We last completed Stage 7 of the 11-sta
     - Mirror a `{name: unit}` map (derived from `column_specs`) on the DataFrame for in-memory debugging only; treat `column_specs` (and later `DataSetMeta`) as the source of truth for persistence.
 
 19. Ensure that the units in the mapping table of the data loader appear in alaphabetical order
+20. On the dataframe preview of the data loader, the empty values appear as NaN, they should appear as ""
+21. On the dataframe preview of the data loader, 0 decimal point rounding still shows as .0 
+22. On the dataframe preview of the data loader, when clicking the "Round Decimals", the action is not triggered
