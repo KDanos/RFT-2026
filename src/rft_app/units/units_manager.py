@@ -93,7 +93,13 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
         label = "Mobility",
         units = ("m²/(Pa.s)","D/P","mD/cP"),
         symbols = ("λ",),
-    )
+    ),
+    "text": QuantityType(
+        key = "text",
+        label = "Text",
+        units = (),
+        symbols = (),
+    ),
 }
 
 @dataclass(frozen=True)
@@ -117,6 +123,7 @@ SI_UNITS = UnitSystem(
         "viscosity": "Pa·s",
         "undefined": "",
         "mobility": "m²/(Pa.s)",
+        "text": "",
     },
 )
 
@@ -135,6 +142,7 @@ METRIC_UNITs = UnitSystem(
         "viscosity": "P",
         "undefined": "",
         "mobility": "D/P",
+        "text": "",
     },
 )
 
@@ -153,6 +161,7 @@ FIELD_UNITS = UnitSystem(
         "viscosity": "cP",
         "undefined": "",
         "mobility": "mD/cP",
+        "text": "",
     },
 )
 
@@ -171,5 +180,6 @@ IMPERIAL_UNITS = UnitSystem(
         "viscosity": "cP",
         "undefined": "",
         "mobility": "mD/cP",
+        "text": "",
     },
 )

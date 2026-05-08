@@ -4,12 +4,14 @@
 4. On data loader, make the mapping window to have no empty space underneath it
 5. Closed: On data loader, replace all "delete rows" functionality and naming with "ignore rows"
 6. On the data loader, create an "ignore" option for the data columns. Remember to adjust the dataframe creation to account for the ignored columns
-7. On the data loader, in the quantities options create a "text" option
+7. Closed: On the data loader, in the quantities options create a "text" option
 8. On the data loader, ensure that the "undefined" and "ignore" options are at the top of the table
 
 ---
 
-## Deferred: project data model, units, and persistence
+## Deferred: project data model, units, and persistence aka PROJECT IMPORT PIPELINE
+
+Bob, resume the Project Import Pipeline. We last completed Stage 7 of the 11-stage list (data loader hands imported_column_specs back). Next up is Stage 8 — wire MainWindow.loadData. Confirm scope before we change main.py.
 
 *(These were split out so `models.py` could start with only `ColumnSpec` for unit metadata. Implement when wiring the project store and analysis.)*
 
@@ -55,3 +57,5 @@
 
 18. **Optional: `DataFrame.attrs["units"]`**
     - Mirror a `{name: unit}` map (derived from `column_specs`) on the DataFrame for in-memory debugging only; treat `column_specs` (and later `DataSetMeta`) as the source of truth for persistence.
+
+19. Ensure that the units in the mapping table of the data loader appear in alaphabetical order

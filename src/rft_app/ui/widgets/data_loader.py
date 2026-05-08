@@ -32,6 +32,8 @@ class DataLoaderDialog(QDialog):
     def _connect_signals(self):
         self.paste_clipboard_btn.clicked.connect(self._parse_data)
         self.row_limit_spin.valueChanged.connect(self._update_spin_box_manually)
+        self.decimals_check_box.toggled.connect(self._on_decimal_check_toggled)
+        self.decimal_limit_spin.valueChanged.connect(self._round_decimal_points_in_preview_table)
         self.show_all_data_radio.toggled.connect(self._on_show_all_toggled)     
         self.import_data_btn.clicked.connect(self._create_dataframe)
         self.preview_table.horizontalHeader().sectionResized.connect(self._sync_resizing_table_column_width)
@@ -53,11 +55,13 @@ class DataLoaderDialog(QDialog):
 
         rowsContainer = QHBoxLayout()
         rowLabel = QLabel("Show max rows")
+        
+        #Define the rows in
         self.row_limit_spin = QSpinBox()
         self.row_limit_spin.setValue(12)
         self.row_limit_spin.setMaximum(10000)
         
-        #Ensure manual typing works in the spinbox
+        #Ensure manual typing works in the rows limit spinbox
         self.row_limit_spin.setReadOnly(False)
         self.row_limit_spin.lineEdit().setReadOnly(False)
         self.row_limit_spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -73,6 +77,23 @@ class DataLoaderDialog(QDialog):
         self.import_data_btn = QPushButton("Import Data")
         controls_layout.addWidget(self.import_data_btn)
         
+        #Define number of decimals at import
+        decimalsContainer = QHBoxLayout()
+        self.decimals_check_box = QCheckBox("Round decimals")
+        self.decimal_limit_spin = QSpinBox()
+        self.decimal_limit_spin.setValue(0)
+        self.decimal_limit_spin.setMaximum(10000)
+        self.decimal_limit_spin.setEnabled(False)
+        decimalsContainer.addWidget(self.decimals_check_box)
+        decimalsContainer.addWidget(self.decimal_limit_spin)
+        controls_layout.addLayout(decimalsContainer)
+
+        #Ensure manual typing works in the decimals spinbox
+        self.decimal_limit_spin.setReadOnly(False)
+        self.decimal_limit_spin.lineEdit().setReadOnly(False)
+        self.decimal_limit_spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.decimal_limit_spin.setKeyboardTracking(False)
+       
         #Right: preview controls
         self.preview_frame = QFrame()
         preview_layout = QVBoxLayout()
@@ -346,8 +367,11 @@ class DataLoaderDialog(QDialog):
                 self.mapping_table.setItem(2,c,QTableWidgetItem(""))
 
     def _create_dataframe(self)-> Optional[pd.DataFrame]:
-        #Ensure the rows to ingore is alligned with the preview_table at its current state
+        #Ensure the rows to ingore list is alligned with the preview_table at its current state
         self._select_rows_to_ignore()
+
+        #Bring in the decimal points limit
+        decimals = self.decimal_limit_spin.value() if self.decimal_limit_spin.isEnabled() else None
         
         #Exit the function if there is no data from the clipboard
         if not self.data_rows:
@@ -389,42 +413,23 @@ class DataLoaderDialog(QDialog):
             row_vals_for_df = []
             for c in range(len(col_names)):
                 value = row_values_to_import[c] if c<len(row_values_to_import) else ""
+                #Round to decimal points if requested:
+                if decimals is not None and self._is_numeric(value):
+                    if decimals ==0:
+                        value = int(round(float(value),decimals))
+                    else:
+                        value = round(float(value),decimals)
+                elif self._is_numeric(value):
+                    value = float(value)
+                elif value.strip() =="":
+                    value=None
+                    
                 row_vals_for_df.append(value)
             rows.append(row_vals_for_df)
 
         mydf =  pd.DataFrame(rows, columns=col_names)
         self.imported_df = mydf
-        print (mydf)
-#################################################################################################
-        # #Load Preview Widget
-        # preview_dialog = QDialog(self)
-        # preview_table = QTableWidget()
-        
-        # layout = QVBoxLayout()
-        # layout.addWidget(preview_table)
-        # preview_dialog.setLayout(layout)
-        
-        # preview_table.setRowCount(len(mydf)+1)
-        # preview_table.setColumnCount(len(mydf.columns))
-        # preview_table.setHorizontalHeaderLabels([str(c) for c in mydf.columns])
-        
-        # for r in range (preview_table.rowCount()):
-        #     for c in range(len(mydf.columns)):
-        #         #Place the units:
-        #         if r == 0:
-        #            spec = self.imported_column_specs[c]
-        #            item = QTableWidgetItem(spec.unit)
-        #         else:
-        #             item = QTableWidgetItem(str(mydf.iat[r-1,c]))
-        #         item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        #         preview_table.setItem(r,c,item)
-        # v_labels = ["Units"]+[str (i+1) for i in range (len(mydf))]
-        # preview_table.setVerticalHeaderLabels(v_labels)
 
-        
-        
-        # preview_dialog.exec()
-#################################################################################################
         #Call the preview window of the dataframe
         result = self._create_the_dataframe_preview_table(mydf)
         if result != QDialog.DialogCode.Accepted:
@@ -478,3 +483,35 @@ class DataLoaderDialog(QDialog):
         preview_table.setVerticalHeaderLabels(v_labels)
         
         return preview_dialog.exec()
+
+    def _round_decimal_points_in_preview_table(self, decimal_points:int = 1000)->None:
+        self.preview_table.blockSignals(True)
+        
+        if self.decimals_check_box.checkState == Qt.CheckState.Checked:
+            decimal_points = self.decimal_limit_spin.value()
+        try:
+            for r in range(self.preview_table.rowCount()):
+                for c in range(1,self.preview_table.columnCount()):#skip the index 0 which is the "ignore row" collumn
+                    item = self.preview_table.item(r,c)
+                    if item is None:
+                        continue
+                    if not self._is_numeric(item.text()):
+                        continue
+                    value = self.data_rows[r][c-1]#This works only so long as data_rows are mirrored in the preview table
+                    value = round(float(value),decimal_points)
+                    item.setText(str(value))
+        
+        finally:
+            self.preview_table.blockSignals(False)
+   
+    def _is_numeric(self, text:str)-> bool: 
+        try:
+            float(text.strip())
+            return True
+        except ValueError:
+            return False
+
+    def _on_decimal_check_toggled(self, checked:bool):
+        self.decimal_limit_spin.setEnabled(checked)
+        self._round_decimal_points_in_preview_table()
+
