@@ -5,7 +5,7 @@ Create two classes, QuanityType and UnitSystem
 
 
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, Tuple
+from typing import Dict, Tuple
 
 
 @dataclass (frozen = True)
@@ -16,6 +16,18 @@ class QuantityType:
     symbols:Tuple[str,...]
  
 STANDARD_QUANTITIES: Dict[str, QuantityType]={
+    "undefined": QuantityType(
+        key = "undefined",
+        label = "Undefined",
+        units = (),
+        symbols = ()
+    ),
+    "ignore": QuantityType(
+        key = "ignore",
+        label = "Ignore",
+        units = (),
+        symbols = (),
+    ),
    "density": QuantityType(
         key="density",
         label="Density",
@@ -82,12 +94,6 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
         units=("m³", "cm³", "bbl", "Imp gal"),
         symbols=("V",),
     ),
-    "undefined": QuantityType(
-        key = "undefined",
-        label = "Undefined",
-        units = (),
-        symbols = ()
-    ),
     "mobility": QuantityType(
         key = "mobility",
         label = "Mobility",
@@ -122,6 +128,7 @@ SI_UNITS = UnitSystem(
         "permeability": "m²",
         "viscosity": "Pa·s",
         "undefined": "",
+        "ignore": "",
         "mobility": "m²/(Pa.s)",
         "text": "",
     },
@@ -141,6 +148,7 @@ METRIC_UNITS = UnitSystem(
         "permeability": "D",
         "viscosity": "P",
         "undefined": "",
+        "ignore": "",
         "mobility": "D/P",
         "text": "",
     },
@@ -160,6 +168,7 @@ FIELD_UNITS = UnitSystem(
         "permeability": "mD",
         "viscosity": "cP",
         "undefined": "",
+        "ignore": "",
         "mobility": "mD/cP",
         "text": "",
     },
@@ -179,6 +188,7 @@ IMPERIAL_UNITS = UnitSystem(
         "permeability": "mD",
         "viscosity": "cP",
         "undefined": "",
+        "ignore": "",
         "mobility": "mD/cP",
         "text": "",
     },

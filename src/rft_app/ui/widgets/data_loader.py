@@ -26,7 +26,6 @@ class DataLoaderDialog(QDialog):
         
         # Create a sync guard flag to prevent column resizing ping-pong loops
         self._is_syncing_columns = False
-        
         self._connect_signals()
 
     def _connect_signals(self):
@@ -44,6 +43,7 @@ class DataLoaderDialog(QDialog):
         #Initilise with empty attributes
         self.data_rows = []
         self.rows_to_ignore = []
+        self.columns_to_ignore =[]
 
         #Left: import controls
         self.controls_frame = QFrame()
@@ -215,9 +215,9 @@ class DataLoaderDialog(QDialog):
 
     def _update_mapping_table(self):
         data_column_count = len(self.data_rows[0]) if self.data_rows else 5
-        mapping_column_count =data_column_count+1
+        mapping_col_count =data_column_count+1
         
-        self.mapping_table.setColumnCount(mapping_column_count)
+        self.mapping_table.setColumnCount(mapping_col_count)
         self.mapping_table.setRowCount(3)
 
         #Clear the header labels
@@ -233,14 +233,31 @@ class DataLoaderDialog(QDialog):
         self.mapping_table.setCellWidget(2,0,headers_query)
         
         for c in range(data_column_count):
-            mapping_column = c+1
+            mapping_col = c+1
             #Select a quantity type
             quantity_combo = QComboBox()
-            for q in um.STANDARD_QUANTITIES.values():
+            
+            priority_keys = ("undefined", "ignore")
+            priority_quantities = [
+                um.STANDARD_QUANTITIES[key]
+                for key in priority_keys
+                if key in um.STANDARD_QUANTITIES
+            ]
+
+            other_quantities = sorted(
+                (
+                q 
+                for key,q in um.STANDARD_QUANTITIES.items()
+                if key not in priority_keys
+                ),
+                key = lambda q: q.label.casefold()
+                                    )
+
+            for q in priority_quantities+other_quantities:
                 quantity_combo.addItem(q.label, q.key)
                 
             quantity_combo.currentIndexChanged.connect(
-                lambda _, col=mapping_column: self._refresh_units_for_column(col)
+                lambda _, col=mapping_col: self._refresh_units_for_column(col)
             )       
             
             # #Set the initial quantity to undefined
@@ -257,8 +274,8 @@ class DataLoaderDialog(QDialog):
             units_combo = QComboBox()
             units_combo.addItems(units_list)
             
-            self.mapping_table.setCellWidget(0,mapping_column,quantity_combo)
-            self.mapping_table.setCellWidget(1,mapping_column,units_combo)
+            self.mapping_table.setCellWidget(0,mapping_col,quantity_combo)
+            self.mapping_table.setCellWidget(1,mapping_col,units_combo)
         
     def _refresh_units_for_column(self, col:int):
         quantity_combo = self.mapping_table.cellWidget(0,col)
@@ -327,6 +344,13 @@ class DataLoaderDialog(QDialog):
            if item and item.checkState()==Qt.CheckState.Checked:
                 self.rows_to_ignore.append(r)
        
+    def _select_columns_to_ignore(self):
+        self.columns_to_ignore = []
+        for c in range(self.mapping_table.columnCount()):
+            quantity_combo = self.mapping_table.cellWidget(0,c)
+            if quantity_combo and quantity_combo.currentData() == "ignore":
+                self.columns_to_ignore.append(c)
+    
     def _deletion_selection_changed(self, item:QTableWidgetItem):
         if item.column()!= 0 or not (item.flags() & Qt.ItemFlag.ItemIsUserCheckable):
             return
@@ -348,14 +372,6 @@ class DataLoaderDialog(QDialog):
         self.show_all_data_radio.setChecked(False)
         self._update_preview_table()
 
-    def _delete_selected_rows(self):
-        if not self.rows_to_ignore:
-            return
-        for r in sorted ((self.rows_to_ignore), reverse= True):
-            del self.data_rows[r]
-        self.rows_to_ignore = []
-        self._update_preview_table()
-
     def _import_headers_from_preview_table (self, checked:bool):
 
         for c in range (1,self.preview_table.columnCount()):
@@ -367,8 +383,9 @@ class DataLoaderDialog(QDialog):
                 self.mapping_table.setItem(2,c,QTableWidgetItem(""))
 
     def _create_dataframe(self)-> Optional[pd.DataFrame]:
-        #Ensure the rows to ingore list is alligned with the preview_table at its current state
+        #Ensure the rows and columns to ingore list is alligned with the preview_table at its current state
         self._select_rows_to_ignore()
+        self._select_columns_to_ignore()
 
         #Bring in the decimal points limit
         decimals = self.decimal_limit_spin.value() if self.decimal_limit_spin.isEnabled() else None
@@ -376,32 +393,37 @@ class DataLoaderDialog(QDialog):
         #Exit the function if there is no data from the clipboard
         if not self.data_rows:
             QMessageBox.information(self, "Data Import", "No data was selected for import")
-            return 
+            return None
 
         #Define the Column names and assign the units (ColumnSpec)
+        selected_mapping_cols = [c for c in range(1,self.mapping_table.columnCount()) if c not in self.columns_to_ignore]
+        if not selected_mapping_cols:
+            QMessageBox.information(self, "Data Import", "No columns have been selected for import")
+            return None
+        
         col_names = []
         
         #Ensure that the column specs are empty before appending 
         self.imported_column_specs = []
         
-        for c in range(1,self.preview_table.columnCount()):
-            item = self.mapping_table.item(2,c)
-            name = item.text().strip() if item and item.text().strip() else f"col_{c}"
+        for mapping_col in selected_mapping_cols:
+            item = self.mapping_table.item(2,mapping_col)
+            name = item.text().strip() if item and item.text().strip() else f"col_{mapping_col}"
             col_names.append(name)
 
             #Create the column specs, to hold the units
-            quantity_combo = self.mapping_table.cellWidget(0,c)
+            quantity_combo = self.mapping_table.cellWidget(0,mapping_col)
             quantity_key = (
                 quantity_combo.currentData()
                 if quantity_combo is not None and quantity_combo.currentData()
                 else "undefined"
             )
-            units_combo = self.mapping_table.cellWidget(1,c)
+            units_combo = self.mapping_table.cellWidget(1,mapping_col)
             units = units_combo.currentText() if units_combo is not None else ""
    
             current_spec = ColumnSpec(name,quantity_key, units )
             self.imported_column_specs.append(current_spec)
-
+        
         #Collect values in the data rows, ignoring the appropriate ones from the preview table
         rows = []
         for r in range(len(self.data_rows)):  
@@ -411,8 +433,10 @@ class DataLoaderDialog(QDialog):
 
             row_values_to_import = self.data_rows[r]
             row_vals_for_df = []
-            for c in range(len(col_names)):
-                value = row_values_to_import[c] if c<len(row_values_to_import) else ""
+            
+            for mapping_col in selected_mapping_cols:
+                source_column = mapping_col-1
+                value = row_values_to_import[source_column] if 0<=source_column<len(row_values_to_import) else ""
                 #Round to decimal points if requested:
                 if decimals is not None and self._is_numeric(value):
                     if decimals ==0:
@@ -426,7 +450,10 @@ class DataLoaderDialog(QDialog):
                     
                 row_vals_for_df.append(value)
             rows.append(row_vals_for_df)
-
+        
+        if not rows: 
+            QMessageBox.information(self, "Data Import", "No rows were selected fro import")
+            return None
         mydf =  pd.DataFrame(rows, columns=col_names)
         self.imported_df = mydf
 
@@ -476,7 +503,9 @@ class DataLoaderDialog(QDialog):
                    spec = self.imported_column_specs[c]
                    item = QTableWidgetItem(spec.unit)
                 else:
-                    item = QTableWidgetItem(str(mydf.iat[r-1,c]))
+                    value =mydf.iat[r-1,c]
+                    display_text = "" if pd.isna(value) else str(value)              
+                    item = QTableWidgetItem(display_text)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 preview_table.setItem(r,c,item)
         v_labels = ["Units"]+[str (i+1) for i in range (len(mydf))]
@@ -487,7 +516,7 @@ class DataLoaderDialog(QDialog):
     def _round_decimal_points_in_preview_table(self, decimal_points:int = 1000)->None:
         self.preview_table.blockSignals(True)
         
-        if self.decimals_check_box.checkState == Qt.CheckState.Checked:
+        if self.decimals_check_box.isChecked():
             decimal_points = self.decimal_limit_spin.value()
         try:
             for r in range(self.preview_table.rowCount()):
@@ -498,9 +527,12 @@ class DataLoaderDialog(QDialog):
                     if not self._is_numeric(item.text()):
                         continue
                     value = self.data_rows[r][c-1]#This works only so long as data_rows are mirrored in the preview table
-                    value = round(float(value),decimal_points)
-                    item.setText(str(value))
-        
+                    if decimal_points == 0:
+                        value = int(round(float(value),decimal_points))
+                    else:
+                        value = round(float(value),decimal_points)
+                    
+                    item.setText(str(value))        
         finally:
             self.preview_table.blockSignals(False)
    
@@ -513,5 +545,9 @@ class DataLoaderDialog(QDialog):
 
     def _on_decimal_check_toggled(self, checked:bool):
         self.decimal_limit_spin.setEnabled(checked)
-        self._round_decimal_points_in_preview_table()
+
+        if checked:
+            self._round_decimal_points_in_preview_table()
+        else: 
+            self._update_preview_table()
 

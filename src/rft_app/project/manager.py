@@ -4,6 +4,8 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
+from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
+
 from .models import ColumnSpec
 
 
@@ -18,6 +20,14 @@ class ProjectDataManager:
     def __init__(self) -> None:
         self.datasets: Dict[str, pd.DataFrame] = {}
         self.column_specs_by_dataset: Dict[str, List[ColumnSpec]] = {}
+
+        self.user_unit_systems:List[UnitSystem] = []
+        self.current_unit_system: UnitSystem = BUILT_IN_UNIT_SYSTEMS[2] #default to Field
+
+    @property
+    def available_unit_systems(self)-> tuple[UnitSystem,...]:
+        "Built-ins + user defined. Used to populate the project units combo"
+        return BUILT_IN_UNIT_SYSTEMS + tuple(self.user_unit_systems)
 
     def add_dataframe(
         self,
@@ -64,3 +74,4 @@ class ProjectDataManager:
         while f"{name}_{i}" in self.datasets:
             i += 1
         return f"{name}_{i}"
+

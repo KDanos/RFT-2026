@@ -4,6 +4,7 @@ from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QSplitter, QToolBar, QTreeWidget, QVBoxLayout, QWidget
 
+from project import ProjectDataManager
 from ui.widgets.data_loader import DataLoaderDialog
 from ui.icons import app_icon, load_qss
 
@@ -18,6 +19,7 @@ class MainWindowKD(QMainWindow):
         self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
         self.setWindowTitle("CyPRES RFT Plotter")
         self.action_list = []
+        self.project = ProjectDataManager()
         self.build_ui()
 
 
@@ -99,12 +101,16 @@ class MainWindowKD(QMainWindow):
         ):
             self.toolBar.addAction(action)
     
+        #Create the units combo
         units_frame = QFrame()
         units_layout = QVBoxLayout()
         units_frame.setLayout(units_layout)
         units_label = QLabel("Project Units")
         self.units_combo = QComboBox(self)
         self.units_combo.addItems(u.label for u in um.BUILT_IN_UNIT_SYSTEMS)
+        for system in self.project.available_unit_systems:
+            self.units_combo.addItem(system.label,system) #text + payload
+        
         units_layout.addWidget(units_label)
         units_layout.addWidget(self.units_combo)
         
