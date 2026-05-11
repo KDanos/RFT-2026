@@ -9,7 +9,7 @@ import units.units_manager as um
 import pandas as pd
 
 class DataLoaderDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, project = None):
         super().__init__(parent)
         
         self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaces when the _create_dataframe function is run
@@ -21,6 +21,8 @@ class DataLoaderDialog(QDialog):
             |Qt.WindowType.WindowMinimizeButtonHint
             |Qt.WindowType.WindowMaximizeButtonHint
         )
+        #Provide access to the project data, imported as the project object when the DataLoaderDialog load function is called in the main window (load_data(self)) 
+        self.project = project
         
         self.build_ui()
         
@@ -273,6 +275,11 @@ class DataLoaderDialog(QDialog):
             units_list = quantity_object.units
             units_combo = QComboBox()
             units_combo.addItems(units_list)
+
+            default_unit = self._get_project_default_units(quantity_chosen)
+            idx = units_combo.findText(default_unit)
+            if idx >= 0:
+                units_combo.setCurrentIndex(idx)
             
             self.mapping_table.setCellWidget(0,mapping_col,quantity_combo)
             self.mapping_table.setCellWidget(1,mapping_col,units_combo)
@@ -289,6 +296,13 @@ class DataLoaderDialog(QDialog):
         units_combo.blockSignals(True)
         units_combo.clear()
         units_combo.addItems(qobj.units)
+        
+        
+        default_unit=self._get_project_default_units(qkey)
+        idx = units_combo.findText(default_unit)
+        if idx >= 0:
+            units_combo.setCurrentIndex(idx)
+        
         units_combo.blockSignals(False)
 
     def _make_checkbox_item(self,name:str) -> QTableWidgetItem:
@@ -452,7 +466,7 @@ class DataLoaderDialog(QDialog):
             rows.append(row_vals_for_df)
         
         if not rows: 
-            QMessageBox.information(self, "Data Import", "No rows were selected fro import")
+            QMessageBox.information(self, "Data Import", "No rows were selected for import")
             return None
         mydf =  pd.DataFrame(rows, columns=col_names)
         self.imported_df = mydf
@@ -551,3 +565,7 @@ class DataLoaderDialog(QDialog):
         else: 
             self._update_preview_table()
 
+    def _get_project_default_units (self, quantity_key:str)->str:
+        if self.project is None: 
+            return ""
+        return self.project.current_unit_system.units_by_quantity.get (quantity_key,"")

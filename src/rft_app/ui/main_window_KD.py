@@ -12,7 +12,6 @@ import units.units_manager as um
 
 
 
-
 class MainWindowKD(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -107,9 +106,13 @@ class MainWindowKD(QMainWindow):
         units_frame.setLayout(units_layout)
         units_label = QLabel("Project Units")
         self.units_combo = QComboBox(self)
-        self.units_combo.addItems(u.label for u in um.BUILT_IN_UNIT_SYSTEMS)
+
         for system in self.project.available_unit_systems:
             self.units_combo.addItem(system.label,system) #text + payload
+        
+        idx = self.units_combo.findData(self.project.current_unit_system)
+        if idx >=0: 
+            self.units_combo.setCurrentIndex(idx)
         
         units_layout.addWidget(units_label)
         units_layout.addWidget(self.units_combo)
@@ -156,9 +159,15 @@ class MainWindowKD(QMainWindow):
 
     def _connect_signals(self)-> None:
         self.actionLoadData.triggered.connect(self.load_data)
+        self.units_combo.currentIndexChanged.connect(self._on_project_units_changed)
 
     def load_data(self)-> None:
-        dlg = DataLoaderDialog(self)
+        dlg = DataLoaderDialog(parent = self, project = self.project)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.imported_df is not None:
             df = dlg.imported_df
             specs = dlg.imported_column_specs
+
+    def _on_project_units_changed(self, _index:int)-> None:
+        selected_system = self.units_combo.currentData()
+        if selected_system is not None:
+            self.project.current_unit_system = selected_system
