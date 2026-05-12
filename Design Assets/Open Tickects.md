@@ -62,3 +62,4 @@ Bob, resume the Project Import Pipeline. We last completed Stage 7 of the 11-sta
 20. Closed: On the dataframe preview of the data loader, the empty values appear as NaN, they should appear as ""
 21. Closed: On the dataframe preview of the data loader, 0 decimal point rounding still shows as .0 
 22. Closed: On the dataframe preview of the data loader, when clicking the "Round Decimals", the action is not triggered
+23. On the dataloader, add an option to name the dataset on import

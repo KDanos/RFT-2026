@@ -1,4 +1,4 @@
-from .models import ColumnSpec
+from .models import ColumnSpec, LoadedDataSet
 from .manager import ProjectDataManager
 
-__all__ = ["ColumnSpec", "ProjectDataManager"]
+__all__ = ["ColumnSpec", "ProjectDataManager", "LoadedDataSet"]

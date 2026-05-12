@@ -1,15 +1,12 @@
 
-
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QSplitter, QToolBar, QTreeWidget, QVBoxLayout, QWidget
 
 from project import ProjectDataManager
+from ui.widgets.data_frame_tree import DataFrameTree
 from ui.widgets.data_loader import DataLoaderDialog
 from ui.icons import app_icon, load_qss
-
-import units.units_manager as um
-
 
 
 class MainWindowKD(QMainWindow):
@@ -149,10 +146,13 @@ class MainWindowKD(QMainWindow):
         vbox = QVBoxLayout()
         my_frame.setLayout(vbox)
         
-        project_tree = QTreeWidget()
+        self.project_data_frame= QFrame(self)
+        self.data_tree_layout = QVBoxLayout()
+        self.project_data_frame.setLayout(self.data_tree_layout)
+
         btn_1 = QPushButton("Placeholder Button")
         btn_2 = QPushButton("Second placeholder Button")
-        vbox.addWidget(project_tree)
+        vbox.addWidget(self.project_data_frame)
         vbox.addWidget(btn_1)
         vbox.addWidget(btn_2)
         return my_frame
@@ -166,8 +166,16 @@ class MainWindowKD(QMainWindow):
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.imported_df is not None:
             df = dlg.imported_df
             specs = dlg.imported_column_specs
+            dataset_name = self.project.add_loaded_dataset(df, specs)
+            self._update_project_data(dataset_name)
 
     def _on_project_units_changed(self, _index:int)-> None:
+
         selected_system = self.units_combo.currentData()
         if selected_system is not None:
             self.project.current_unit_system = selected_system
+
+    def _update_project_data(self,dataset_name):
+        dataset = self.project._get_loaded_dataset(dataset_name)
+        new_tree = DataFrameTree(self, dataset)
+        self.data_tree_layout.addWidget(new_tree)
