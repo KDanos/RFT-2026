@@ -2,10 +2,11 @@
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QSplitter, QToolBar, QTreeWidget, QVBoxLayout, QWidget
-
-from project import ProjectDataManager
+from qtpy.QtWidgets import QTabWidget, QToolButton
+from project import ProjectDataManager, save_project_as, load_project
 from ui.widgets.data_frame_tree import DataFrameTree
 from ui.widgets.data_loader import DataLoaderDialog
+from ui.widgets.analysis_widget import AnalysisWidget
 from ui.icons import app_icon, load_qss
 
 
@@ -17,7 +18,6 @@ class MainWindowKD(QMainWindow):
         self.action_list = []
         self.project = ProjectDataManager()
         self.build_ui()
-
 
     def build_ui(self):
         self._build_actions()
@@ -36,6 +36,29 @@ class MainWindowKD(QMainWindow):
 
         #Analysis Tabs
         self.analysis_frame = QFrame(self)
+        self.analysis_frame_layout = QVBoxLayout()
+        self.analysis_frame.setLayout(self.analysis_frame_layout)
+
+        self.analysis_tabs = QTabWidget(self.analysis_frame)
+        self.analysis_frame_layout.addWidget(self.analysis_tabs)
+
+        self.analysis_tabs.setTabShape(QTabWidget.TabShape.Triangular)
+        self.analysis_tabs.setTabPosition(QTabWidget.TabPosition.North)
+        self.analysis_tabs.setTabsClosable(True)
+        self.analysis_tabs.setMovable(True)
+
+        self.new_tab_btn = QToolButton(self.analysis_tabs)
+        self.new_tab_btn.setText("+")
+        self.new_tab_btn.setAutoRaise(True)
+        self.analysis_tabs.setCornerWidget(self.new_tab_btn,Qt.Corner.TopRightCorner)
+
+        self.starting_tab = QWidget(self.analysis_tabs)
+        
+        staring_tab_layout = QVBoxLayout(self.starting_tab)
+        self.analysis_tabs.addTab(self.starting_tab, "Analysis 1")
+
+
+        
         #Status Bar
         
         #Manage the main splitter
@@ -123,9 +146,18 @@ class MainWindowKD(QMainWindow):
     def _build_actions(self):
         # File actions
         self.actionNewProject = QAction("New Project", self)
+        
+        #Open Project
         self.actionOpenProject = QAction("Open Project", self)
+        self.actionOpenProject.setIcon(app_icon("fa5.folder-open"))
+        
+        #Save Action
         self.actionSaveProject = QAction("Save", self)
+        self.actionSaveProject.setIcon(app_icon("fa5.save"))
+        
+        #Save As action
         self.actionSaveAs = QAction("Save As", self)
+        self.actionSaveAs.setIcon(app_icon("msc.save-as"))
 
         # Data actions
         self.actionLoadData = QAction("Load Data", self)
@@ -158,10 +190,15 @@ class MainWindowKD(QMainWindow):
         return my_frame
 
     def _connect_signals(self)-> None:
-        self.actionLoadData.triggered.connect(self.load_data)
+        self.actionLoadData.triggered.connect(self.import_new_data)
+        self.actionSaveAs.triggered.connect(self._save_project_as)
+        self.actionOpenProject.triggered.connect(self._open_project)
+        
         self.units_combo.currentIndexChanged.connect(self._on_project_units_changed)
 
-    def load_data(self)-> None:
+        self.new_tab_btn.clicked.connect(self._add_analysis_tab)
+
+    def import_new_data(self)-> None:
         dlg = DataLoaderDialog(parent = self, project = self.project)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.imported_df is not None:
             df = dlg.imported_df
@@ -179,3 +216,37 @@ class MainWindowKD(QMainWindow):
         dataset = self.project._get_loaded_dataset(dataset_name)
         new_tree = DataFrameTree(self, dataset)
         self.data_tree_layout.addWidget(new_tree)
+    
+    def _save_project_as (self): 
+        save_project_as(self.project)
+
+    def _open_project (self):
+        self.project = load_project()
+        self._refresh_project_tree()
+
+    def _refresh_project_tree(self):
+        #Clear the existing project tree
+        while self.data_tree_layout.count():
+            item = self.data_tree_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        
+        #Repopulate the project tree
+        for dataset in self.project.loaded_datasets:
+            new_tree = DataFrameTree(self,dataset)
+            self.data_tree_layout.addWidget(new_tree)
+
+    def _add_analysis_tab(self)->QWidget:
+        idx = self.analysis_tabs.count()-1   
+        
+        page = self.analysis_tabs.widget(idx)
+        new_widget = AnalysisWidget()
+        layout = page.layout()
+        layout.addWidget(new_widget)
+
+    def _close_analysis_tab(self,idx:int)->None:
+        self.analysis_tabs.removeTab(idx)
+        self.Widget.deleteLater()
+
+        

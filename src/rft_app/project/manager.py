@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
-from .models import ColumnSpec, LoadedDataSet
+from .models import Analysis, ColumnSpec, LoadedDataSet
 
 
 class ProjectDataManager:
@@ -17,6 +17,7 @@ class ProjectDataManager:
         self.loaded_datasets :list[LoadedDataSet]=[]
         self.user_unit_systems:list[UnitSystem] = []
         self.current_unit_system: UnitSystem = BUILT_IN_UNIT_SYSTEMS[2] #default to Field
+        self.project_analyses: list[Analysis]= []
 
     @property
     def available_unit_systems(self)-> tuple[UnitSystem,...]:

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from __future__ import annotations
 import pandas as pd
 
 
@@ -20,3 +21,24 @@ class LoadedDataSet:
     name:str
     dataframe: pd.DataFrame
     column_specs: list[ColumnSpec]
+
+@dataclass
+class Analysis:
+    """Contains all the variables and objects generated, visualised and used in an analysis tab"""
+    name:str
+    data:pd.DataFrame | None = None
+    column_units:list[]
+    fluids:list[Fluid]
+
+@dataclass
+class Fluid:
+    "An interpreted fluid in the reseroir"
+    name:str
+    type: FluidType 
+
+@dataclass
+class FluidType:
+    "Standard fluid types available for selection in the project"
+    name:str
+    density: float
+    color: str
