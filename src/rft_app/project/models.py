@@ -1,5 +1,7 @@
-from dataclasses import dataclass
 from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Any
+
 import pandas as pd
 
 
@@ -23,22 +25,34 @@ class LoadedDataSet:
     column_specs: list[ColumnSpec]
 
 @dataclass
-class Analysis:
+class AnalysisObject:
     """Contains all the variables and objects generated, visualised and used in an analysis tab"""
-    name:str
-    data:pd.DataFrame | None = None
-    column_units:list[]
-    fluids:list[Fluid]
+    name:str = ""
+    source_datasets:list[str] = field(default_factory= list)
+    column_indices:list[int] = field(default_factory= list)
+    stored_data:pd.DataFrame | None = None
+    displayed_data: pd.DataFrame | None = None
+    column_specs: list[AnalysisColumnSpec] = field (default_factory= list)
+    fluids:list[Fluid] = field (default_factory= list)
+    parameters:dict[str,Any] = field (default_factory= dict)
 
 @dataclass
 class Fluid:
-    "An interpreted fluid in the reseroir"
+    """An interpreted fluid in the reservoir"""
     name:str
     type: FluidType 
 
 @dataclass
 class FluidType:
-    "Standard fluid types available for selection in the project"
+    """Standard fluid types available for selection in the project"""
     name:str
     density: float
     color: str
+
+@dataclass
+class AnalysisColumnSpec:
+    """Carries the metadata, unit and unit conversion facilitation for the displayed data in the analysis"""
+    name:str
+    quantity_key: str
+    source_unit: str
+    display_unit: str

@@ -11,6 +11,88 @@ This document is the implementation plan for the **Analysis** feature: one analy
 
 ---
 
+## Action Index
+
+A single linear checklist of every action implied by this blueprint. Each item links back to the section that defines it in detail.
+
+### Phase A — Foundation: model, manager, conversion
+
+1. **Completed:** Add `from __future__ import annotations` as the first line of `models.py`. → [§2.1](#21-file-hygiene)
+2. **Completed:** Fix invalid annotations (e.g. `list[]` → `list[SomeType]`). → [§2.1](#21-file-hygiene)
+3. **Completed:** Use `field(default_factory=...)` for all mutable defaults on dataclasses. → [§2.1](#21-file-hygiene)
+4. **Completed:** Define `AnalysisColumnSpec` dataclass with fields `name`, `quantity_key`, `source_unit`, `display_unit`. → [§2.2](#22-analysiscolumnspec-new)
+5. **Completed:** Finalise `Analysis` fields: `name`, `source_dataset_name`, `row_indices`, `storage_data`, `display_data`, `column_specs`, `fluids`, `parameters`. → [§2.3](#23-analysis-shape)
+6. **Completed:** Convert `Fluid` / `FluidType` placeholders to proper docstrings; ensure `FluidType` is defined before `Fluid` (or rely on postponed evaluation). → [§2.4](#24-fluid--fluidtype)
+7. **Open:** Add `src/rft_app/units/conversion.py` (or extend `units_manager.py`) with `to_display(value, quantity_key, source_unit, display_unit)` and batch helpers. → [§2.5](#25-unit-conversion-module)
+8. **Open:** Document temperature conversion as affine (offset + scale), not a single factor. → [§2.5](#25-unit-conversion-module)
+9. **Completed:** Add `self.analyses: list[Analysis] = []` to `ProjectDataManager`. → [§3](#3-project-manager-projectmanagerpy)
+10. **Open:** Implement `add_analysis`, `get_analysis`, `remove_analysis` and a unique-name helper. → [§3](#3-project-manager-projectmanagerpy)
+11. **Open:** Handle analyses that reference missing datasets on project load (warn / disable / clear ref). → [§3](#3-project-manager-projectmanagerpy)
+12. **Open:** Update `project/__init__.py` exports for the new types. → [Phase A](#phase-a--model-and-manager-foundation)
+
+### Phase B — Build analysis data from project
+
+13. Implement `build_analysis_storage_from_source(project, analysis) -> None` (slice rows/columns, init `AnalysisColumnSpec`s). → [Phase B](#phase-b--build-analysis-data-from-project)
+14. Implement `refresh_analysis_display_data(analysis, project) -> None` (convert `storage_data` → `display_data` per column). → [Phase B](#phase-b--build-analysis-data-from-project)
+15. Call both from `AnalysisWidget` on load and after any unit combo change. → [Phase B](#phase-b--build-analysis-data-from-project)
+
+### Phase C — Analysis widget shell + tabular MVP
+
+16. `AnalysisWidget` constructor: `(analysis, project, parent=None)`; store `self.analysis` and `self.project`. → [§4.2](#42-constructor-contract)
+17. Split widget into `_build_ui()` and `_wire_signals()`; no business logic in the widget. → [§4.2](#42-constructor-contract)
+18. Build `graphical_frame` (top) for 1–3 plots and `tabular_frame` (bottom) for table + toolbar. → [§4.1](#41-structure-keep-current-intent)
+19. Replace bottom table with `QTableView` + custom `QAbstractTableModel` bound to `analysis.display_data`. → [§5.1](#51-widget-choice-qtableview--qabstracttablemodel)
+20. Add a horizontal row of `QComboBox`es (one per column) above the `QTableView` for display units (Option A). → [§5.2](#52-unit-combo-row)
+21. Populate each combo from `STANDARD_QUANTITIES` / current `UnitSystem` (mirrors `DataLoaderDialog` mapping). → [§5.2](#52-unit-combo-row)
+22. On combo `currentIndexChanged`, update `AnalysisColumnSpec.display_unit`, rebuild `display_data` from `storage_data`, emit `dataChanged` / reset model. → [§5.2](#52-unit-combo-row)
+23. Enable sorting via `QSortFilterProxyModel`. → [§5.3](#53-sorting)
+24. Decide and document whether sort acts on display values only or reorders storage. → [§5.3](#53-sorting)
+25. Add a simple per-column text filter (`QLineEdit` per column or filter icon popup) using `setFilterKeyColumn` + `setFilterWildcard`. → [§5.4](#54-filtering-excel-like)
+
+### Phase D — Column add / remove
+
+26. Build an "Add column" UI: pick a source column from `LoadedDataSet`, optional rename, append to `storage_data`, `display_data`, `column_specs`, combo row, then `insertColumns`. → [§5.5](#55-add--remove-columns)
+27. Build a "Remove column" action: warn/handle if plotted; drop from frames + specs; call `removeColumns`. → [§5.5](#55-add--remove-columns)
+28. Define rules for column subset alignment (v1: same row-subset only). → [§5.5](#55-add--remove-columns)
+29. Ensure all add/remove changes flow through `Analysis` (single source of truth). → [Phase D](#phase-d--column-addremove)
+
+### Phase E — First interactive plot
+
+30. Add `pyqtgraph` to project dependencies. → [§8](#8-dependencies)
+31. Spike one `pyqtgraph.PlotWidget` in `graphical_frame` with crosshair + right-click menu. → [§6.1](#61-library-choice)
+32. Define `PlotSpec` (dataclass or dict inside `Analysis.parameters`) with `plot_index`, `x_column`, `y_column`, style, colour. → [§6.3](#63-data-binding)
+33. Bind the spike plot to one series from `PlotSpec`; refresh on table `dataChanged`/structure change using `PlotDataItem.setData`. → [§6.3](#63-data-binding)
+34. Add a basic right-click context menu (Reset view, Export, Toggle crosshair, series visibility). → [§6.4](#64-interactivity-checklist-implement-incrementally)
+
+### Phase F — Multi-plot and advanced interaction
+
+35. Lay out 2–3 `PlotWidget` instances in a splitter / grid; visible count from settings. → [§6.2](#62-layout)
+36. Crosshair + nearest-point readout via `SignalProxy` + `mouseMoved` + `TextItem`. → [§6.4](#64-interactivity-checklist-implement-incrementally)
+37. Movable `InfiniteLine`s; connect `sigPositionChanged` to update `Analysis.parameters` (or refilter table). → [§6.4](#64-interactivity-checklist-implement-incrementally)
+38. Legend with click-to-toggle series visibility. → [§6.4](#64-interactivity-checklist-implement-incrementally)
+39. Add advanced filters in stages: numeric/range (Phase 2), Excel-style header dropdowns (Phase 3). → [§5.4](#54-filtering-excel-like)
+40. (Optional) Brush selection on plot highlights matching rows in proxy model. → [§6.4](#64-interactivity-checklist-implement-incrementally)
+41. Polish plots: image export, axis labels with units, consistent legend styling. → [Phase F](#phase-f--multi-plot-and-advanced-interaction)
+
+### Phase G — Persistence and main window wiring
+
+42. Audit `Analysis` and nested types for pickle-safety: no `QWidget`/`QColor`; use `str` for colours. → [Phase G](#phase-g--persistence-and-main-window)
+43. `MainWindowKD`: tab creation builds `Analysis`, registers it with `ProjectDataManager`, passes it to `AnalysisWidget`. → [Phase G](#phase-g--persistence-and-main-window)
+44. Define and document tab-close semantics (remove from project vs hide). → [Phase G](#phase-g--persistence-and-main-window)
+
+### Phase H — QA and UX
+
+45. Large-`DataFrame` scroll/performance smoke test on the table and plots. → [Phase H](#phase-h--qa-and-ux)
+46. Test empty project / no datasets / missing source dataset paths. → [Phase H](#phase-h--qa-and-ux)
+47. Document keyboard shortcuts (if any) in user-facing notes. → [Phase H](#phase-h--qa-and-ux)
+
+### Cross-cutting decisions
+
+48. Resolve open decisions before Phase C is hardened: row subset definition, sort/filter scope, add-column scope, default plot count. → [§9](#9-open-decisions)
+49. Track v1 completion against the success criteria checklist. → [§10](#10-success-criteria-module-done-for-v1)
+
+---
+
 ## 1. Goals and non-goals
 
 ### 1.1 Goals

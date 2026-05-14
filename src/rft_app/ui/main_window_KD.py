@@ -3,7 +3,7 @@ from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QSplitter, QToolBar, QTreeWidget, QVBoxLayout, QWidget
 from qtpy.QtWidgets import QTabWidget, QToolButton
-from project import ProjectDataManager, save_project_as, load_project
+from project import ProjectDataManager, save_project_as, load_project, AnalysisObject
 from ui.widgets.data_frame_tree import DataFrameTree
 from ui.widgets.data_loader import DataLoaderDialog
 from ui.widgets.analysis_widget import AnalysisWidget
@@ -249,4 +249,7 @@ class MainWindowKD(QMainWindow):
         self.analysis_tabs.removeTab(idx)
         self.Widget.deleteLater()
 
-        
+    def _create_new_analysis(self)->AnalysisObject: 
+        new_analysis = AnalysisObject()
+        new_analysis.name = 
+        self.project.analyses.append

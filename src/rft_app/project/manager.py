@@ -1,8 +1,9 @@
-from __future__ import annotations
 from typing import Optional
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
 from .models import Analysis, ColumnSpec, LoadedDataSet
+from utils.naming import unique_name
+
 
 
 class ProjectDataManager:
@@ -17,7 +18,7 @@ class ProjectDataManager:
         self.loaded_datasets :list[LoadedDataSet]=[]
         self.user_unit_systems:list[UnitSystem] = []
         self.current_unit_system: UnitSystem = BUILT_IN_UNIT_SYSTEMS[2] #default to Field
-        self.project_analyses: list[Analysis]= []
+        self.analyses: list[Analysis]= []
 
     @property
     def available_unit_systems(self)-> tuple[UnitSystem,...]:
@@ -28,16 +29,17 @@ class ProjectDataManager:
         self,
         df: pd.DataFrame,
         column_specs: list[ColumnSpec],
-        name: Optional[str] = None,
+        name: str = "Dataset",
                         ) -> str:
         """Store a DataFrame and its column specs under a unique key.
 
         Rules:
-          - If `name` is None or empty, auto-generate one ("dataset_1", ...).
+          - Name defaults to "Dataset".
           - If `name` already exists, append a numeric suffix to make it unique.
         Returns the key actually used.
         """
-        chosen = self._unique_name(name)
+        existing_names = {dataset.name for dataset in self.loaded_datasets}
+        chosen = unique_name(name, existing_names)
         loaded_dataset = LoadedDataSet(
             name = chosen,
             dataframe = df, 
@@ -47,33 +49,14 @@ class ProjectDataManager:
         return chosen
 
     def get_dataframe(self, name: str) -> pd.DataFrame:
-        return self.datasets[name]
+        return self._get_loaded_dataset(name).dataframe
 
     def get_column_specs(self, name: str) -> list[ColumnSpec]:
-        return self.column_specs_by_dataset[name]
+        return self._get_loaded_dataset(name).column_specs
+
 
     def list_datasets(self) -> list[str]:
-        return list(self.datasets.keys())
-
-    def _unique_name(self, name: Optional[str]) -> str:
-        """Generate a unique dataset key based on `name` and the current store."""
-        existing_names = {dataset.name for dataset in self.loaded_datasets}
-        
-        if not name:
-            i = len(existing_names) + 1
-            candidate = f"dataset_{i}"
-            while candidate in existing_names:
-                i += 1
-                candidate = f"dataset_{i}"
-            return candidate
-
-        if name not in existing_names:
-            return name
-
-        i = 2
-        while f"{name}_{i}" in existing_names:
-            i += 1
-        return f"{name}_{i}"
+        return list(dataset.name for dataset in self.loaded_datasets)
 
     def _get_loaded_dataset(self, name:str) -> LoadedDataSet:
         for dataset in self.loaded_datasets:

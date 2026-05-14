@@ -1,5 +1,5 @@
 from .persistence import save_project_as, load_project
-from .models import ColumnSpec, LoadedDataSet
+from .models import ColumnSpec, LoadedDataSet, AnalysisObject
 from .manager import ProjectDataManager
 
 __all__ = ["ColumnSpec", 
@@ -7,4 +7,5 @@ __all__ = ["ColumnSpec",
             "LoadedDataSet", 
             "save_project_as",
             "load_project",
+            "AnalysisObject",
             ]
