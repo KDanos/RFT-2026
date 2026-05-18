@@ -3,12 +3,12 @@ import pickle
 
 from project.manager import ProjectDataManager
 
-def save_project_as(project:ProjectDataManager, path: str|Path="test_project.rftproj")->None:
+def save_project(project:ProjectDataManager, path: str|Path)->None:
     path = Path(path)
     with path.open("wb") as f: # w: write mode, b:binary mode
         pickle.dump(project,f)
 
-def load_project(path:str|Path="test_project.rftproj")->ProjectDataManager:
+def load_project(path:str|Path)->ProjectDataManager:
     path = Path(path)
     with path.open ("rb") as f: # r: read mode, b: binary mode
         project = pickle.load(f)

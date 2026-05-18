@@ -13,7 +13,7 @@ class DataFrameTree(QTreeWidget):
         if loaded_dataset is None:
             raise ValueError("DataFrameTree requires a LoadedDataSet")
         self.loaded_dataset = loaded_dataset
-        self.setHeaderHidden(True)
+        self.setHeaderLabel(self.loaded_dataset.name)
         self._design_tree()
         
     def _design_tree(self):

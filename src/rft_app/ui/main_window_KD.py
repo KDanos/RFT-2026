@@ -1,13 +1,15 @@
 
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QFile, QSize, Qt
 from PyQt6.QtGui import QAction, QIcon
-from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QSplitter, QToolBar, QTreeWidget, QVBoxLayout, QWidget
-from qtpy.QtWidgets import QTabWidget, QToolButton
-from project import ProjectDataManager, save_project_as, load_project, AnalysisObject
-from ui.widgets.data_frame_tree import DataFrameTree
-from ui.widgets.data_loader import DataLoaderDialog
-from ui.widgets.analysis_widget import AnalysisWidget
-from ui.icons import app_icon, load_qss
+from PyQt6.QtWidgets import QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSplitter,  QToolBar, QTreeWidget, QVBoxLayout, QWidget, QTabWidget, QToolButton, QMessageBox
+from pathlib import Path
+
+
+from project import ProjectDataManager, save_project, load_project, AnalysisObject
+from utils.naming import unique_name
+
+from ui.widgets import DataLoaderDialogAnalysis, DataLoaderDialogProject, AnalysisWidget, AnalysisTree, DataFrameTree,AllDataSetsTree
+from ui import app_icon, load_qss
 
 
 class MainWindowKD(QMainWindow):
@@ -17,12 +19,14 @@ class MainWindowKD(QMainWindow):
         self.setWindowTitle("CyPRES RFT Plotter")
         self.action_list = []
         self.project = ProjectDataManager()
+        self._project_path :Path|None = None
         self.build_ui()
+        self._check_if_project_has_path()
 
     def build_ui(self):
         self._build_actions()
         self._build_central_widget()
-        # self._build_menubar()
+        self._build_menubar()
         # self._build_statusbar()
         self._connect_signals()
 
@@ -54,7 +58,7 @@ class MainWindowKD(QMainWindow):
 
         self.starting_tab = QWidget(self.analysis_tabs)
         
-        staring_tab_layout = QVBoxLayout(self.starting_tab)
+        self.staring_tab_layout = QVBoxLayout(self.starting_tab)
         self.analysis_tabs.addTab(self.starting_tab, "Analysis 1")
 
 
@@ -71,12 +75,12 @@ class MainWindowKD(QMainWindow):
     def _build_menubar(self):
         menubar = self.menuBar()
         
-                # File
+        # File
         self.menu_file = menubar.addMenu("File")
-        # self.menu_file.addAction(self.actionNewProject)
-        # self.menu_file.addAction(self.actionOpenProject)
-        # self.menu_file.addAction(self.actionSaveProject)
-        # self.menu_file.addAction(self.actionSaveAs)
+        self.menu_file.addAction(self.actionOpenProject)
+        self.menu_file.addAction(self.actionSaveProject)
+        self.menu_file.addAction(self.actionSaveAs)
+        self.menu_file.addSeparator()
 
         # Data
         self.menu_data = menubar.addMenu("Data")
@@ -114,9 +118,11 @@ class MainWindowKD(QMainWindow):
             self.actionSaveProject,
             self.actionSaveAs,
             self.actionLoadData,
+            self.actionNewAnalysis,
             self.actionChangeProjecUnits,
             self.actionAbout,
             self.actionContact_Us,
+
         ):
             self.toolBar.addAction(action)
     
@@ -163,6 +169,10 @@ class MainWindowKD(QMainWindow):
         self.actionLoadData = QAction("Load Data", self)
         self.actionLoadData.setIcon (app_icon("ph.upload-simple-fill"))
 
+        #Analysis actions
+        self.actionNewAnalysis = QAction ("Start a new analysis", self)
+        self.actionNewAnalysis.setIcon(app_icon("mdi6.chart-scatter-plot"))
+        
         # Settings actions (kept original spelling for API compatibility)
         self.actionChangeProjecUnits = QAction("Change Project Units", self)
 
@@ -174,32 +184,43 @@ class MainWindowKD(QMainWindow):
         pass
 
     def _build_project_controls_frame(self)->QFrame:
-        my_frame=QFrame()
-        vbox = QVBoxLayout()
-        my_frame.setLayout(vbox)
+        self.project_controls_frame=QFrame()
+        vbox = QVBoxLayout(self.project_controls_frame)
+        # project_controls_frame.setLayout(vbox)
         
+        #Build a tree for the loaded data
         self.project_data_frame= QFrame(self)
         self.data_tree_layout = QVBoxLayout()
         self.project_data_frame.setLayout(self.data_tree_layout)
 
-        btn_1 = QPushButton("Placeholder Button")
-        btn_2 = QPushButton("Second placeholder Button")
+        #Build a tree for the analysis in the project
+        self.project_analyses_frame = QFrame(self)
+        self.analysis_tree_layout = QVBoxLayout(self.project_analyses_frame)
+        
+        self.btn_1 = QPushButton("Build Master Data Tree")
+        self.btn_2 = QPushButton("Second placeholder Button")
+        
+        #Add the frames to the main layout
         vbox.addWidget(self.project_data_frame)
-        vbox.addWidget(btn_1)
-        vbox.addWidget(btn_2)
-        return my_frame
+        vbox.addWidget(self.project_analyses_frame)
+        vbox.addWidget(self.btn_1)
+        vbox.addWidget(self.btn_2)
+        return self.project_controls_frame
 
     def _connect_signals(self)-> None:
         self.actionLoadData.triggered.connect(self.import_new_data)
         self.actionSaveAs.triggered.connect(self._save_project_as)
+        self.actionSaveProject.triggered.connect(self._save_project)
         self.actionOpenProject.triggered.connect(self._open_project)
         
+        self.actionNewAnalysis.triggered.connect(self._start_new_analysis)
         self.units_combo.currentIndexChanged.connect(self._on_project_units_changed)
 
         self.new_tab_btn.clicked.connect(self._add_analysis_tab)
+        self.btn_1.clicked.connect (self._create_master_data_tree)
 
     def import_new_data(self)-> None:
-        dlg = DataLoaderDialog(parent = self, project = self.project)
+        dlg = DataLoaderDialogProject(parent = self, project = self.project)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.imported_df is not None:
             df = dlg.imported_df
             specs = dlg.imported_column_specs
@@ -217,14 +238,79 @@ class MainWindowKD(QMainWindow):
         new_tree = DataFrameTree(self, dataset)
         self.data_tree_layout.addWidget(new_tree)
     
-    def _save_project_as (self): 
-        save_project_as(self.project)
+    def _save_project_as (self)->None: 
+        start = str(self._project_path) if self._project_path else "untitled.rftproj"
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Project AS",
+            start,
+            "RFT Project (*.rftproj);;All Files (*)",
+        )
+        if not path:
+            return #user cancelled
+
+        path = Path(path)
+        if path.suffix.lower() != ".rftproj":
+            path= path.with_suffix(".rftproj")
+        
+        try: 
+            save_project(self.project,path)        
+        except OSError as e: 
+            QMessageBox.critical(self,
+            "Save as",
+            f"Could not save project \n{e}")
+            return 
+
+        self._project_path= path
+        self.setWindowTitle(f"CyPRES RFT Plotter - {path.name}")
+        self._check_if_project_has_path()
+
+
+    def _save_project(self)->None:
+        if self._project_path is None: 
+            self._save_project_as()
+            return
+        
+        try: 
+            save_project(self.project, self._project_path)
+        except OSError as e: 
+            QMessageBox.critical(self,
+            "Save project",
+            f"Could not save project \n{e}")
+            return 
+        return
 
     def _open_project (self):
-        self.project = load_project()
-        self._refresh_project_tree()
+        start_dir = ""
 
-    def _refresh_project_tree(self):
+        path_str,_ = QFileDialog.getOpenFileName(
+            self, 
+            "Open Project", 
+            start_dir, 
+            "RFT Project (*.rftproj);;All Files (*)"
+        )
+        
+        if not path_str:
+            return #user cancelled
+
+        path = Path(path_str)
+        try:
+            self.project = load_project(path)
+        except (OSError, TypeError) as e:
+            QMessageBox.critical(
+                self, 
+                "Open Project",
+                f"Could not open project:\n{e}"
+            )
+            return
+
+        self._project_path = path
+        self.setWindowTitle (f"CyPRES RFT Plotter - {path.name}")
+        self._refresh_data_tree()
+        self._refresh_analyses_tree()
+        self._check_if_project_has_path()   
+        
+    def _refresh_data_tree_1(self)->None:
         #Clear the existing project tree
         while self.data_tree_layout.count():
             item = self.data_tree_layout.takeAt(0)
@@ -236,20 +322,64 @@ class MainWindowKD(QMainWindow):
         for dataset in self.project.loaded_datasets:
             new_tree = DataFrameTree(self,dataset)
             self.data_tree_layout.addWidget(new_tree)
-
-    def _add_analysis_tab(self)->QWidget:
-        idx = self.analysis_tabs.count()-1   
+    
+    def _refresh_data_tree(self)-> None:
+        old_tree = getattr(self, "project_data_tree",None)
+        if old_tree is not None:
+            self.project_data_tree.deleteLater()
         
-        page = self.analysis_tabs.widget(idx)
-        new_widget = AnalysisWidget()
-        layout = page.layout()
+        self.project_data_tree = AllDataSetsTree(self.project_controls_frame, self.project)
+        self.project_controls_frame.layout().addWidget(self.project_data_tree)
+    
+    def _refresh_analyses_tree(self)->None:
+        #Clear the existing analysese tree
+        while self.analysis_tree_layout.count():
+            item = self.analysis_tree_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        #Repopulate the analysis tree    
+        for analysis in self.project.analyses:
+            new_tree = AnalysisTree(self, analysis)
+            self.analysis_tree_layout.addWidget(new_tree)
+
+    def _add_analysis_tab(self)->None:
+        new_analysis = self._create_new_analysis_object()
+        page = QWidget(self.analysis_tabs)
+        layout= QVBoxLayout(page)
+        new_widget = AnalysisWidget(page)
         layout.addWidget(new_widget)
+        idx = self.analysis_tabs.addTab(page, new_analysis.name)
+        self.analysis_tabs.setCurrentIndex(idx)
 
     def _close_analysis_tab(self,idx:int)->None:
         self.analysis_tabs.removeTab(idx)
         self.Widget.deleteLater()
 
-    def _create_new_analysis(self)->AnalysisObject: 
+    def _create_new_analysis_object(self)->AnalysisObject: 
         new_analysis = AnalysisObject()
-        new_analysis.name = 
-        self.project.analyses.append
+        existing_names = {analysis.name for analysis in self.project.analyses}
+        new_analysis.name = unique_name("Analysis", existing_names)
+        self.project.analyses.append(new_analysis)
+        return new_analysis
+
+    def _start_new_analysis(self)->None:
+        #Exit the module if not data is available in the project
+        if not self.project.loaded_datasets or len(self.project.loaded_datasets)==0:
+            QMessageBox.critical(self,"New Analysis", """
+            No pressure data has been loaded in the project. 
+            Please import data first before proceeding with an analysis""")
+            return
+        
+        analysis_dlg = DataLoaderDialogAnalysis(self, self.project)
+        analysis_dlg.show()
+
+    def _create_master_data_tree(self)->QTreeWidget:
+        print("this button has fired")
+        master_tree = AllDataSetsTree(self, self.project)
+        self.project_controls_frame.layout().addWidget(master_tree)
+
+    def _check_if_project_has_path(self)-> None:
+        has_path = self._project_path is not None
+        self.actionSaveProject.setEnabled(has_path)

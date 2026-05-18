@@ -8,11 +8,11 @@ from project import ColumnSpec
 import units.units_manager as um
 import pandas as pd
 
-class DataLoaderDialog(QDialog):
+class DataLoaderDialogProject(QDialog):
     def __init__(self, parent=None, project = None):
         super().__init__(parent)
         
-        self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaces when the _create_dataframe function is run
+        self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaced when the _create_dataframe function is run
         self.imported_column_specs: list[ColumnSpec] = []
         self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
         self.setWindowTitle("Data Loader")       

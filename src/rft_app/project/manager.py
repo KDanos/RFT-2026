@@ -1,7 +1,7 @@
 from typing import Optional
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
-from .models import Analysis, ColumnSpec, LoadedDataSet
+from .models import AnalysisObject, ColumnSpec, LoadedDataSet
 from utils.naming import unique_name
 
 
@@ -18,7 +18,7 @@ class ProjectDataManager:
         self.loaded_datasets :list[LoadedDataSet]=[]
         self.user_unit_systems:list[UnitSystem] = []
         self.current_unit_system: UnitSystem = BUILT_IN_UNIT_SYSTEMS[2] #default to Field
-        self.analyses: list[Analysis]= []
+        self.analyses: list[AnalysisObject]= []
 
     @property
     def available_unit_systems(self)-> tuple[UnitSystem,...]:
@@ -53,7 +53,6 @@ class ProjectDataManager:
 
     def get_column_specs(self, name: str) -> list[ColumnSpec]:
         return self._get_loaded_dataset(name).column_specs
-
 
     def list_datasets(self) -> list[str]:
         return list(dataset.name for dataset in self.loaded_datasets)
