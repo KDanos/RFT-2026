@@ -19,6 +19,7 @@ class ProjectDataManager:
         self.user_unit_systems:list[UnitSystem] = []
         self.current_unit_system: UnitSystem = BUILT_IN_UNIT_SYSTEMS[2] #default to Field
         self.analyses: list[AnalysisObject]= []
+        self._is_modified: bool =False
 
     @property
     def available_unit_systems(self)-> tuple[UnitSystem,...]:
@@ -62,3 +63,13 @@ class ProjectDataManager:
             if dataset.name == name:
                 return dataset
         raise KeyError (name)
+
+    def mark_modified(self)->None:
+        self._is_modified = True
+    
+    def mark_clean(self)->None:
+        self._is_modified = False
+
+    @property
+    def is_modified(self)->bool:
+        return self._is_modified

@@ -12,8 +12,7 @@ def load_project(path:str|Path)->ProjectDataManager:
     path = Path(path)
     with path.open ("rb") as f: # r: read mode, b: binary mode
         project = pickle.load(f)
-    
+           
     if not isinstance(project, ProjectDataManager):
         raise TypeError ("The selected file does not contain a valid RFT project")
-
     return project

@@ -1,16 +1,15 @@
-
-from PyQt6.QtCore import QFile, QSize, Qt
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction, QIcon
-from PyQt6.QtWidgets import QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSplitter,  QToolBar, QTreeWidget, QVBoxLayout, QWidget, QTabWidget, QToolButton, QMessageBox
+from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSplitter,  QToolBar, QTreeWidget, QVBoxLayout, QWidget, QTabWidget, QToolButton, QMessageBox
 from pathlib import Path
 
 
-from project import ProjectDataManager, save_project, load_project, AnalysisObject
+
+from project import ProjectDataManager, save_project, AnalysisObject
 from utils.naming import unique_name
 
-from ui.widgets import DataLoaderDialogAnalysis, DataLoaderDialogProject, AnalysisWidget, AnalysisTree, DataFrameTree,AllDataSetsTree
-from ui import app_icon, load_qss
-
+from ui.widgets import DataLoaderDialogAnalysis, DataLoaderDialogProject, AnalysisWidget, AnalysisTree, AllDataSetsTree
+from ui import app_icon, load_qss, save_project_as, open_project_dialog
 
 class MainWindowKD(QMainWindow):
     def __init__(self, parent=None):
@@ -56,12 +55,7 @@ class MainWindowKD(QMainWindow):
         self.new_tab_btn.setAutoRaise(True)
         self.analysis_tabs.setCornerWidget(self.new_tab_btn,Qt.Corner.TopRightCorner)
 
-        self.starting_tab = QWidget(self.analysis_tabs)
-        
-        self.staring_tab_layout = QVBoxLayout(self.starting_tab)
-        self.analysis_tabs.addTab(self.starting_tab, "Analysis 1")
-
-
+        self._create_a_starting_analysis_tab()
         
         #Status Bar
         
@@ -72,6 +66,11 @@ class MainWindowKD(QMainWindow):
         self.mainSplitter.setSizes([1000,5000])
         self.setCentralWidget(central_widget)
 
+    def _create_a_starting_analysis_tab(self)->None:
+        self.starting_tab = QWidget(self.analysis_tabs)
+        self.staring_tab_layout = QVBoxLayout(self.starting_tab)
+        self.analysis_tabs.addTab(self.starting_tab, "Analysis 1")
+
     def _build_menubar(self):
         menubar = self.menuBar()
         
@@ -81,6 +80,8 @@ class MainWindowKD(QMainWindow):
         self.menu_file.addAction(self.actionSaveProject)
         self.menu_file.addAction(self.actionSaveAs)
         self.menu_file.addSeparator()
+        self.menu_file.addAction(self.actionCloseProject)
+        self.menu_file.addAction(self.actionExitApplication)
 
         # Data
         self.menu_data = menubar.addMenu("Data")
@@ -113,7 +114,6 @@ class MainWindowKD(QMainWindow):
 
         #Add actions (and hence buttons) to the toolbar
         for action in (
-            self.actionNewProject,
             self.actionOpenProject,
             self.actionSaveProject,
             self.actionSaveAs,
@@ -122,7 +122,6 @@ class MainWindowKD(QMainWindow):
             self.actionChangeProjecUnits,
             self.actionAbout,
             self.actionContact_Us,
-
         ):
             self.toolBar.addAction(action)
     
@@ -149,22 +148,23 @@ class MainWindowKD(QMainWindow):
         self.toolBar.addWidget(spacer)
         self.toolBar.addWidget(units_frame)
     
-    def _build_actions(self):
-        # File actions
-        self.actionNewProject = QAction("New Project", self)
-        
+    def _build_actions(self):      
         #Open Project
         self.actionOpenProject = QAction("Open Project", self)
         self.actionOpenProject.setIcon(app_icon("fa5.folder-open"))
-        
         #Save Action
         self.actionSaveProject = QAction("Save", self)
         self.actionSaveProject.setIcon(app_icon("fa5.save"))
-        
-        #Save As action
+        #Save As Action
         self.actionSaveAs = QAction("Save As", self)
         self.actionSaveAs.setIcon(app_icon("msc.save-as"))
-
+        #Close Project Action
+        self.actionCloseProject = QAction ("Close Project", self)
+        self.actionCloseProject.setIcon(app_icon("mdi6.close-outline"))
+        #Exit Application Action
+        self.actionExitApplication = QAction("Exit the Application", self)
+        self.actionExitApplication.setIcon(app_icon("mdi.exit-to-app"))
+        
         # Data actions
         self.actionLoadData = QAction("Load Data", self)
         self.actionLoadData.setIcon (app_icon("ph.upload-simple-fill"))
@@ -212,6 +212,8 @@ class MainWindowKD(QMainWindow):
         self.actionSaveAs.triggered.connect(self._save_project_as)
         self.actionSaveProject.triggered.connect(self._save_project)
         self.actionOpenProject.triggered.connect(self._open_project)
+        self.actionCloseProject.triggered.connect(self._close_project)
+        self.actionExitApplication.triggered.connect(self._exit_application)
         
         self.actionNewAnalysis.triggered.connect(self._start_new_analysis)
         self.units_combo.currentIndexChanged.connect(self._on_project_units_changed)
@@ -225,7 +227,10 @@ class MainWindowKD(QMainWindow):
             df = dlg.imported_df
             specs = dlg.imported_column_specs
             dataset_name = self.project.add_loaded_dataset(df, specs)
-            self._update_project_data(dataset_name)
+            
+            #Raise a "need to save flag" prior to exiting the project
+            self.project.mark_modified()
+            self._refresh_data_tree()
 
     def _on_project_units_changed(self, _index:int)-> None:
 
@@ -233,96 +238,44 @@ class MainWindowKD(QMainWindow):
         if selected_system is not None:
             self.project.current_unit_system = selected_system
 
-    def _update_project_data(self,dataset_name):
-        dataset = self.project._get_loaded_dataset(dataset_name)
-        new_tree = DataFrameTree(self, dataset)
-        self.data_tree_layout.addWidget(new_tree)
+            #Raise a "need to save flag" prior to exiting the project
+            self.project.mark_modified()
     
     def _save_project_as (self)->None: 
-        start = str(self._project_path) if self._project_path else "untitled.rftproj"
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Project AS",
-            start,
-            "RFT Project (*.rftproj);;All Files (*)",
-        )
-        if not path:
-            return #user cancelled
-
-        path = Path(path)
-        if path.suffix.lower() != ".rftproj":
-            path= path.with_suffix(".rftproj")
         
-        try: 
-            save_project(self.project,path)        
-        except OSError as e: 
-            QMessageBox.critical(self,
-            "Save as",
-            f"Could not save project \n{e}")
-            return 
-
-        self._project_path= path
+        path = save_project_as(self, self.project, self._project_path)
+        
+        #Update the path of the current project
+        if path is None:
+            return #cancelled or save failed
+        self._project_path = path
         self.setWindowTitle(f"CyPRES RFT Plotter - {path.name}")
         self._check_if_project_has_path()
-
 
     def _save_project(self)->None:
         if self._project_path is None: 
             self._save_project_as()
             return
-        
-        try: 
-            save_project(self.project, self._project_path)
-        except OSError as e: 
-            QMessageBox.critical(self,
-            "Save project",
-            f"Could not save project \n{e}")
-            return 
-        return
-
-    def _open_project (self):
-        start_dir = ""
-
-        path_str,_ = QFileDialog.getOpenFileName(
-            self, 
-            "Open Project", 
-            start_dir, 
-            "RFT Project (*.rftproj);;All Files (*)"
-        )
-        
-        if not path_str:
-            return #user cancelled
-
-        path = Path(path_str)
         try:
-            self.project = load_project(path)
-        except (OSError, TypeError) as e:
-            QMessageBox.critical(
-                self, 
-                "Open Project",
-                f"Could not open project:\n{e}"
-            )
+            save_project(self.project, self._project_path)
+            #Mark the project as clean and no save required
+            self.project.mark_clean()
+        except OSError as e: 
+            QMessageBox.critical(self, "Save Project", f"Could not save project \n{e}")
+    
+    def _open_project (self):
+        result = open_project_dialog(self, self._project_path)
+        if result is None:
             return
 
+        self.project, path = result
         self._project_path = path
-        self.setWindowTitle (f"CyPRES RFT Plotter - {path.name}")
+        
+        self.setWindowTitle (f"CyPRES RFT Plotter - {self._project_path.name}")
         self._refresh_data_tree()
         self._refresh_analyses_tree()
         self._check_if_project_has_path()   
-        
-    def _refresh_data_tree_1(self)->None:
-        #Clear the existing project tree
-        while self.data_tree_layout.count():
-            item = self.data_tree_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-        
-        #Repopulate the project tree
-        for dataset in self.project.loaded_datasets:
-            new_tree = DataFrameTree(self,dataset)
-            self.data_tree_layout.addWidget(new_tree)
-    
+
     def _refresh_data_tree(self)-> None:
         old_tree = getattr(self, "project_data_tree",None)
         if old_tree is not None:
@@ -357,11 +310,18 @@ class MainWindowKD(QMainWindow):
         self.analysis_tabs.removeTab(idx)
         self.Widget.deleteLater()
 
+        #Raise a "need to save flag" prior to exiting the project
+        self.project.mark_modified()
+
     def _create_new_analysis_object(self)->AnalysisObject: 
         new_analysis = AnalysisObject()
         existing_names = {analysis.name for analysis in self.project.analyses}
         new_analysis.name = unique_name("Analysis", existing_names)
         self.project.analyses.append(new_analysis)
+        
+        #Raise a "need to save flag" prior to exiting the project
+        self.project.mark_modified()
+        
         return new_analysis
 
     def _start_new_analysis(self)->None:
@@ -372,14 +332,77 @@ class MainWindowKD(QMainWindow):
             Please import data first before proceeding with an analysis""")
             return
         
-        analysis_dlg = DataLoaderDialogAnalysis(self, self.project)
+        analysis_dlg = DataLoaderDialogAnalysis(self, self.project)        
         analysis_dlg.show()
 
     def _create_master_data_tree(self)->QTreeWidget:
-        print("this button has fired")
         master_tree = AllDataSetsTree(self, self.project)
+        
+        
         self.project_controls_frame.layout().addWidget(master_tree)
 
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None
         self.actionSaveProject.setEnabled(has_path)
+
+    def _close_project(self)-> None:
+        print("_close_project called, is_modified =", self.project.is_modified)
+        if not self._confirm_discard_or_save_if_modified():
+            return
+        
+        #New empty in-memeory project
+        self.project = ProjectDataManager()
+        self._project_path = None
+        self.setWindowTitle("CyPRES RFT Plotter")
+
+        #Clear analysis tabs
+        while self.analysis_tabs.count()>0:
+            widget = self.analysis_tabs.widget(0)
+            self.analysis_tabs.removeTab(0)
+            if widget is not None:
+                widget.deleteLater()
+
+        #Create an empty starter tab
+        self._create_a_starting_analysis_tab()
+
+        #Clear the project data and analysese trees
+        self._refresh_analyses_tree()
+        self._refresh_data_tree()
+
+        #Reset the units combo to match the new project (set default)
+        self.units_combo.blockSignals(True)
+        self.units_combo.clear()
+        for system in self.project.available_unit_systems:
+            self.units_combo.addItem(system.label, system)
+        idx = self.units_combo.findData(self.project.current_unit_system)
+        if idx >= 0:
+            self.units_combo.setCurrentIndex(idx)
+        self.units_combo.blockSignals(False)
+
+        self._check_if_project_has_path()
+
+    def _confirm_discard_or_save_if_modified(self)->bool:
+        if not self.project.is_modified:
+            return True
+        reply = QMessageBox.question(
+            self, 
+            "Unsaved Changes", 
+            "Save changes before continuing?",
+            QMessageBox.StandardButton.Save
+            |QMessageBox.StandardButton.Discard
+            |QMessageBox.StandardButton.Cancel
+        )
+
+        if reply == QMessageBox.StandardButton.Cancel:
+            return False
+        if reply == QMessageBox.StandardButton.Save:
+            self._save_project()
+            if self.project._is_modified: #save failed or cancelled
+                return False
+        
+        return True
+
+    def _exit_application(self)-> None:
+        if not self._confirm_discard_or_save_if_modified():
+            return
+        self.close()
