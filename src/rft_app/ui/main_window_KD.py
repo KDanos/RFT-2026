@@ -3,8 +3,6 @@ from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSplitter,  QToolBar, QTreeWidget, QVBoxLayout, QWidget, QTabWidget, QToolButton, QMessageBox
 from pathlib import Path
 
-
-
 from project import ProjectDataManager, save_project, AnalysisObject
 from utils.naming import unique_name
 
@@ -186,12 +184,10 @@ class MainWindowKD(QMainWindow):
     def _build_project_controls_frame(self)->QFrame:
         self.project_controls_frame=QFrame()
         vbox = QVBoxLayout(self.project_controls_frame)
-        # project_controls_frame.setLayout(vbox)
         
         #Build a tree for the loaded data
         self.project_data_frame= QFrame(self)
-        self.data_tree_layout = QVBoxLayout()
-        self.project_data_frame.setLayout(self.data_tree_layout)
+        self.data_tree_layout = QVBoxLayout(self.project_data_frame)
 
         #Build a tree for the analysis in the project
         self.project_analyses_frame = QFrame(self)
@@ -219,7 +215,7 @@ class MainWindowKD(QMainWindow):
         self.units_combo.currentIndexChanged.connect(self._on_project_units_changed)
 
         self.new_tab_btn.clicked.connect(self._add_analysis_tab)
-        self.btn_1.clicked.connect (self._create_master_data_tree)
+        self.btn_1.clicked.connect (self._refresh_data_tree)
 
     def import_new_data(self)-> None:
         dlg = DataLoaderDialogProject(parent = self, project = self.project)
@@ -277,13 +273,17 @@ class MainWindowKD(QMainWindow):
         self._check_if_project_has_path()   
 
     def _refresh_data_tree(self)-> None:
-        old_tree = getattr(self, "project_data_tree",None)
-        if old_tree is not None:
-            self.project_data_tree.deleteLater()
+        #Clear the layout
+        tree_layout = self.data_tree_layout
+        while tree_layout.count():
+            item = tree_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
         
-        self.project_data_tree = AllDataSetsTree(self.project_controls_frame, self.project)
-        self.project_controls_frame.layout().addWidget(self.project_data_tree)
-    
+        self.project_data_tree = AllDataSetsTree(self.project_data_frame, self.project)
+        tree_layout.insertWidget(0, self.project_data_tree)
+ 
     def _refresh_analyses_tree(self)->None:
         #Clear the existing analysese tree
         while self.analysis_tree_layout.count():
@@ -334,12 +334,6 @@ class MainWindowKD(QMainWindow):
         
         analysis_dlg = DataLoaderDialogAnalysis(self, self.project)        
         analysis_dlg.show()
-
-    def _create_master_data_tree(self)->QTreeWidget:
-        master_tree = AllDataSetsTree(self, self.project)
-        
-        
-        self.project_controls_frame.layout().addWidget(master_tree)
 
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None
