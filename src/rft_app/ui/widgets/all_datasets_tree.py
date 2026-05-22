@@ -33,5 +33,5 @@ class AllDataSetsTree(QTreeWidget):
             top_level.addChild(column_level)
             for idx, header in enumerate(df.columns):
                 units = set.column_specs[idx].unit if set.column_specs[idx].unit else "no units"
-                text = f"{header} [unit]"
+                text = f"{header} [{units}]"
                 column_level.addChild(QTreeWidgetItem([text]))

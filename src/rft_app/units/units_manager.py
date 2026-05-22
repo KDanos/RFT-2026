@@ -2,8 +2,6 @@
 Central Type of units for the project
 Create two classes, QuanityType and UnitSystem
 """
-
-
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
@@ -85,7 +83,7 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
     "volume_gas": QuantityType(
         key="volume_gas",
         label="Volume (Gas)",
-        units=("m³", "cm³", "scf"),
+        units=("m³", "cm³", "scf", "mscf", "mmscf", "bcf", "bcm"),
         symbols=("V",),
     ),
     "volume_liquid": QuantityType(
@@ -105,6 +103,12 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
         label = "Text",
         units = (),
         symbols = (),
+    ),
+    "well": QuantityType(
+        key="well",
+        label="Well",
+        units=(),
+        symbols=(),
     ),
 }
 
@@ -131,6 +135,7 @@ SI_UNITS = UnitSystem(
         "ignore": "",
         "mobility": "m²/(Pa.s)",
         "text": "",
+        "well": "",
     },
 )
 
@@ -151,6 +156,7 @@ METRIC_UNITS = UnitSystem(
         "ignore": "",
         "mobility": "D/P",
         "text": "",
+        "well":"",
     },
 )
 
@@ -171,6 +177,7 @@ FIELD_UNITS = UnitSystem(
         "ignore": "",
         "mobility": "mD/cP",
         "text": "",
+        "well":"",
     },
 )
 
@@ -191,6 +198,7 @@ IMPERIAL_UNITS = UnitSystem(
         "ignore": "",
         "mobility": "mD/cP",
         "text": "",
+        "well":"",
     },
 )
 
