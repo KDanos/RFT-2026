@@ -1,10 +1,10 @@
 from typing import Optional
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel,  QMessageBox, QPushButton, QRadioButton, QSizePolicy,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,  QMessageBox, QPushButton, QRadioButton, QSizePolicy,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  
 import csv
 from io import StringIO
-from project import ColumnSpec
+from project import ColumnSpec, DataFrameSpecs, DataFrameSpecs
 import units.units_manager as um
 import pandas as pd
 
@@ -14,6 +14,7 @@ class DataLoaderDialogProject(QDialog):
         
         self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaced when the _create_dataframe function is run
         self.imported_column_specs: list[ColumnSpec] = []
+        self.imported_dataframe_specs: DataFrameSpecs = None
         self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
         self.setWindowTitle("Data Loader")       
         self.setWindowFlags(
@@ -49,16 +50,21 @@ class DataLoaderDialogProject(QDialog):
 
         #Left: import controls
         self.controls_frame = QFrame()
-        controls_layout = QVBoxLayout()
-        self.controls_frame.setLayout(controls_layout)
+        controls_layout = QVBoxLayout(self.controls_frame)
         
+        # Option to name the dataset
+        self.name_line_edit = QLineEdit()
+        self.name_line_edit.setPlaceholderText("Dataset Name")
+        controls_layout.addWidget(self.name_line_edit)
+
+        # Button to update the clipboard
         self.paste_clipboard_btn = QPushButton("Update Clipboard")      
         controls_layout.addWidget(self.paste_clipboard_btn)
-
+        
+        #Define the rows in preview table
         rowsContainer = QHBoxLayout()
         rowLabel = QLabel("Show max rows")
         
-        #Define the rows in
         self.row_limit_spin = QSpinBox()
         self.row_limit_spin.setValue(12)
         self.row_limit_spin.setMaximum(10000)
@@ -471,21 +477,27 @@ class DataLoaderDialogProject(QDialog):
         mydf =  pd.DataFrame(rows, columns=col_names)
         self.imported_df = mydf
 
+        # Create the dataframe metadata
+        name = self.name_line_edit.text().strip()
+        self.dataframe_specs = DataFrameSpecs(name)
+        
         #Call the preview window of the dataframe
-        result = self._create_the_dataframe_preview_table(mydf)
+        result = self._create_the_dataframe_preview_table(mydf, name)
         if result != QDialog.DialogCode.Accepted:
             self.imported_df = None
             self.imported_column_specs = []
+            self.imported_dataframe_specs = []
             return None
         
         self.accept()
         return mydf
 
-    def _create_the_dataframe_preview_table(self, dataframe:pd.DataFrame) -> int:
+    def _create_the_dataframe_preview_table(self, dataframe:pd.DataFrame, name:str) -> int:
         mydf = dataframe
         
         #Load Preview Widget
         preview_dialog = QDialog(self)
+        preview_dialog.setWindowTitle(name)
         preview_table = QTableWidget()
         layout = QVBoxLayout()
         layout.addWidget(preview_table)

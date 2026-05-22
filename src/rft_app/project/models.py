@@ -5,6 +5,11 @@ from typing import Any
 import pandas as pd
 
 
+@dataclass
+class DataFrameSpecs:
+    "Meta data for loaded data set"
+    name:str
+
 @dataclass(frozen=True)
 class ColumnSpec:
     """Metadata for a single column of an imported DataFrame

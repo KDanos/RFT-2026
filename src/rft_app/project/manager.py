@@ -1,7 +1,7 @@
 from typing import Optional
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
-from .models import AnalysisObject, ColumnSpec, LoadedDataSet
+from .models import AnalysisObject, ColumnSpec, LoadedDataSet, DataFrameSpecs
 from utils.naming import unique_name
 
 
@@ -30,15 +30,20 @@ class ProjectDataManager:
         self,
         df: pd.DataFrame,
         column_specs: list[ColumnSpec],
-        name: str = "Dataset",
+        dataframe_specs: DataFrameSpecs,
                         ) -> str:
         """Store a DataFrame and its column specs under a unique key.
 
         Rules:
-          - Name defaults to "Dataset".
+          - Name requested on dataframe data import via the data_loader_project.py file
+          - If name is empty, it defaults to "Dataset".
           - If `name` already exists, append a numeric suffix to make it unique.
         Returns the key actually used.
         """
+        # Extract the dataset name from the dataset specs
+        name =  (dataframe_specs.name.strip() or "") or "Dataset"
+
+        # Verify if the name is unique or requires changing
         existing_names = {dataset.name for dataset in self.loaded_datasets}
         chosen = unique_name(name, existing_names)
         loaded_dataset = LoadedDataSet(
