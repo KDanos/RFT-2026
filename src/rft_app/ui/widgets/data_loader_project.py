@@ -4,8 +4,12 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,  QMessageBox, QPushButton, QRadioButton, QSizePolicy,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  
 import csv
 from io import StringIO
+
+from qtpy.QtWidgets import QSplitter
 from project import ColumnSpec, DataFrameSpecs, DataFrameSpecs
+from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units
 import units.units_manager as um
+import units.units_normalisation as u_norm
 import pandas as pd
 
 class DataLoaderDialogProject(QDialog):
@@ -104,7 +108,7 @@ class DataLoaderDialogProject(QDialog):
        
         #Right: preview controls
         self.preview_frame = QFrame()
-        preview_layout = QVBoxLayout()
+
         
         #Right-top:column mapping
         self.mapping_table = QTableWidget()       
@@ -118,13 +122,21 @@ class DataLoaderDialogProject(QDialog):
         preview_hdr.setVisible(True)
         preview_hdr.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         
+        preview_layout = QVBoxLayout(self.preview_frame)
         preview_layout.addWidget(self.mapping_table,0)
         preview_layout.addWidget(self.preview_table,1)
 
+        # Create the main splitter
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        main_splitter.addWidget(self.controls_frame)
+        main_splitter.addWidget(self.preview_frame)
+        main_splitter.setSizes([1000,5000])
+        main_splitter.setChildrenCollapsible(False)
+        
         #Main Layout
         mainLayout = QHBoxLayout()
-        mainLayout.addWidget(self.controls_frame)
-        mainLayout.addLayout(preview_layout)
+        mainLayout.addWidget(main_splitter)
+        
         self.setLayout(mainLayout)
 
         #Update tables
@@ -247,15 +259,15 @@ class DataLoaderDialogProject(QDialog):
             
             priority_keys = ("undefined", "ignore")
             priority_quantities = [
-                um.STANDARD_QUANTITIES[key]
+                STANDARD_QUANTITIES[key]
                 for key in priority_keys
-                if key in um.STANDARD_QUANTITIES
+                if key in STANDARD_QUANTITIES
             ]
 
             other_quantities = sorted(
                 (
                 q 
-                for key,q in um.STANDARD_QUANTITIES.items()
+                for key,q in STANDARD_QUANTITIES.items()
                 if key not in priority_keys
                 ),
                 key = lambda q: q.label.casefold()
@@ -277,7 +289,7 @@ class DataLoaderDialogProject(QDialog):
 
             #Select the units associated with the quantity
             quantity_chosen = quantity_combo.currentData()
-            quantity_object = um.STANDARD_QUANTITIES[quantity_chosen]
+            quantity_object = STANDARD_QUANTITIES[quantity_chosen]
             units_list = quantity_object.units
             units_combo = QComboBox()
             units_combo.addItems(units_list)
@@ -297,7 +309,7 @@ class DataLoaderDialogProject(QDialog):
             return
         
         qkey = quantity_combo.currentData()
-        qobj = um.STANDARD_QUANTITIES[qkey]
+        qobj = STANDARD_QUANTITIES[qkey]
 
         units_combo.blockSignals(True)
         units_combo.clear()
@@ -334,8 +346,6 @@ class DataLoaderDialogProject(QDialog):
         #Exit the function if already in it
         if self._is_syncing_columns:
             return
-        
-        
         
         sender = self.sender()
         if sender is self.mapping_table.horizontalHeader():
@@ -454,20 +464,22 @@ class DataLoaderDialogProject(QDialog):
             row_values_to_import = self.data_rows[r]
             row_vals_for_df = []
             
-            for mapping_col in selected_mapping_cols:
+            for idx,mapping_col in enumerate(selected_mapping_cols):
                 source_column = mapping_col-1
                 value = row_values_to_import[source_column] if 0<=source_column<len(row_values_to_import) else ""
-                #Round to decimal points if requested:
-                if decimals is not None and self._is_numeric(value):
-                    if decimals ==0:
-                        value = int(round(float(value),decimals))
-                    else:
-                        value = round(float(value),decimals)
+                
+                # Normalise the numeric data
+                spec = self.imported_column_specs[idx]
+                quantity_key = spec.quantity_key
+                user_unit = spec.unit
+                
+                if self._is_numeric(value) and user_unit:
+                    value = normalise_from_user_units(user_unit,quantity_key,float(value))
                 elif self._is_numeric(value):
-                    value = float(value)
-                elif value.strip() =="":
-                    value=None
-                    
+                    value =float (value) # captures scenarios of undefined quantities with numeric values
+                elif isinstance(value,str) and value.strip()=="":
+                    value = None
+
                 row_vals_for_df.append(value)
             rows.append(row_vals_for_df)
         
@@ -524,12 +536,28 @@ class DataLoaderDialogProject(QDialog):
         
         for r in range (preview_table.rowCount()):
             for c in range(len(mydf.columns)):
+                
                 #Place the units:
+                spec = self.imported_column_specs[c]
+                user_unit = spec.unit
+                quantity = spec.quantity_key
+                
                 if r == 0:
-                   spec = self.imported_column_specs[c]
                    item = QTableWidgetItem(spec.unit)
                 else:
                     value =mydf.iat[r-1,c]
+                    # Convert from Normalised to display units
+                    if self._is_numeric(value):
+                        value = convert_from_normalised_to_user_units(user_unit, quantity, value)
+                    
+                        # Apply rounding if requested: 
+                        if self.decimals_check_box.isChecked():
+                            decimal_points = self.decimal_limit_spin.value()
+                            if decimal_points == 0:
+                                value = int(round(float(value),decimal_points))
+                            else:
+                                value = round(float(value),decimal_points)
+                    
                     display_text = "" if pd.isna(value) else str(value)              
                     item = QTableWidgetItem(display_text)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -562,9 +590,17 @@ class DataLoaderDialogProject(QDialog):
         finally:
             self.preview_table.blockSignals(False)
    
-    def _is_numeric(self, text:str)-> bool: 
+    def _is_numeric(self, value)-> bool: 
+        if value is None:
+            return False
+        if isinstance(value,float) and pd.isna(value):
+            return False
+        if isinstance(value,(int,float)):
+            return True
+        if not isinstance(value,str):
+            return False
         try:
-            float(text.strip())
+            float(value.strip())
             return True
         except ValueError:
             return False

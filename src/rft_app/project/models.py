@@ -15,7 +15,7 @@ class ColumnSpec:
     """Metadata for a single column of an imported DataFrame
 
     Stored alongside the DataFrame (not inside it). The DataFrame holds only alpha-numeric or empty values. 
-    ColumnSpec records what those values mean (Qquantiy) and in which units they were imported
+    ColumnSpec records what those values mean (Quantiy) and in which units they were imported
     """
     name:str
     quantity_key:str
