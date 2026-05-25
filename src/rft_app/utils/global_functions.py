@@ -1,5 +1,6 @@
 
 from typing import Iterable
+import pandas as pd
 
 
 def unique_name(
@@ -26,5 +27,18 @@ def unique_name(
         candidate = f"{n}_{i}"
     return candidate
     
-
+def is_numeric(value)-> bool: 
+    if value is None:
+        return False
+    if isinstance(value,float) and pd.isna(value):
+        return False
+    if isinstance(value,(int,float)):
+        return True
+    if not isinstance(value,str):
+        return False
+    try:
+        float(value.strip())
+        return True
+    except ValueError:
+        return False
     

@@ -2,7 +2,7 @@ from typing import Optional
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
 from .models import AnalysisObject, ColumnSpec, LoadedDataSet, DataFrameSpecs
-from utils.naming import unique_name
+from utils import unique_name
 
 
 

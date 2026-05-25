@@ -16,7 +16,6 @@ class AnalysisWidget(QWidget):
         main_layout = QHBoxLayout(self)
         main_vertical_splitter = QSplitter()
 
-
         #Widget Frame
         widget_frame = QFrame(self)
         widget_layout = QVBoxLayout(widget_frame)

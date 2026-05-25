@@ -3,8 +3,8 @@ from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSplitter,  QToolBar, QTreeWidget, QVBoxLayout, QWidget, QTabWidget, QToolButton, QMessageBox
 from pathlib import Path
 
-from project import ProjectDataManager, save_project, AnalysisObject
-from utils.naming import unique_name
+from project import ProjectDataManager, load_project, save_project, AnalysisObject
+from utils import unique_name
 
 from ui.widgets import DataLoaderDialogAnalysis, DataLoaderDialogProject, AnalysisWidget, AnalysisTree, AllDataSetsTree
 from ui import app_icon, load_qss, save_project_as, open_project_dialog
@@ -19,6 +19,7 @@ class MainWindowKD(QMainWindow):
         self._project_path :Path|None = None
         self.build_ui()
         self._check_if_project_has_path()
+
 
     def build_ui(self):
         self._build_actions()
@@ -283,6 +284,22 @@ class MainWindowKD(QMainWindow):
                 widget.deleteLater()
         
         self.project_data_tree = AllDataSetsTree(self.project_data_frame, self.project)
+        
+        #Add units next to the column names
+        tree = self.project_data_tree
+        for i in range(tree.topLevelItemCount()):
+            dataset_name = tree.topLevelItem(i).text(0)
+            columns_node = tree.topLevelItem(i).child(1)
+            dataset = self.project._get_loaded_dataset(dataset_name)
+            
+            for k in range (columns_node.childCount()):
+                col_item = columns_node.child(k)
+                header = col_item.text(0)
+
+                units = dataset.column_specs[k].unit
+                text = f"{header} [{units}]"
+                col_item.setText(0,text)
+        
         tree_layout.insertWidget(0, self.project_data_tree)
  
     def _refresh_analyses_tree(self)->None:

@@ -8,8 +8,7 @@ from io import StringIO
 from qtpy.QtWidgets import QSplitter
 from project import ColumnSpec, DataFrameSpecs, DataFrameSpecs
 from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units
-import units.units_manager as um
-import units.units_normalisation as u_norm
+from utils import is_numeric
 import pandas as pd
 
 class DataLoaderDialogProject(QDialog):
@@ -31,8 +30,9 @@ class DataLoaderDialogProject(QDialog):
         
         self.build_ui()
         
-        # Create a sync guard flag to prevent column resizing ping-pong loops
+        # Create a sync guard flag to prevent column resizing and scrolling position ping-pong loops
         self._is_syncing_columns = False
+        self._is_syncing_scroll = False
         self._connect_signals()
 
     def _connect_signals(self):
@@ -44,7 +44,10 @@ class DataLoaderDialogProject(QDialog):
         self.import_data_btn.clicked.connect(self._create_dataframe)
         self.preview_table.horizontalHeader().sectionResized.connect(self._sync_resizing_table_column_width)
         self.preview_table.itemChanged.connect(self._deletion_selection_changed)
+        self.preview_table.horizontalScrollBar().valueChanged.connect(self._sync_scroller_position)
+        
         self.mapping_table.horizontalHeader().sectionResized.connect(self._sync_resizing_table_column_width)
+        self.mapping_table.horizontalScrollBar().valueChanged.connect(self._sync_scroller_position)
 
     def build_ui(self):
         #Initilise with empty attributes
@@ -109,7 +112,6 @@ class DataLoaderDialogProject(QDialog):
         #Right: preview controls
         self.preview_frame = QFrame()
 
-        
         #Right-top:column mapping
         self.mapping_table = QTableWidget()       
         mapping_hdr = self.mapping_table.horizontalHeader()
@@ -142,6 +144,7 @@ class DataLoaderDialogProject(QDialog):
         #Update tables
         self._update_preview_table()
         self._update_mapping_table()
+        self._sync_initial_table_column_width() 
     
     def _parse_data(self):
         clipboard = QApplication.clipboard()
@@ -367,6 +370,27 @@ class DataLoaderDialogProject(QDialog):
             #Remore the guard to allow entry into the function again
             self._is_syncing_columns = False
 
+    def _sync_scroller_position(self,new_position_value)->None:
+        #Exit the function if already in it
+        if self._is_syncing_scroll:
+            return
+        
+        sender = self.sender()
+        if sender is self.mapping_table.horizontalScrollBar():
+            target = self.preview_table.horizontalScrollBar()
+        elif sender is self.preview_table.horizontalScrollBar():
+            target = self.mapping_table.horizontalScrollBar()
+        else:
+            return
+
+        #Engage the guard to avoid ping-pong scrolling
+        self._is_syncing_scroll = True
+        try:
+            # position = sender.value()
+            target.setValue(new_position_value)
+        finally:     
+            self._is_syncing_scroll = False
+        
     def _select_rows_to_ignore(self):
         self.rows_to_ignore =[]
         for r in range(self.preview_table.rowCount()):
@@ -473,9 +497,9 @@ class DataLoaderDialogProject(QDialog):
                 quantity_key = spec.quantity_key
                 user_unit = spec.unit
                 
-                if self._is_numeric(value) and user_unit:
+                if is_numeric(value) and user_unit:
                     value = normalise_from_user_units(user_unit,quantity_key,float(value))
-                elif self._is_numeric(value):
+                elif is_numeric(value):
                     value =float (value) # captures scenarios of undefined quantities with numeric values
                 elif isinstance(value,str) and value.strip()=="":
                     value = None
@@ -547,7 +571,7 @@ class DataLoaderDialogProject(QDialog):
                 else:
                     value =mydf.iat[r-1,c]
                     # Convert from Normalised to display units
-                    if self._is_numeric(value):
+                    if is_numeric(value):
                         value = convert_from_normalised_to_user_units(user_unit, quantity, value)
                     
                         # Apply rounding if requested: 
@@ -578,7 +602,7 @@ class DataLoaderDialogProject(QDialog):
                     item = self.preview_table.item(r,c)
                     if item is None:
                         continue
-                    if not self._is_numeric(item.text()):
+                    if not is_numeric(item.text()):
                         continue
                     value = self.data_rows[r][c-1]#This works only so long as data_rows are mirrored in the preview table
                     if decimal_points == 0:
@@ -589,21 +613,6 @@ class DataLoaderDialogProject(QDialog):
                     item.setText(str(value))        
         finally:
             self.preview_table.blockSignals(False)
-   
-    def _is_numeric(self, value)-> bool: 
-        if value is None:
-            return False
-        if isinstance(value,float) and pd.isna(value):
-            return False
-        if isinstance(value,(int,float)):
-            return True
-        if not isinstance(value,str):
-            return False
-        try:
-            float(value.strip())
-            return True
-        except ValueError:
-            return False
 
     def _on_decimal_check_toggled(self, checked:bool):
         self.decimal_limit_spin.setEnabled(checked)
