@@ -1,4 +1,4 @@
-from typing import Optional
+
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
 from .models import AnalysisObject, ColumnSpec, LoadedDataSet, DataFrameSpecs
@@ -55,15 +55,15 @@ class ProjectDataManager:
         return chosen
 
     def get_dataframe(self, name: str) -> pd.DataFrame:
-        return self._get_loaded_dataset(name).dataframe
+        return self.get_loaded_dataset(name).dataframe
 
     def get_column_specs(self, name: str) -> list[ColumnSpec]:
-        return self._get_loaded_dataset(name).column_specs
+        return self.get_loaded_dataset(name).column_specs
 
     def list_datasets(self) -> list[str]:
         return list(dataset.name for dataset in self.loaded_datasets)
 
-    def _get_loaded_dataset(self, name:str) -> LoadedDataSet:
+    def get_loaded_dataset(self, name:str) -> LoadedDataSet:
         for dataset in self.loaded_datasets:
             if dataset.name == name:
                 return dataset

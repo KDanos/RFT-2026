@@ -28,7 +28,7 @@ class DataLoaderDialogProject(QDialog):
         #Provide access to the project data, imported as the project object when the DataLoaderDialog load function is called in the main window (load_data(self)) 
         self.project = project
         
-        self.build_ui()
+        self._build_ui()
         
         # Create a sync guard flag to prevent column resizing and scrolling position ping-pong loops
         self._is_syncing_columns = False
@@ -49,7 +49,7 @@ class DataLoaderDialogProject(QDialog):
         self.mapping_table.horizontalHeader().sectionResized.connect(self._sync_resizing_table_column_width)
         self.mapping_table.horizontalScrollBar().valueChanged.connect(self._sync_scroller_position)
 
-    def build_ui(self):
+    def _build_ui(self):
         #Initilise with empty attributes
         self.data_rows = []
         self.rows_to_ignore = []

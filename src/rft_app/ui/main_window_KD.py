@@ -17,11 +17,11 @@ class MainWindowKD(QMainWindow):
         self.action_list = []
         self.project = ProjectDataManager()
         self._project_path :Path|None = None
-        self.build_ui()
+        self._build_ui()
         self._check_if_project_has_path()
 
 
-    def build_ui(self):
+    def _build_ui(self):
         self._build_actions()
         self._build_central_widget()
         self._build_menubar()
@@ -290,7 +290,7 @@ class MainWindowKD(QMainWindow):
         for i in range(tree.topLevelItemCount()):
             dataset_name = tree.topLevelItem(i).text(0)
             columns_node = tree.topLevelItem(i).child(1)
-            dataset = self.project._get_loaded_dataset(dataset_name)
+            dataset = self.project.get_loaded_dataset(dataset_name)
             
             for k in range (columns_node.childCount()):
                 col_item = columns_node.child(k)
@@ -351,7 +351,14 @@ class MainWindowKD(QMainWindow):
             return
         
         analysis_dlg = DataLoaderDialogAnalysis(self, self.project)        
-        analysis_dlg.show()
+        if analysis_dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        dataset, columns = analysis_dlg.return_dataset_and_columns()
+        if not dataset or not columns:
+            QMessageBox.warning(self, "New Analysis", "Please select at least a depth and pressure column from one dataset.")
+            return
+
 
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None

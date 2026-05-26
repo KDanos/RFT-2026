@@ -1,5 +1,7 @@
 
+from tkinter import Toplevel
 from typing import Iterable
+from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator
 import pandas as pd
 
 
@@ -42,3 +44,18 @@ def is_numeric(value)-> bool:
     except ValueError:
         return False
     
+def get_tree_top_level_item_by_name(tree:QTreeWidget, name:str)->QTreeWidgetItem:
+    for i in range(tree.topLevelItemCount()):
+        item = tree.topLevelItem(i)
+        if item.text(0)==name:
+            return item
+    return None
+    
+def get_tree_item_by_name(tree:QTreeWidget, top_level_item:QTreeWidgetItem, name:str)->QTreeWidgetItem:
+
+    it = QTreeWidgetItemIterator(top_level_item)
+    while node := it.value():
+        if node.text(0)==name:
+            return node
+        it += 1
+    return None

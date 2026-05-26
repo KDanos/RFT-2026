@@ -2,8 +2,16 @@
 Central Type of units for the project
 Create two classes, QuanityType and UnitSystem
 """
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from project.manager import ProjectDataManager
+
 from dataclasses import dataclass
 from typing import Dict, Tuple
+
+
+
 
 
 @dataclass (frozen = True)
@@ -208,3 +216,8 @@ BUILT_IN_UNIT_SYSTEMS: Tuple[UnitSystem,...]= (
     FIELD_UNITS,
     IMPERIAL_UNITS
 )
+
+def get_project_default_units (project:ProjectDataManager, quantity_key:str)->str:
+        if project is None: 
+            return ""
+        return project.current_unit_system.units_by_quantity.get (quantity_key,"")
