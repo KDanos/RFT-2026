@@ -174,7 +174,6 @@ def convert_from_normalised_to_user_units(user_output_unit:str, quantity_type:st
     pint_storage_unit = app_unit_to_pint(si_storage_unit) #has to be "meter", for exampe ("m"->"meter")
     
     #Convert the user view unit to pint unit
-    
     pint_output_unit = app_unit_to_pint(user_output_unit) #convert from "ft" to "foot", for example ("ft"->"foot")
 
     #Make the converstion

@@ -12,11 +12,11 @@ class AllDataSetsTree(QTreeWidget):
 
         self.parent = parent
         self.project = project
-        self.loaded_datasets = self.project.loaded_datasets
+        self.datasets = self.project.datasets
         self.setHeaderLabel("Loaded Data Sets")
         
         
-        for set in self.project.loaded_datasets:
+        for set in self.project.datasets:
             df = set.dataframe
             top_level = QTreeWidgetItem([set.name])
             # Add a top level item

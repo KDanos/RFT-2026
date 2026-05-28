@@ -1,7 +1,7 @@
 
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
-from .models import AnalysisObject, ColumnSpec, LoadedDataSet, DataFrameSpecs
+from .models import AnalysisObject, ColumnSpec, DataSet, DataFrameSpecs
 from utils import unique_name
 
 
@@ -15,7 +15,7 @@ class ProjectDataManager:
     """
 
     def __init__(self) -> None:
-        self.loaded_datasets :list[LoadedDataSet]=[]
+        self.datasets :list[DataSet]=[]
         self.user_unit_systems:list[UnitSystem] = []
         self.current_unit_system: UnitSystem = BUILT_IN_UNIT_SYSTEMS[2] #default to Field
         self.analyses: list[AnalysisObject]= []
@@ -44,27 +44,27 @@ class ProjectDataManager:
         name =  (dataframe_specs.name.strip() or "") or "Dataset"
 
         # Verify if the name is unique or requires changing
-        existing_names = {dataset.name for dataset in self.loaded_datasets}
+        existing_names = {dataset.name for dataset in self.datasets}
         chosen = unique_name(name, existing_names)
-        loaded_dataset = LoadedDataSet(
+        loaded_dataset = DataSet(
             name = chosen,
             dataframe = df, 
             column_specs= list(column_specs),
         )
-        self.loaded_datasets.append (loaded_dataset)
+        self.datasets.append (loaded_dataset)
         return chosen
 
     def get_dataframe(self, name: str) -> pd.DataFrame:
-        return self.get_loaded_dataset(name).dataframe
+        return self.get_dataset_by_name(name).dataframe
 
     def get_column_specs(self, name: str) -> list[ColumnSpec]:
-        return self.get_loaded_dataset(name).column_specs
+        return self.get_dataset_by_name(name).column_specs
 
     def list_datasets(self) -> list[str]:
-        return list(dataset.name for dataset in self.loaded_datasets)
+        return list(dataset.name for dataset in self.datasets)
 
-    def get_loaded_dataset(self, name:str) -> LoadedDataSet:
-        for dataset in self.loaded_datasets:
+    def get_dataset_by_name(self, name:str) -> DataSet:
+        for dataset in self.datasets:
             if dataset.name == name:
                 return dataset
         raise KeyError (name)

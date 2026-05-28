@@ -19,7 +19,24 @@ class MainWindowKD(QMainWindow):
         self._project_path :Path|None = None
         self._build_ui()
         self._check_if_project_has_path()
+        # self._load_default_project_on_startup()
 
+    def _load_default_project_on_startup(self) -> None:
+        default_path = Path(__file__).resolve().parent.parent / "260527 Three Datasets KD.rftproj"
+        if not default_path.exists():
+            return
+        try:
+            self.project = load_project(default_path)
+        except Exception as e:
+            QMessageBox.warning(self, "Startup Project", f"Could not load default project:\n{e}")
+            return
+        self._project_path = default_path
+        self.setWindowTitle(f"CyPRES RFT Plotter - {default_path.name}")
+        
+        self._refresh_data_tree()
+        self._refresh_analyses_tree()
+        self._check_if_project_has_path()
+        self.project.mark_clean()
 
     def _build_ui(self):
         self._build_actions()
@@ -27,6 +44,8 @@ class MainWindowKD(QMainWindow):
         self._build_menubar()
         # self._build_statusbar()
         self._connect_signals()
+        # self.setWindowState(self.windowState() | Qt.WindowState.WindowMaximized)
+        self._load_default_project_on_startup()
 
     def _build_central_widget(self):
         central_widget = QWidget(self)
@@ -290,7 +309,7 @@ class MainWindowKD(QMainWindow):
         for i in range(tree.topLevelItemCount()):
             dataset_name = tree.topLevelItem(i).text(0)
             columns_node = tree.topLevelItem(i).child(1)
-            dataset = self.project.get_loaded_dataset(dataset_name)
+            dataset = self.project.get_dataset_by_name(dataset_name)
             
             for k in range (columns_node.childCount()):
                 col_item = columns_node.child(k)
@@ -344,7 +363,7 @@ class MainWindowKD(QMainWindow):
 
     def _start_new_analysis(self)->None:
         #Exit the module if not data is available in the project
-        if not self.project.loaded_datasets or len(self.project.loaded_datasets)==0:
+        if not self.project.datasets or len(self.project.datasets)==0:
             QMessageBox.critical(self,"New Analysis", """
             No pressure data has been loaded in the project. 
             Please import data first before proceeding with an analysis""")
@@ -358,7 +377,6 @@ class MainWindowKD(QMainWindow):
         if not dataset or not columns:
             QMessageBox.warning(self, "New Analysis", "Please select at least a depth and pressure column from one dataset.")
             return
-
 
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None

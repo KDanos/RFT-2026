@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import QTreeWidget, QWidget, QTreeWidgetItem
 import pandas as pd
-from project import LoadedDataSet
+from project import DataSet
 
 
 class DataFrameTree(QTreeWidget):
     def __init__(self, 
                 parent: QWidget | None = None, 
-                loaded_dataset: LoadedDataSet | None = None,
+                loaded_dataset: DataSet | None = None,
                 ) -> None:
         super().__init__(parent)
         

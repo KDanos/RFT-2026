@@ -1,10 +1,10 @@
 from .persistence import save_project, load_project
-from .models import ColumnSpec, LoadedDataSet, AnalysisObject, DataFrameSpecs
+from .models import ColumnSpec, DataSet, AnalysisObject, DataFrameSpecs
 from .manager import ProjectDataManager
 
 __all__ = ["ColumnSpec", 
             "ProjectDataManager", 
-            "LoadedDataSet", 
+            "DataSet", 
             "save_project",
             "load_project",
             "AnalysisObject",

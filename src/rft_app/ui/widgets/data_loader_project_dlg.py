@@ -15,9 +15,7 @@ class DataLoaderDialogProject(QDialog):
     def __init__(self, parent=None, project = None):
         super().__init__(parent)
         
-        self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaced when the _create_dataframe function is run
-        self.imported_column_specs: list[ColumnSpec] = []
-        self.imported_dataframe_specs: DataFrameSpecs = None
+        #Design the Window
         self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
         self.setWindowTitle("Data Loader")       
         self.setWindowFlags(
@@ -27,6 +25,16 @@ class DataLoaderDialogProject(QDialog):
         )
         #Provide access to the project data, imported as the project object when the DataLoaderDialog load function is called in the main window (load_data(self)) 
         self.project = project
+        
+        #Define starting attributes
+        self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaced when the _create_dataframe function is run
+        self.imported_column_specs: list[ColumnSpec] = []
+        self.imported_dataframe_specs: DataFrameSpecs = None
+        
+        #Initilise with empty attributes
+        self.data_rows = []
+        self.rows_to_ignore = []
+        self.columns_to_ignore =[]
         
         self._build_ui()
         
@@ -50,10 +58,6 @@ class DataLoaderDialogProject(QDialog):
         self.mapping_table.horizontalScrollBar().valueChanged.connect(self._sync_scroller_position)
 
     def _build_ui(self):
-        #Initilise with empty attributes
-        self.data_rows = []
-        self.rows_to_ignore = []
-        self.columns_to_ignore =[]
 
         #Left: import controls
         self.controls_frame = QFrame()
@@ -95,10 +99,11 @@ class DataLoaderDialogProject(QDialog):
         #Define number of decimals at import
         decimalsContainer = QHBoxLayout()
         self.decimals_check_box = QCheckBox("Round decimals")
+        self.decimals_check_box.setCheckState(Qt.CheckState.Checked)
         self.decimal_limit_spin = QSpinBox()
-        self.decimal_limit_spin.setValue(0)
+        self.decimal_limit_spin.setValue(1)
         self.decimal_limit_spin.setMaximum(10000)
-        self.decimal_limit_spin.setEnabled(False)
+        self.decimal_limit_spin.setEnabled(True)
         decimalsContainer.addWidget(self.decimals_check_box)
         decimalsContainer.addWidget(self.decimal_limit_spin)
         controls_layout.addLayout(decimalsContainer)
@@ -235,6 +240,9 @@ class DataLoaderDialogProject(QDialog):
 
         #Check any rows that have been previously selected for deletion
         self._recheck_rows_to_ignore()
+
+        # Round the decimal points to the
+        self._round_decimal_points_in_preview_table()
 
     def _update_mapping_table(self):
         data_column_count = len(self.data_rows[0]) if self.data_rows else 5
@@ -592,10 +600,12 @@ class DataLoaderDialogProject(QDialog):
         return preview_dialog.exec()
 
     def _round_decimal_points_in_preview_table(self, decimal_points:int = 1000)->None:
+        if not self.decimals_check_box.isChecked():
+            return
+    
         self.preview_table.blockSignals(True)
-        
-        if self.decimals_check_box.isChecked():
-            decimal_points = self.decimal_limit_spin.value()
+    
+        decimal_points = self.decimal_limit_spin.value()
         try:
             for r in range(self.preview_table.rowCount()):
                 for c in range(1,self.preview_table.columnCount()):#skip the index 0 which is the "ignore row" collumn
