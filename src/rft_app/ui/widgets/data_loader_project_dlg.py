@@ -8,7 +8,7 @@ from io import StringIO
 from qtpy.QtWidgets import QSplitter
 from project import ColumnSpec, DataFrameSpecs, DataFrameSpecs
 from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units
-from utils import is_numeric
+from utilities import is_numeric
 import pandas as pd
 
 class DataLoaderDialogProject(QDialog):
@@ -96,7 +96,7 @@ class DataLoaderDialogProject(QDialog):
         self.import_data_btn = QPushButton("Import Data")
         controls_layout.addWidget(self.import_data_btn)
         
-        #Define number of decimals at import
+        #Define number of decimals to view
         decimalsContainer = QHBoxLayout()
         self.decimals_check_box = QCheckBox("Round decimals")
         self.decimals_check_box.setCheckState(Qt.CheckState.Checked)

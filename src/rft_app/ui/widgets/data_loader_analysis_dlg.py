@@ -1,12 +1,14 @@
+from pprint import pprint
+from PyQt6.QtCore import QSignalBlocker, Qt
+from PyQt6.QtWidgets import (QCheckBox, QDialog, QGridLayout, QLabel, QSplitter, QTableWidget, QTreeWidget, QTreeWidgetItem, 
+                            QTreeWidgetItemIterator, QVBoxLayout, QWidget, QComboBox, QFrame, QHBoxLayout, 
+                            QLineEdit, QSpinBox, QTableWidgetItem)
+from qtpy.QtWidgets import QMessageBox, QPushButton
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QSplitter, QTableWidget, QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator, QVBoxLayout, QWidget, QComboBox, QFrame
-from qtpy.QtWidgets import QLineEdit, QTableWidgetItem
-
-from project import AnalysisObject, DataSet, ProjectDataManager
+from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units, get_project_default_units
 from .all_datasets_tree import AllDataSetsTree
-from utils import get_tree_top_level_item_by_name, get_tree_item_by_name, is_numeric, unique_name
+from utilities import get_tree_top_level_item_by_name, get_tree_item_by_name, is_numeric, round_str_to_decimal_points, unique_name, update_tree_descendants, update_tree_ancestors
 import pandas as pd
 
 
@@ -23,6 +25,7 @@ class DataLoaderDialogAnalysis(QDialog):
         self.selected_dataset = None
         self.selected_columns = []
         self.selected_columns_specs = []
+        self.result_analysis = None
 
         # Execute the build functions
         self._build_ui()
@@ -45,7 +48,7 @@ class DataLoaderDialogAnalysis(QDialog):
         main_splitter = QSplitter(self)
         main_splitter.addWidget(self.data_frame)
         main_splitter.addWidget(self.table_frame)
-        main_splitter.setSizes([2000, 4000])
+        main_splitter.setSizes([1000, 5000])
 
         self.main_layout = QVBoxLayout(self)
         self.main_layout.addWidget(main_splitter)
@@ -56,11 +59,45 @@ class DataLoaderDialogAnalysis(QDialog):
         self.name_lineEdit.setPlaceholderText("Analysis Name")
         self.data_frame_layout.addWidget(self.name_lineEdit)
 
+        # Mapping primary depth and pressure data
+        self.mapping_layout=QGridLayout()
+        self.depth_label = QLabel("Depth Column")
+        self.pressure_label = QLabel("Pressure Column")
+        self.depth_combo = QComboBox(self.data_frame)
+        self.pressure_combo = QComboBox(self.data_frame)
+        self.mapping_layout.addWidget(self.depth_label, 1,1)
+        self.mapping_layout.addWidget(self.pressure_label, 2,1)
+        self.mapping_layout.addWidget(self.depth_combo, 1,2)
+        self.mapping_layout.addWidget(self.pressure_combo, 2,2)
+        self.data_frame_layout.addLayout(self.mapping_layout)
+       
         # Create the data tree
         self.loaded_data_tree = AllDataSetsTree(self.data_frame, self.project)
         self.data_frame_layout.addWidget(self.loaded_data_tree)
         self._make_tree_tristate_checkable(self.loaded_data_tree)
 
+        #Create a start analysis button
+        self.start_btn = QPushButton("Start Analysis",self.data_frame)
+        self.data_frame_layout.addWidget(self.start_btn)
+        
+        #Create the decimal rounding options
+        decimalsContainer = QHBoxLayout()
+        self.decimals_check_box = QCheckBox("Round decimals")
+        self.decimals_check_box.setCheckState(Qt.CheckState.Checked)
+        self.decimal_limit_spin = QSpinBox()
+        self.decimal_limit_spin.setValue(1)
+        self.decimal_limit_spin.setMaximum(10000)
+        self.decimal_limit_spin.setEnabled(True)
+        decimalsContainer.addWidget(self.decimals_check_box)
+        decimalsContainer.addWidget(self.decimal_limit_spin)
+        self.data_frame_layout.addLayout(decimalsContainer)
+
+        #Ensure manual typing works in the decimals spinbox
+        self.decimal_limit_spin.setReadOnly(False)
+        self.decimal_limit_spin.lineEdit().setReadOnly(False)
+        self.decimal_limit_spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.decimal_limit_spin.setKeyboardTracking(False)
+        
         # Create the table preview
         self.preview_table = QTableWidget()
         table_layout = QVBoxLayout(self.table_frame)
@@ -74,6 +111,8 @@ class DataLoaderDialogAnalysis(QDialog):
 
     def _connect_signals(self) -> None:
         self.loaded_data_tree.itemChanged.connect(self._on_tree_item_changed)
+        self.decimal_limit_spin.valueChanged.connect(self._update_table_values)
+        self.start_btn.clicked.connect(self._start_analysis)
 
     def _make_tree_tristate_checkable(self, tree: QTreeWidget) -> None:
         it = QTreeWidgetItemIterator(tree)
@@ -109,7 +148,7 @@ class DataLoaderDialogAnalysis(QDialog):
                 if other_top.checkState(0) == Qt.CheckState.Unchecked:
                     continue
                 other_top.setCheckState(0, Qt.CheckState.Unchecked)
-                self._set_descendants_without_signal_blocks(other_top, Qt.CheckState.Unchecked)
+                update_tree_descendants(other_top, Qt.CheckState.Unchecked)
         finally:
             tree.blockSignals(False)
 
@@ -145,8 +184,9 @@ class DataLoaderDialogAnalysis(QDialog):
         self._update_ancestors(item)
         self._enforce_only_one_dataset(item)
         dataset_name = self._dataset_name_for_item(item)
-        self._extract_dataset_and_columns(dataset_name)
+        self._extract_dataset_and_columns(dataset_name) 
         self._create_analysis_dataframe()
+        self._update_mapping_combos()
         self._update_table()
 
     def _update_table(self) -> None:
@@ -232,8 +272,14 @@ class DataLoaderDialogAnalysis(QDialog):
                             user_output_unit=user_unit,
                             quantity_type=quantity_key,
                             value=value)
+                
+                        #Round the values to selected decimal points
+                        value = round_str_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
                 display = str(value)
-                self.preview_table.setItem(r + 1, c, QTableWidgetItem(display))
+                
+                item = QTableWidgetItem(display)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.preview_table.setItem(r + 1, c, item)
 
     def _get_analysis_name(self) -> str:
         name = self.name_lineEdit.text() if self.name_lineEdit.text() else "Analysis"
@@ -254,10 +300,16 @@ class DataLoaderDialogAnalysis(QDialog):
         source_datasets = [self.selected_dataset.name]
         analysis_dataset = self.analysis_dataset
 
+        formation_pressure_src_col =self.pressure_combo.currentText().strip()
+        vert_depth_src_col = self.depth_combo.currentText().strip()
+
         new_analysis_object = AnalysisObject(
             name=name,
             source_datasets=source_datasets,
-            analysis_dataset=analysis_dataset)
+            analysis_dataset=analysis_dataset,
+            formation_pres_src_col=formation_pressure_src_col,
+            vert_depth_src_col = vert_depth_src_col,
+            )
         return new_analysis_object
 
     def _create_displayed_data_dataframe(self) -> None:
@@ -265,64 +317,78 @@ class DataLoaderDialogAnalysis(QDialog):
 
     def _set_descendants(self, item: QTreeWidgetItem) -> None:
 
-        # Extract the new state of the item
-        state = item.checkState(0)
-
-        # Identify the tree to which the item belongs
         tree = item.treeWidget()
-        if tree is None:
-            return
-        try:
-            # Block signals
-            tree.blockSignals(True)
-            self._set_descendants_without_signal_blocks(item, state)
-
-        finally:
-            # Unblock signals
-            tree.blockSignals(False)
-
-    def _set_descendants_without_signal_blocks(self, item: QTreeWidgetItem, state: Qt.CheckState):
-        for i in range(item.childCount()):
-            child = item.child(i)
-            child.setCheckState(0, state)
-            self._set_descendants_without_signal_blocks(child, state)
+        state = item.checkState(0)
+        if tree is not None:
+            with QSignalBlocker(tree):
+                update_tree_descendants(item, state)
 
     def _update_ancestors(self, item: QTreeWidgetItem) -> None:
-
-        # Identify the tree to which the item belongs
         tree = item.treeWidget()
-        if tree is None:
-            return
-        # Block signals
-        tree.blockSignals(True)
-        try:
-            self._update_uncestors_without_signal_block(item)
-        finally:
-            # Unblock signals
-            tree.blockSignals(False)
-
-    def _update_uncestors_without_signal_block(self, item: QTreeWidgetItem) -> None:
-        parent = item.parent()
-        while parent is not None:
-            checked = 0
-            unchecked = 0
-            for i in range(parent.childCount()):
-                state = parent.child(i).checkState(0)
-                if state == Qt.CheckState.Checked:
-                    checked += 1
-                elif state == Qt.CheckState.Unchecked:
-                    unchecked += 1
-            if checked == parent.childCount():
-                parent.setCheckState(0, Qt.CheckState.Checked)
-            elif unchecked == parent.childCount():
-                parent.setCheckState(0, Qt.CheckState.Unchecked)
-            else:
-                parent.setCheckState(0, Qt.CheckState.PartiallyChecked)
-            # Iterate to the next parent
-            parent = parent.parent()
+        if tree is not None:
+            with QSignalBlocker(tree):
+                update_tree_ancestors(item)
 
     def _create_empty_preview_table(self):
         table = self.preview_table
         table.setColumnCount(5)
         table.setRowCount(5)
         table.clear()
+
+    def _create_options_list(
+        self,
+        user_quantity:str, 
+        column_specs:list[ColumnSpec]
+        )->list[str]:
+        
+        options = []
+        for spec in column_specs:
+            name = spec.name
+            quantity_key = spec.quantity_key
+            if user_quantity  == quantity_key:
+                options.append(name)
+        return options
+
+    def _update_mapping_combos(self):
+        if self.analysis_dataset is None or not self.analysis_dataset.column_specs:
+            self.depth_combo.clear()
+            self.pressure_combo.clear()
+            return
+        
+        #Update depth combo
+        depth_options = self._create_options_list("length", self.analysis_dataset.column_specs)
+        self.depth_combo.clear()
+        self.depth_combo.addItems(depth_options)
+
+        #Update pressure combo
+        pressure_options = self._create_options_list("pressure", self.analysis_dataset.column_specs)        
+        self.pressure_combo.clear()
+        self.pressure_combo.addItems(pressure_options)
+
+    def _start_analysis(self)->AnalysisObject:
+        if not self.selected_columns:
+            QMessageBox.warning(
+                self,
+                "Start New Analysis",
+                "No columns have been selected. Check at least on column in the tree"
+            )
+            return
+        if self.depth_combo == "":
+            QMessageBox.warning(
+                self,
+                "Start New Analysis",
+                """Ensure that a column defined as a 'length' quantity has been selected to serve 
+                as the base depth axis for the analysis"""
+            )
+            return
+        if self.pressure_combo == "":
+            QMessageBox.warning(
+                self,
+                "Start New Analysis",
+                """Ensure that a column defined as a 'pressure' quantity has been selected to serve 
+                as the base formation pressure for the analysis """
+            )
+        else:
+            self.result_analysis = self._create_analysis_object()
+            pprint(self.result_analysis)
+            self.accept()

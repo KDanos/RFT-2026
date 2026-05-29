@@ -2,7 +2,7 @@
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
 from .models import AnalysisObject, ColumnSpec, DataSet, DataFrameSpecs
-from utils import unique_name
+from utilities import unique_name
 
 
 

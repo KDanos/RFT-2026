@@ -1,0 +1,39 @@
+from PyQt6.QtWidgets import QTreeWidget, QWidget
+from qtpy.QtWidgets import QTreeWidgetItem
+
+
+from project import AnalysisObject, ProjectDataManager
+
+
+class AnalysesTree(QTreeWidget):
+    def __init__(self,
+                parent:QWidget| None = None,
+                project:ProjectDataManager=None
+                )->QTreeWidget:
+        super().__init__(parent)
+
+        self.parent = parent
+        self.project = project
+        self.analyses = project.analyses
+        self.setHeaderLabel("Analyses")
+        
+        for analysis in self.project.analyses:
+            #Add the top level item
+            top_level = QTreeWidgetItem([analysis.name])
+            top_level.setExpanded(True)
+            self.addTopLevelItem(top_level)
+
+            # Add the second level items
+            #Source Data
+            source_node = QTreeWidgetItem(["Source Datasets:"])
+            top_level.addChild(source_node)
+            for name in analysis.source_datasets:
+                source_node.addChild (QTreeWidgetItem([name]))
+
+            #Depth reference 
+            text = f"Depth Column: {analysis.vert_depth_src_col}"
+            top_level.addChild(QTreeWidgetItem([text]))
+            
+            # Pressure reference
+            text = f"Pressure Column: {analysis.formation_pres_src_col}"
+            top_level.addChild(QTreeWidgetItem([text]))

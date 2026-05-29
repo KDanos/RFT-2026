@@ -4,9 +4,10 @@ from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMa
 from pathlib import Path
 
 from project import ProjectDataManager, load_project, save_project, AnalysisObject
-from utils import unique_name
+from utilities import unique_name
 
-from ui.widgets import DataLoaderDialogAnalysis, DataLoaderDialogProject, AnalysisWidget, AnalysisTree, AllDataSetsTree
+from ui.widgets import (DataLoaderDialogAnalysis, DataLoaderDialogProject, AnalysisWidget, 
+                        AllDataSetsTree, AnalysesTree)
 from ui import app_icon, load_qss, save_project_as, open_project_dialog
 
 class MainWindowKD(QMainWindow):
@@ -211,7 +212,7 @@ class MainWindowKD(QMainWindow):
 
         #Build a tree for the analysis in the project
         self.project_analyses_frame = QFrame(self)
-        self.analysis_tree_layout = QVBoxLayout(self.project_analyses_frame)
+        self.analyses_tree_layout = QVBoxLayout(self.project_analyses_frame)
         
         self.btn_1 = QPushButton("Build Master Data Tree")
         self.btn_2 = QPushButton("Second placeholder Button")
@@ -322,17 +323,16 @@ class MainWindowKD(QMainWindow):
         tree_layout.insertWidget(0, self.project_data_tree)
  
     def _refresh_analyses_tree(self)->None:
-        #Clear the existing analysese tree
-        while self.analysis_tree_layout.count():
-            item = self.analysis_tree_layout.takeAt(0)
+        #Clear the existing analyses tree
+        while self.analyses_tree_layout.count():
+            item = self.analyses_tree_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
 
         #Repopulate the analysis tree    
-        for analysis in self.project.analyses:
-            new_tree = AnalysisTree(self, analysis)
-            self.analysis_tree_layout.addWidget(new_tree)
+        new_tree = AnalysesTree(self.project_data_frame, self.project)
+        self.analyses_tree_layout.addWidget(new_tree)
 
     def _add_analysis_tab(self)->None:
         new_analysis = self._create_new_analysis_object()
@@ -350,16 +350,17 @@ class MainWindowKD(QMainWindow):
         #Raise a "need to save flag" prior to exiting the project
         self.project.mark_modified()
 
-    def _create_new_analysis_object(self)->AnalysisObject: 
-        new_analysis = AnalysisObject()
-        existing_names = {analysis.name for analysis in self.project.analyses}
-        new_analysis.name = unique_name("Analysis", existing_names)
-        self.project.analyses.append(new_analysis)
+    def _create_new_analysis_view(self)->AnalysisObject: 
+        pass
+        # new_analysis = AnalysisObject()
+        # existing_names = {analysis.name for analysis in self.project.analyses}
+        # new_analysis.name = unique_name("Analysis", existing_names)
+        # self.project.analyses.append(new_analysis)
         
-        #Raise a "need to save flag" prior to exiting the project
-        self.project.mark_modified()
+        # #Raise a "need to save flag" prior to exiting the project
+        # self.project.mark_modified()
         
-        return new_analysis
+        # return new_analysis
 
     def _start_new_analysis(self)->None:
         #Exit the module if not data is available in the project
@@ -373,10 +374,14 @@ class MainWindowKD(QMainWindow):
         if analysis_dlg.exec() != QDialog.DialogCode.Accepted:
             return
 
-        dataset, columns = analysis_dlg.return_dataset_and_columns()
-        if not dataset or not columns:
-            QMessageBox.warning(self, "New Analysis", "Please select at least a depth and pressure column from one dataset.")
+        new_analysis_object = analysis_dlg.result_analysis
+        if new_analysis_object is None:
             return
+        self.project.analyses.append(new_analysis_object)
+
+        #Raise a "need to save flag" prior to exiting the project
+        self.project.mark_modified()
+        self._refresh_analyses_tree()
 
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None

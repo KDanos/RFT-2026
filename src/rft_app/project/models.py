@@ -35,6 +35,8 @@ class AnalysisObject:
     name:str = ""
     source_datasets:list[str] = field(default_factory= list)
     analysis_dataset:DataSet | None = None
+    formation_pres_src_col: str = None
+    vert_depth_src_col:str = None
     displayed_dataframe: pd.DataFrame | None = None
     fluids:list[Fluid] = field (default_factory= list)
     parameters:dict[str,Any] = field (default_factory= dict)
