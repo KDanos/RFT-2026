@@ -1,12 +1,14 @@
 from typing import Optional
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,  QMessageBox, QPushButton, QRadioButton, QSizePolicy,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,  QMessageBox, QPushButton, QRadioButton, QSizePolicy,  QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout  ,QSplitter
 import csv
 from io import StringIO
 
-from qtpy.QtWidgets import QSplitter
+from pint.facets.numpy import unit
+
 from project import ColumnSpec, DataFrameSpecs, DataFrameSpecs
+from .table_widgets import UnitsComboBox
 from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units
 from utilities import is_numeric
 import pandas as pd
@@ -300,10 +302,13 @@ class DataLoaderDialogProject(QDialog):
 
             #Select the units associated with the quantity
             quantity_chosen = quantity_combo.currentData()
-            quantity_object = STANDARD_QUANTITIES[quantity_chosen]
-            units_list = quantity_object.units
-            units_combo = QComboBox()
-            units_combo.addItems(units_list)
+            units_combo = UnitsComboBox(quantity_chosen)
+
+            # Redundant, remove once UnitsCombo() is proven to work
+            # quantity_object = STANDARD_QUANTITIES[quantity_chosen]
+            # units_list = quantity_object.units
+            # units_combo = QComboBox()
+            # units_combo.addItems(units_list)
 
             default_unit = self._get_project_default_units(quantity_chosen)
             idx = units_combo.findText(default_unit)
@@ -319,20 +324,16 @@ class DataLoaderDialogProject(QDialog):
         if not quantity_combo or units_combo is None:
             return
         
+        if not isinstance(units_combo, UnitsComboBox): #guard in case it is some other kind of widget
+            return 
         qkey = quantity_combo.currentData()
-        qobj = STANDARD_QUANTITIES[qkey]
 
-        units_combo.blockSignals(True)
-        units_combo.clear()
-        units_combo.addItems(qobj.units)
-        
-        
-        default_unit=self._get_project_default_units(qkey)
-        idx = units_combo.findText(default_unit)
-        if idx >= 0:
-            units_combo.setCurrentIndex(idx)
-        
-        units_combo.blockSignals(False)
+        with QSignalBlocker(units_combo):
+            units_combo.update_units_list(qkey)
+            default_unit=self._get_project_default_units(qkey)
+            idx = units_combo.findText(default_unit)
+            if idx >= 0:
+                units_combo.setCurrentIndex(idx)    
 
     def _make_checkbox_item(self,name:str) -> QTableWidgetItem:
         item = QTableWidgetItem(name)

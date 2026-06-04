@@ -4,9 +4,8 @@ from PyQt6.QtWidgets import QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMa
 from pathlib import Path
 
 from project import ProjectDataManager, load_project, save_project, AnalysisObject
-from utilities import unique_name
 
-from ui.widgets import (DataLoaderDialogAnalysis, DataLoaderDialogProject, AnalysisWidget, 
+from ui.widgets import (AnalysisViewWidget, DataLoaderDialogAnalysis, DataLoaderDialogProject,
                         AllDataSetsTree, AnalysesTree)
 from ui import app_icon, load_qss, save_project_as, open_project_dialog
 
@@ -23,7 +22,7 @@ class MainWindowKD(QMainWindow):
         # self._load_default_project_on_startup()
 
     def _load_default_project_on_startup(self) -> None:
-        default_path = Path(__file__).resolve().parent.parent / "260527 Three Datasets KD.rftproj"
+        default_path = Path(__file__).resolve().parent.parent / "260529 Two Analyses KD.rftproj"
         if not default_path.exists():
             return
         try:
@@ -45,7 +44,7 @@ class MainWindowKD(QMainWindow):
         self._build_menubar()
         # self._build_statusbar()
         self._connect_signals()
-        # self.setWindowState(self.windowState() | Qt.WindowState.WindowMaximized)
+        self.setWindowState(self.windowState() | Qt.WindowState.WindowMaximized)
         self._load_default_project_on_startup()
 
     def _build_central_widget(self):
@@ -61,20 +60,18 @@ class MainWindowKD(QMainWindow):
         self.analysis_frame_layout = QVBoxLayout()
         self.analysis_frame.setLayout(self.analysis_frame_layout)
 
-        self.analysis_tabs = QTabWidget(self.analysis_frame)
-        self.analysis_frame_layout.addWidget(self.analysis_tabs)
+        self.analyses_tabs = QTabWidget(self.analysis_frame)
+        self.analysis_frame_layout.addWidget(self.analyses_tabs)
 
-        self.analysis_tabs.setTabShape(QTabWidget.TabShape.Triangular)
-        self.analysis_tabs.setTabPosition(QTabWidget.TabPosition.North)
-        self.analysis_tabs.setTabsClosable(True)
-        self.analysis_tabs.setMovable(True)
+        self.analyses_tabs.setTabShape(QTabWidget.TabShape.Triangular)
+        self.analyses_tabs.setTabPosition(QTabWidget.TabPosition.North)
+        self.analyses_tabs.setTabsClosable(True)
+        self.analyses_tabs.setMovable(True)
 
-        self.new_tab_btn = QToolButton(self.analysis_tabs)
+        self.new_tab_btn = QToolButton(self.analyses_tabs)
         self.new_tab_btn.setText("+")
         self.new_tab_btn.setAutoRaise(True)
-        self.analysis_tabs.setCornerWidget(self.new_tab_btn,Qt.Corner.TopRightCorner)
-
-        self._create_a_starting_analysis_tab()
+        self.analyses_tabs.setCornerWidget(self.new_tab_btn,Qt.Corner.TopRightCorner)
         
         #Status Bar
         
@@ -84,11 +81,6 @@ class MainWindowKD(QMainWindow):
         hbox.addWidget(self.mainSplitter)
         self.mainSplitter.setSizes([1000,5000])
         self.setCentralWidget(central_widget)
-
-    def _create_a_starting_analysis_tab(self)->None:
-        self.starting_tab = QWidget(self.analysis_tabs)
-        self.staring_tab_layout = QVBoxLayout(self.starting_tab)
-        self.analysis_tabs.addTab(self.starting_tab, "Analysis 1")
 
     def _build_menubar(self):
         menubar = self.menuBar()
@@ -225,7 +217,7 @@ class MainWindowKD(QMainWindow):
         return self.project_controls_frame
 
     def _connect_signals(self)-> None:
-        self.actionLoadData.triggered.connect(self.import_new_data)
+        self.actionLoadData.triggered.connect(self._import_new_data)
         self.actionSaveAs.triggered.connect(self._save_project_as)
         self.actionSaveProject.triggered.connect(self._save_project)
         self.actionOpenProject.triggered.connect(self._open_project)
@@ -238,7 +230,7 @@ class MainWindowKD(QMainWindow):
         self.new_tab_btn.clicked.connect(self._add_analysis_tab)
         self.btn_1.clicked.connect (self._refresh_data_tree)
 
-    def import_new_data(self)-> None:
+    def _import_new_data(self)-> None:
         dlg = DataLoaderDialogProject(parent = self, project = self.project)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.imported_df is not None:
             df = dlg.imported_df
@@ -334,33 +326,33 @@ class MainWindowKD(QMainWindow):
         new_tree = AnalysesTree(self.project_data_frame, self.project)
         self.analyses_tree_layout.addWidget(new_tree)
 
-    def _add_analysis_tab(self)->None:
-        new_analysis = self._create_new_analysis_object()
-        page = QWidget(self.analysis_tabs)
+    def _add_analysis_tab(self,analysis:AnalysisObject)->QTabWidget:
+
+        page = QWidget(self.analyses_tabs)
         layout= QVBoxLayout(page)
-        new_widget = AnalysisWidget(page)
+        new_widget = QTabWidget(page)
         layout.addWidget(new_widget)
-        idx = self.analysis_tabs.addTab(page, new_analysis.name)
-        self.analysis_tabs.setCurrentIndex(idx)
+        idx = self.analyses_tabs.addTab(page, analysis.name)
+        self.analyses_tabs.setCurrentIndex(idx)
+        return new_widget
 
     def _close_analysis_tab(self,idx:int)->None:
-        self.analysis_tabs.removeTab(idx)
+        self.analyses_tabs.removeTab(idx)
         self.Widget.deleteLater()
 
         #Raise a "need to save flag" prior to exiting the project
         self.project.mark_modified()
 
-    def _create_new_analysis_view(self)->AnalysisObject: 
-        pass
-        # new_analysis = AnalysisObject()
-        # existing_names = {analysis.name for analysis in self.project.analyses}
-        # new_analysis.name = unique_name("Analysis", existing_names)
-        # self.project.analyses.append(new_analysis)
+    def _create_new_analysis_view(self, parent:QTabWidget)->AnalysisObject: 
+        page = AnalysisViewWidget(parent)
+        # layout = QVBoxLayout(page)
+        new_widget = QTabWidget(page)
+        # layout.addWidget(new_widget)
+        idx = parent.addTab(page, "placeholder text")
+        parent.setCurrentIndex(idx)
         
-        # #Raise a "need to save flag" prior to exiting the project
-        # self.project.mark_modified()
-        
-        # return new_analysis
+        #Raise a "need to save flag" prior to exiting the project
+        self.project.mark_modified()
 
     def _start_new_analysis(self)->None:
         #Exit the module if not data is available in the project
@@ -382,13 +374,17 @@ class MainWindowKD(QMainWindow):
         #Raise a "need to save flag" prior to exiting the project
         self.project.mark_modified()
         self._refresh_analyses_tree()
+        
+        # Create a default view tab
+        new_analysis_tab = self._add_analysis_tab(new_analysis_object)
+        self._create_new_analysis_view(new_analysis_tab)
 
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None
         self.actionSaveProject.setEnabled(has_path)
 
     def _close_project(self)-> None:
-        print("_close_project called, is_modified =", self.project.is_modified)
+
         if not self._confirm_discard_or_save_if_modified():
             return
         
@@ -398,14 +394,11 @@ class MainWindowKD(QMainWindow):
         self.setWindowTitle("CyPRES RFT Plotter")
 
         #Clear analysis tabs
-        while self.analysis_tabs.count()>0:
-            widget = self.analysis_tabs.widget(0)
-            self.analysis_tabs.removeTab(0)
+        while self.analyses_tabs.count()>0:
+            widget = self.analyses_tabs.widget(0)
+            self.analyses_tabs.removeTab(0)
             if widget is not None:
                 widget.deleteLater()
-
-        #Create an empty starter tab
-        self._create_a_starting_analysis_tab()
 
         #Clear the project data and analysese trees
         self._refresh_analyses_tree()

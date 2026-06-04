@@ -1,12 +1,11 @@
-from pprint import pprint
 from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtWidgets import (QCheckBox, QDialog, QGridLayout, QLabel, QSplitter, QTableWidget, QTreeWidget, QTreeWidgetItem, 
                             QTreeWidgetItemIterator, QVBoxLayout, QWidget, QComboBox, QFrame, QHBoxLayout, 
-                            QLineEdit, QSpinBox, QTableWidgetItem)
-from qtpy.QtWidgets import QMessageBox, QPushButton
+                            QLineEdit, QSpinBox, QTableWidgetItem,QMessageBox, QPushButton)
 
 from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
-from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units, get_project_default_units
+from .table_widgets import UnitsComboBox
+from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from .all_datasets_tree import AllDataSetsTree
 from utilities import get_tree_top_level_item_by_name, get_tree_item_by_name, is_numeric, round_str_to_decimal_points, unique_name, update_tree_descendants, update_tree_ancestors
 import pandas as pd
@@ -205,21 +204,16 @@ class DataLoaderDialogAnalysis(QDialog):
             all_columns = list(self.selected_dataset.dataframe.columns)
 
             for c in range(column_count):
-                units_combo = QComboBox()
-                units_combo.currentTextChanged.connect(self._update_table_values)
+
                 header = header_list[c]
                 idx = all_columns.index(header)
                 quantity_key = self.selected_dataset.column_specs[idx].quantity_key
-                units_list = STANDARD_QUANTITIES[quantity_key].units
-                default_unit = get_project_default_units(self.project, quantity_key)
+                units_combo = UnitsComboBox(quantity_key=quantity_key)
+                units_combo.currentTextChanged.connect(self._update_table_values)
 
-                # Silence currentTextChanged during addItems/setCurrentText
-                units_combo.blockSignals(True)
-                try:
-                    units_combo.addItems(units_list)
-                    units_combo.setCurrentText(default_unit)
-                finally:
-                    units_combo.blockSignals(False)
+                with QSignalBlocker(units_combo):    
+                    units_combo.set_default_unit(self.project)
+
                 self.preview_table.setCellWidget(0, c, units_combo)
 
             # Update the values in the new table
@@ -295,23 +289,6 @@ class DataLoaderDialogAnalysis(QDialog):
             existing_names.append(analysis.name)
         return existing_names
 
-    def _create_analysis_object(self) -> AnalysisObject:
-        name = self.analysis_dataset.name
-        source_datasets = [self.selected_dataset.name]
-        analysis_dataset = self.analysis_dataset
-
-        formation_pressure_src_col =self.pressure_combo.currentText().strip()
-        vert_depth_src_col = self.depth_combo.currentText().strip()
-
-        new_analysis_object = AnalysisObject(
-            name=name,
-            source_datasets=source_datasets,
-            analysis_dataset=analysis_dataset,
-            formation_pres_src_col=formation_pressure_src_col,
-            vert_depth_src_col = vert_depth_src_col,
-            )
-        return new_analysis_object
-
     def _create_displayed_data_dataframe(self) -> None:
         pass
 
@@ -365,6 +342,8 @@ class DataLoaderDialogAnalysis(QDialog):
         self.pressure_combo.clear()
         self.pressure_combo.addItems(pressure_options)
 
+#Creating the new analysis
+    # function to be called from the main window, to extract the newly created analysis object
     def _start_analysis(self)->AnalysisObject:
         if not self.selected_columns:
             QMessageBox.warning(
@@ -390,5 +369,21 @@ class DataLoaderDialogAnalysis(QDialog):
             )
         else:
             self.result_analysis = self._create_analysis_object()
-            pprint(self.result_analysis)
             self.accept()
+
+    def _create_analysis_object(self) -> AnalysisObject:
+        name = self.analysis_dataset.name
+        source_datasets = [self.selected_dataset.name]
+        analysis_dataset = self.analysis_dataset
+
+        formation_pressure_src_col =self.pressure_combo.currentText().strip()
+        vert_depth_src_col = self.depth_combo.currentText().strip()
+
+        new_analysis_object = AnalysisObject(
+            name=name,
+            source_datasets=source_datasets,
+            analysis_dataset=analysis_dataset,
+            formation_pres_src_col=formation_pressure_src_col,
+            vert_depth_src_col = vert_depth_src_col,
+            )
+        return new_analysis_object
