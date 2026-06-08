@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QCheckBox, QDialog, QGridLayout, QLabel, QSplitter,
 from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
 from .table_widgets import UnitsComboBox
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
-from .all_datasets_tree import AllDataSetsTree
+from .tree_all_datasets import AllDataSetsTree
 from utilities import get_tree_top_level_item_by_name, get_tree_item_by_name, is_numeric, round_str_to_decimal_points, unique_name, update_tree_descendants, update_tree_ancestors
 import pandas as pd
 

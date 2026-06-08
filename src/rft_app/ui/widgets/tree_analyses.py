@@ -1,3 +1,4 @@
+from PyQt6.QtCore import QSignalBlocker
 from PyQt6.QtWidgets import QTreeWidget, QWidget
 from qtpy.QtWidgets import QTreeWidgetItem
 
@@ -14,9 +15,10 @@ class AnalysesTree(QTreeWidget):
 
         self.parent = parent
         self.project = project
-        self.analyses = project.analyses
         self.setHeaderLabel("Analyses")
         
+    def _build_tree(self)->None:
+
         for analysis in self.project.analyses:
             #Add the top level item
             top_level = QTreeWidgetItem([analysis.name])
@@ -37,3 +39,17 @@ class AnalysesTree(QTreeWidget):
             # Pressure reference
             text = f"Pressure Column: {analysis.formation_pres_src_col}"
             top_level.addChild(QTreeWidgetItem([text]))
+
+            #Displayed dataframe
+            #hold, not sure what this represents yet
+            
+            #Analysis frame
+            view_node = QTreeWidgetItem(["Analysis Views:"])
+            top_level.addChild(view_node)
+            for view in analysis.analysis_views:
+                view_node.addChild(QTreeWidgetItem([view.name]))
+
+    def reload_from_project(self)->None:
+        with QSignalBlocker(self):
+            self.clear()
+            self._build_tree()

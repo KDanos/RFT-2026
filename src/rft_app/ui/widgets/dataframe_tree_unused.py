@@ -1,5 +1,4 @@
 from PyQt6.QtWidgets import QTreeWidget, QWidget, QTreeWidgetItem
-import pandas as pd
 from project import DataSet
 
 

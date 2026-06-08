@@ -1,9 +1,9 @@
-from .analyses_tree import AnalysesTree
+from .tree_analyses import AnalysesTree
 from .analysis_view_widget import AnalysisViewWidget
 from .data_loader_analysis_dlg import DataLoaderDialogAnalysis
 from .data_loader_project_dlg import DataLoaderDialogProject
-from .dataframe_tree import DataFrameTree
-from .all_datasets_tree import AllDataSetsTree
+# from .dataframe_tree import DataFrameTree
+from .tree_all_datasets import AllDataSetsTree
 from .table_widgets import UnitsComboBox
 
 __all__ = [
@@ -11,7 +11,7 @@ __all__ = [
     "AnalysisViewWidget",
     "DataLoaderDialogAnalysis",
     "DataLoaderDialogProject",
-    "DataFrameTree",
+    # "DataFrameTree",
     "AllDataSetsTree",
     "UnitsComboBox"
 ]

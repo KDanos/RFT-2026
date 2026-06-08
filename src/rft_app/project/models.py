@@ -40,7 +40,10 @@ class AnalysisObject:
     displayed_dataframe: pd.DataFrame | None = None
     fluids:list[Fluid] = field (default_factory= list)
     parameters:dict[str,Any] = field (default_factory= dict)
-    analysis_views: AnalysisView  = None
+    analysis_views: list[AnalysisView]  = field(default_factory=list)
+    @property
+    def is_visible(self)->bool:
+        return any(view.is_visible for view in self.analysis_views)
 
 @dataclass
 class AnalysisView:
@@ -48,8 +51,9 @@ class AnalysisView:
     It is linked to a view_tab, where the main interaction with the graphical data takes place"""
     name: str = ""
     analysis_object: AnalysisObject = None
-    is_visible:bool = False
+    is_visible:bool = True
     df: pd.DataFrame= None
+
 
 @dataclass
 class Fluid:
