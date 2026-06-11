@@ -37,7 +37,6 @@ class AnalysisViewWidget(QWidget):
         btn2 = QPushButton("placeholder 2")
         widget_layout.addWidget(btn1)
         widget_layout.addWidget(btn2)
-        widget_layout.addWidget(self.analysis_data_tree)
         
         #Main Frame
         main_frame = QFrame(self)

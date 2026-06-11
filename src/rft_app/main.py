@@ -2,7 +2,7 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 
-from ui.main_window_KD import MainWindowKD
+from ui.main_window.main_window import MainWindowKD
 
 
 class MainWindow(MainWindowKD):
