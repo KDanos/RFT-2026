@@ -1,9 +1,10 @@
-from PyQt6.QtCore import QSignalBlocker
-from PyQt6.QtWidgets import QTreeWidget, QWidget
-from qtpy.QtWidgets import QTreeWidgetItem
+from PyQt6.QtCore import QPoint, QSignalBlocker, Qt
+from PyQt6.QtWidgets import QTreeWidget, QWidget, QTreeWidgetItem
+
 
 
 from project import AnalysisObject, ProjectDataManager
+from ui.widgets.tree_analyses_functions import on_all_analyses_tree_context_menu
 
 
 class AnalysesTree(QTreeWidget):
@@ -16,9 +17,17 @@ class AnalysesTree(QTreeWidget):
         self.parent = parent
         self.project = project
         self.setHeaderLabel("Analyses")
+        self._connect_signals()
         
+    def _connect_signals(self)->None:
+        self.customContextMenuRequested.connect(
+            lambda position: on_all_analyses_tree_context_menu(self, position))
+    
     def _build_tree(self)->None:
 
+        # Create the drop down menu option son right click of the menu
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        
         for analysis in self.project.analyses:
             #Add the top level item
             top_level = QTreeWidgetItem([analysis.name])

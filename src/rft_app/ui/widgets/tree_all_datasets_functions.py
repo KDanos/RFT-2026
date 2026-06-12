@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 def on_all_dataset_tree_context_menu(tree:AllDataSetsTree,position:QPoint):
 
     item =tree.itemAt(position)
-    if item is None: #to ensure that menu is only build on not-white space
+    if item is None: #to ensure that menu is only build on non-white space
         return
 
 

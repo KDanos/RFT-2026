@@ -35,8 +35,14 @@ class AnalysisWorkspace(QFrame):
         layout.setContentsMargins(0,0,0,0)
 
         inner_tabs = QTabWidget(page)
+        inner_tabs.setTabsClosable(True)
+        inner_tabs.setMovable(True)
+        
+        inner_tabs.tabCloseRequested.connect(
+            lambda idx, tabs=inner_tabs, analysis=analysis: 
+            self._on_view_tab_close_requested(tabs, analysis, idx))
+        
         layout.addWidget(inner_tabs)
-
         idx = self.analyses_tabs.addTab(page, analysis.name)
         self.analyses_tabs.setCurrentIndex(idx)
 
@@ -64,8 +70,10 @@ class AnalysisWorkspace(QFrame):
 
         idx = analysis_tab.addTab(widget,view.name)
         analysis_tab.setCurrentIndex(idx)
-
         self.project.mark_modified()
+
+        #Remember to which ViewObject this inner tab belongs to (for close and visibility handling)
+        widget.setProperty("view_object",view)
 
     def refresh_tabs_from_project(self)->None:
         """Rebuild tabs from project.analyses based on is_visible flag"""
@@ -92,9 +100,10 @@ class AnalysisWorkspace(QFrame):
         layout.addWidget(self.analyses_tabs)
  
     def _connect_signals(self)->None:
-        self.analyses_tabs.tabCloseRequested.connect(self._on_tab_close_requested)
+        self.analyses_tabs.tabCloseRequested.connect(self._on_analysis_tab_close_requested)
 
-    def _on_tab_close_requested(self, index:int)->None:
+
+    def _on_analysis_tab_close_requested(self, index:int)->None:
         page = self.analyses_tabs.widget(index)
         analysis = page.property("analysis_object") if page is not None else None
 
@@ -106,4 +115,34 @@ class AnalysisWorkspace(QFrame):
         if page is not None:
             page.deleteLater()
 
+        self.project.mark_modified()
+
+    def _on_view_tab_close_requested(
+        self,
+        tabs:QTabWidget, 
+        analysis:AnalysisObject, 
+        idx:int
+        )->None:
+        
+        view_tab= tabs.widget(idx)
+        if view_tab is None:
+            return
+        
+        view_object = view_tab.property("view_object")
+        if view_object is None:
+            view_object = getattr(view_tab, "analysis_view_obj",None)
+        if view_object is not None: 
+            view_object.is_visible = False
+        
+        tabs.removeTab(idx)
+        view_tab.deleteLater()
+        
+        # Remove outer tab if no inner tabs are visible
+        if tabs.count()==0:
+            for i in range(self.analyses_tabs.count()):
+                page = self.analyses_tabs.widget(i)
+                if page is not None and page.property("analysis_object") is analysis:
+                    self._on_analysis_tab_close_requested(i)
+                    break
+        
         self.project.mark_modified()

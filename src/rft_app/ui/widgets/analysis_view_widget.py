@@ -25,7 +25,6 @@ class AnalysisViewWidget(QWidget):
         self.analysis_data_tree = None
         self._build_ui()
         
-
     def _build_ui(self):
         main_layout = QHBoxLayout(self)
         main_vertical_splitter = QSplitter()
