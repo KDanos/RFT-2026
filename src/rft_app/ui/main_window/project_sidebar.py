@@ -1,9 +1,7 @@
 from PyQt6.QtCore import QSignalBlocker
 from PyQt6.QtWidgets import QFrame, QTreeWidget, QVBoxLayout, QWidget
-
 from project import ProjectDataManager
 from ui.widgets import AllDataSetsTree, AnalysesTree
-
 
 class ProjectSidebar(QFrame):
     """Left Panel: Data and Analysis Trees"""
@@ -71,8 +69,13 @@ class ProjectSidebar(QFrame):
         layout.addWidget(self.project_analyses_frame)
 
     def _connect_signals(self)->None:
+        # Loaded Datasets Tree
         self.all_loaded_datasets_tree.dataset_renamed.connect(self.refresh_all_analyses_tree)
         self.all_loaded_datasets_tree.dataset_deleted.connect(self.refresh_all_analyses_tree)
+
+        # Analyses Tree
+        self.all_analyses_tree.analysis_renamed.connect(self.refresh_all_analyses_tree)
+        self.all_analyses_tree.analysis_deleted.connect(self.refresh_all_analyses_tree)
 
     def _apply_column_units_to_tree(self, tree:QTreeWidget)->None: 
         """"Append the on-load units labes to the columns names in the dataset tree"""

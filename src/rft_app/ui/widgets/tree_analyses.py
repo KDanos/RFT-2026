@@ -1,13 +1,20 @@
-from PyQt6.QtCore import QPoint, QSignalBlocker, Qt
+from PyQt6.QtCore import QPoint, QSignalBlocker, Qt, pyqtSignal
+from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import QTreeWidget, QWidget, QTreeWidgetItem
 
 
 
-from project import AnalysisObject, ProjectDataManager
+from project import AnalysisObject, AnalysisView, ProjectDataManager
 from ui.widgets.tree_analyses_functions import on_all_analyses_tree_context_menu
 
 
 class AnalysesTree(QTreeWidget):
+    # Create Custom Signals
+    analysis_renamed = pyqtSignal()
+    analysis_deleted = pyqtSignal()
+    analysis_visibility_changed = pyqtSignal()
+    new_view_requested = pyqtSignal(AnalysisObject)
+    
     def __init__(self,
                 parent:QWidget| None = None,
                 project:ProjectDataManager=None
@@ -16,10 +23,11 @@ class AnalysesTree(QTreeWidget):
 
         self.parent = parent
         self.project = project
-        self.setHeaderLabel("Analyses")
+        self.setHeaderLabel("Analyses") 
         self._connect_signals()
         
     def _connect_signals(self)->None:
+        self.itemChanged.connect(self._on_item_changed)
         self.customContextMenuRequested.connect(
             lambda position: on_all_analyses_tree_context_menu(self, position))
     
@@ -30,7 +38,12 @@ class AnalysesTree(QTreeWidget):
         
         for analysis in self.project.analyses:
             #Add the top level item
-            top_level = QTreeWidgetItem([analysis.name])
+            text = analysis.name
+            if not analysis.is_visible:
+                text = text + " [hidden]"
+            top_level = QTreeWidgetItem([text])
+            top_level.setFlags(top_level.flags()|Qt.ItemFlag.ItemIsEditable)
+            top_level.setData(0,Qt.ItemDataRole.UserRole, analysis)
             top_level.setExpanded(True)
             self.addTopLevelItem(top_level)
 
@@ -56,9 +69,56 @@ class AnalysesTree(QTreeWidget):
             view_node = QTreeWidgetItem(["Analysis Views:"])
             top_level.addChild(view_node)
             for view in analysis.analysis_views:
-                view_node.addChild(QTreeWidgetItem([view.name]))
+                text = view.name
+                if not view.is_visible:
+                    text = text + " [hidden]"
+                view_item = QTreeWidgetItem([text])
+                view_item.setFlags(view_item.flags()
+                |Qt.ItemFlag.ItemIsEditable)
+                view_item.setData(0,Qt.ItemDataRole.UserRole,view)
+                view_node.addChild(view_item)
 
     def reload_from_project(self)->None:
         with QSignalBlocker(self):
             self.clear()
             self._build_tree()
+
+    def _on_item_changed(self, item:QTreeWidgetItem, col:int)->None:
+        if col !=0:
+            return
+
+        obj = item.data(0,Qt.ItemDataRole.UserRole)
+        
+        if obj is None:
+            return
+        
+        if isinstance(obj, AnalysisObject):
+               self._rename_analysis(item)
+        elif isinstance(obj, AnalysisView):
+            self._rename_view(item)
+
+    def _rename_analysis(self, item:QTreeWidgetItem)->None:
+        analysis = item.data(0, Qt.ItemDataRole.UserRole)
+        analysis.name = item.text(0).strip()
+        self.analysis_renamed.emit()
+        self.project.mark_modified()
+
+    def _rename_view(self,item:QTreeWidgetItem)->None:
+        view = item.data(0, Qt.ItemDataRole.UserRole)
+        view.name = item.text(0).strip()
+        self.analysis_visibility_changed.emit()
+        self.project.mark_modified()
+        
+    def _delete_analysis (self, item:QTreeWidgetItem)->None:
+        analysis = item.data(0, Qt.ItemDataRole.UserRole)
+        if analysis is None:
+            return
+
+        if analysis not in self.project.analyses:
+            return
+
+        self.project.analyses = [a for a in self.project.analyses if a is not analysis]
+        self.project.mark_modified()
+        self.analysis_deleted.emit()
+
+

@@ -47,7 +47,7 @@ class AnalysisObject:
 
 @dataclass
 class AnalysisView:
-    """Contains a dataframe with at leact a vertical depth, formation pressure and excess pressure.
+    """Contains a dataframe with at least a vertical depth, formation pressure and excess pressure.
     It is linked to a view_tab, where the main interaction with the graphical data takes place"""
     name: str = ""
     analysis_object: AnalysisObject = None

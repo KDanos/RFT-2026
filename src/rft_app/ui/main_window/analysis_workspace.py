@@ -70,7 +70,6 @@ class AnalysisWorkspace(QFrame):
 
         idx = analysis_tab.addTab(widget,view.name)
         analysis_tab.setCurrentIndex(idx)
-        self.project.mark_modified()
 
         #Remember to which ViewObject this inner tab belongs to (for close and visibility handling)
         widget.setProperty("view_object",view)
@@ -101,7 +100,6 @@ class AnalysisWorkspace(QFrame):
  
     def _connect_signals(self)->None:
         self.analyses_tabs.tabCloseRequested.connect(self._on_analysis_tab_close_requested)
-
 
     def _on_analysis_tab_close_requested(self, index:int)->None:
         page = self.analyses_tabs.widget(index)

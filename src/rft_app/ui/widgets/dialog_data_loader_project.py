@@ -5,8 +5,6 @@ from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialog
 import csv
 from io import StringIO
 
-from pint.facets.numpy import unit
-
 from project import ColumnSpec, DataFrameSpecs, DataFrameSpecs
 from .table_widgets import UnitsComboBox
 from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units

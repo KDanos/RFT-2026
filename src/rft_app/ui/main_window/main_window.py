@@ -4,8 +4,10 @@ from PyQt6.QtWidgets import (QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QM
                             QSplitter,  QToolBar, QVBoxLayout, QWidget, QMessageBox)
 from pathlib import Path
 
-from project import AnalysisView, ProjectDataManager, load_project, save_project
-from ui.widgets import (DataLoaderDialogAnalysis, DataLoaderDialogProject)
+from qtpy.QtWidgets import QTabWidget
+
+from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
+from ui.widgets import (DataLoaderDialogAnalysis, DataLoaderDialogProject, NewViewDialog)
 from ui.main_window.analysis_workspace import AnalysisWorkspace
 from ui.main_window.project_sidebar import ProjectSidebar
 
@@ -25,10 +27,11 @@ class MainWindowKD(QMainWindow):
 
         self._build_ui()
         self._check_if_project_has_path()
-        # self._load_default_project_on_startup()
+        self._load_default_project_on_startup()
 
     def _load_default_project_on_startup(self) -> None:
-        default_path = Path(__file__).resolve().parent.parent / "260604 Two Views KD.rftproj"
+        default_path = Path(__file__).resolve().parent.parent.parent / "260611 Four Analyses KD.rftproj"
+        print("Looking for:", default_path, "exists:", default_path.exists())
         if not default_path.exists():
             return
         try:
@@ -204,6 +207,13 @@ class MainWindowKD(QMainWindow):
         #Widgets
         self.units_combo.currentIndexChanged.connect(self._on_project_units_changed)
 
+        # Analyses tree 
+        self.project_sidebar.all_analyses_tree.analysis_renamed.connect(self.analysis_workspace.refresh_tabs_from_project)
+        self.project_sidebar.all_analyses_tree.analysis_deleted.connect(self.analysis_workspace.refresh_tabs_from_project)
+        self.project_sidebar.all_analyses_tree.analysis_visibility_changed.connect(self.analysis_workspace.refresh_tabs_from_project)
+        self.project_sidebar.all_analyses_tree.analysis_visibility_changed.connect(self.project_sidebar.refresh_all_analyses_tree)
+        self.project_sidebar.all_analyses_tree.new_view_requested.connect(lambda analysis: self.create_new_analysis_view(analysis))
+
     def _import_new_data(self)-> None:
         dlg = DataLoaderDialogProject(parent = self, project = self.project)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.imported_df is not None:
@@ -284,20 +294,10 @@ class MainWindowKD(QMainWindow):
         if new_analysis_object is None:
             return
         self.project.analyses.append(new_analysis_object)
-        new_analysis_tab = self.analysis_workspace.add_analysis_tab(new_analysis_object)
         
         #Create a new analysis view
-        new_analysis_view_obj = AnalysisView(name = "New View")
-        new_analysis_object.analysis_views.append(new_analysis_view_obj)
-        self.analysis_workspace.add_view_tab(   new_analysis_tab, 
-                                                new_analysis_object, 
-                                                new_analysis_view_obj
-                                            )
-
-        #Update the project actions
-        self.project.mark_modified()
-        self.project_sidebar.refresh_all_analyses_tree()
-
+        self.create_default_analysis_view(new_analysis_object)
+    
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None
         self.actionSaveProject.setEnabled(has_path)
@@ -362,3 +362,27 @@ class MainWindowKD(QMainWindow):
             event.ignore() #keep the window open
             return
         event.accept()
+
+    def create_default_analysis_view(self,analysis:AnalysisObject,tab:QTabWidget|None=None,):
+        # #Create a new analysis view
+        new_analysis_view_obj = AnalysisView(name = "New View")
+        analysis.analysis_views.append(new_analysis_view_obj)
+        self.analysis_workspace.add_view_tab(   tab, 
+                                                analysis, 
+                                                new_analysis_view_obj
+                                            )
+        # #Update the project actions
+        self.project.mark_modified()
+        self.project_sidebar.refresh_all_analyses_tree()
+        self.analysis_workspace.refresh_tabs_from_project()
+
+    def create_new_analysis_view(self, analysis:AnalysisObject)->None:
+        # Launch the dialog window for the creation of a new view object
+        NewViewDialog(self, analysis, self.project)    
+        
+        # Update the project actions
+        self.project.mark_modified()
+        self.project_sidebar.refresh_all_analyses_tree()
+        self.analysis_workspace.refresh_tabs_from_project()
+
+        

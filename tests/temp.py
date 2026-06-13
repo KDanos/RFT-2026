@@ -1,57 +1,19 @@
-def rename_item(item: QTreeWidgetItem, tree) -> None:
-    if item.parent() is not None:
-        return  # only top-level dataset rows
 
-    old_name = item.text(0).strip()
-    if not old_name:
-        return
+import sys
+from pathlib import Path
+APP_ROOT = Path(__file__).resolve().parents[1] / "src" / "rft_app"
+sys.path.insert(0, str(APP_ROOT))
 
-    new_name, ok = QInputDialog.getText(
-        tree,
-        "Rename dataset",
-        "New name:",
-        text=old_name,
-    )
-    if not ok:
-        return  # user cancelled
+from project.models import AnalysisObject, AnalysisView
 
-    new_name = new_name.strip()
-    if not new_name:
-        QMessageBox.warning(tree, "Rename dataset", "Name cannot be empty.")
-        return
 
-    if new_name == old_name:
-        return
+analysis = AnalysisObject(name = "Test Analysis")
+analysis.analysis_views = [
+    AnalysisView(name = "View 1"),
+    AnalysisView(name ="New View"),
+    AnalysisView(name = "Plot A")
+]
 
-    # Names already used by other datasets
-    existing_names = {
-        ds.name for ds in tree.project.datasets if ds.name != old_name
-    }
-    if new_name in existing_names:
-        QMessageBox.warning(
-            tree,
-            "Rename dataset",
-            f"A dataset named '{new_name}' already exists.",
-        )
-        return
+list_of_existing_view_names = [view.name for view in (analysis.analysis_views if analysis is not None else [])]
 
-    # Update project model
-    try:
-        dataset = tree.project.get_dataset_by_name(old_name)
-    except KeyError:
-        QMessageBox.warning(tree, "Rename dataset", f"Dataset '{old_name}' not found.")
-        return
-
-    dataset.name = new_name
-
-    # Update analyses that reference this dataset by name
-    for analysis in tree.project.analyses:
-        analysis.source_datasets = [
-            new_name if name == old_name else name
-            for name in analysis.source_datasets
-        ]
-
-    # Update tree label
-    item.setText(0, new_name)
-
-    tree.project.mark_modified()
+print (list_of_existing_view_names)
