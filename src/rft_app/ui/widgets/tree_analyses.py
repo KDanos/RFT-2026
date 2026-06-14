@@ -1,6 +1,7 @@
-from PyQt6.QtCore import QPoint, QSignalBlocker, Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, QSignalBlocker, QTemporaryDir, Qt, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import QTreeWidget, QWidget, QTreeWidgetItem
+from qtpy.QtWidgets import QWidgetItem
 
 
 
@@ -48,6 +49,23 @@ class AnalysesTree(QTreeWidget):
             self.addTopLevelItem(top_level)
 
             # Add the second level items
+            # Dataset
+            dataset_node= QTreeWidgetItem(["Dataset:"])
+            top_level.addChild(dataset_node)
+            dataset_node.setData(0,Qt.ItemDataRole.UserRole, analysis.analysis_dataset)
+            
+            # Dataframe shape
+            rows, col = analysis.analysis_dataset.dataframe.shape
+            shape_item =QTreeWidgetItem([f"Shape: {rows} rows x {col} columns"])
+            dataset_node.addChild(shape_item)
+            # Dataframe Columns
+            column_item = QTreeWidgetItem(["Columns"])
+            dataset_node.addChild(column_item)
+            for header in analysis.analysis_dataset.dataframe.columns:
+                item = QTreeWidgetItem([header])
+                column_item.addChild(item)
+
+
             #Source Data
             source_node = QTreeWidgetItem(["Source Datasets:"])
             top_level.addChild(source_node)

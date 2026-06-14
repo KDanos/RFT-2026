@@ -4,7 +4,8 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QTreeWidgetItem
 from qtpy.QtWidgets import QMenu, QMessageBox, QTreeWidget
 
-from project import AnalysisView
+from project import AnalysisObject, AnalysisView
+from utilities.global_functions import show_data_frame_table
 
 # from ui.widgets import AnalysesTree 
 
@@ -46,6 +47,11 @@ def create_analysis_menu_actions(tree,item)->list[QAction]:
     delete_analysis_action = QAction("Delete",tree)
     delete_analysis_action.triggered.connect(lambda: delete_analysis(item, tree))
     list_of_actions.append(delete_analysis_action)
+
+    # Show Data
+    show_data_table_action= QAction("Show Data", tree)
+    show_data_table_action.triggered.connect(lambda: show_data(item, tree))
+    list_of_actions.append(show_data_table_action)
 
     list_of_actions.extend(create_all_views_menu_actions(tree, item, list_of_actions))
     return list_of_actions
@@ -185,3 +191,14 @@ def add_a_view(item:QTreeWidgetItem,tree:QTreeWidget)->None:
     
     analysis = item.data(0, Qt.ItemDataRole.UserRole)
     tree.new_view_requested.emit(analysis)
+
+def show_data(item:QTreeWidgetItem, tree:QTreeWidget)->None:
+    obj = item.data(0, Qt.ItemDataRole.UserRole)
+    if not isinstance(obj, AnalysisObject):
+        return 
+    
+    df = obj.analysis_dataset.dataframe
+    specs = obj.analysis_dataset.column_specs
+    name = obj.analysis_dataset.name
+    
+    show_data_frame_table(df, specs, name, tree.parent)

@@ -1,8 +1,14 @@
 from typing import Iterable
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QTableView, QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import (QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator,QCheckBox, QDialog, QSpinBox, 
+                            QTableWidget, QVBoxLayout)
 import pandas as pd
-from qtpy.QtWidgets import QCheckBox, QSpinBox, QTableWidget
+from qtpy.QtWidgets import QTableWidgetItem
+
+
+from project.models import ColumnSpec
+
 
 
 def unique_name(
@@ -105,3 +111,33 @@ def round_str_to_decimal_points(
         value = round(float(value),decimal_points)
     return(str(value))          
 
+def create_dataframe_table(df:pd.DataFrame, spec:ColumnSpec=None, title:str =None,parent = None)->QTableWidget:
+    from ui.widgets.table_widgets import UnitsComboBox
+    rows, columns = df.shape
+    data_table = QTableWidget(rows+1, columns,parent)
+    data_table.setHorizontalHeaderLabels([str(column) for column in df.columns])
+    for c in range(columns):
+        quantity = spec[c].quantity_key
+        units_combo=UnitsComboBox(quantity)
+        data_table.setCellWidget(0,c,units_combo)
+        for r in range(rows):
+            item = str(df.iat[r,c])
+            data_table.setItem(r+1,c,QTableWidgetItem(item))
+
+    return data_table
+
+def show_data_frame_table(df:pd.DataFrame, spec:ColumnSpec=None,title:str=None, parent=None)->QDialog:
+    if title is None or "":
+        title = "Data Table"
+    
+    window = QDialog(parent)
+    window.setWindowTitle(title)
+    window.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
+    window.setWindowFlags(window.windowFlags()
+        |Qt.WindowType.WindowMaximizeButtonHint 
+        |Qt.WindowType.WindowMinimizeButtonHint
+    )
+    table = create_dataframe_table(df,spec, title, parent )
+    layout = QVBoxLayout(window)
+    layout.addWidget(table)
+    window.show()
