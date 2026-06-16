@@ -219,9 +219,16 @@ class MainWindowKD(QMainWindow):
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.imported_df is not None:
             df = dlg.imported_df
             column_specs = dlg.imported_column_specs
-            dataframe_specs = dlg.dataframe_specs
-            self.project.add_loaded_dataset(df, column_specs, dataframe_specs)
             
+            new_data_set_name = self.project.add_loaded_dataset(
+                                            df, 
+                                            column_specs,
+                                            dlg.imported_name,
+                                            info_log = dlg.info_log)
+            new_data_set =self.project.get_dataset_by_name(new_data_set_name)
+            #************************************************************************
+            print (new_data_set.info_log)
+            #************************************************************************
             #Raise a "need to save flag" prior to exiting the project
             self.project.mark_modified()
             self.project_sidebar.refresh_all_loaded_datasets_tree()

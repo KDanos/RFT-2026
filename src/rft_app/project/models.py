@@ -1,14 +1,39 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+
 from typing import Any
 
 import pandas as pd
 
 
 @dataclass
-class DataFrameSpecs:
-    "Meta data for loaded data set"
-    name:str
+class DataSetLogEntry:
+    message: str
+    level:str = "Warning"
+    timestamp:datetime= field(default_factory  = lambda:datetime.now(timezone.utc))
+    row: int | None = None
+    column:str | None = None
+    column_idx: int | None = None
+    old_value: Any = None
+    new_value: Any = None
+    quantity_key:str | None = None
+    reason:str | None = None
+
+""" Example
+    DataSetLogEntry(
+    message="Non-numeric temperature value removed; set to None",
+    level="warning"
+    timestamp=datetime.now(timezone.utc),
+    row=12,
+    column="T",
+    old_value="abc",
+    new_value=None,
+    action="cell_cleared",
+    quantity_key="temperature",
+    reason="expected numeric value for quantity type temperature",
+)"""
+
 
 @dataclass(frozen=True)
 class ColumnSpec:
@@ -28,6 +53,10 @@ class DataSet:
     name:str
     dataframe: pd.DataFrame
     column_specs: list[ColumnSpec]
+    info_log:list[DataSetLogEntry] =field(default_factory=list)
+    created_at:datetime=field (default_factory=lambda:datetime.now(timezone.utc))
+    created_by:str = "Undefined"
+    user_comments: list[str] = field(default_factory=list)
 
 @dataclass
 class AnalysisObject:

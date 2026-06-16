@@ -1,3 +1,5 @@
+
+from datetime import datetime, timezone
 from typing import Optional
 from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtGui import QIcon
@@ -5,10 +7,10 @@ from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialog
 import csv
 from io import StringIO
 
-from project import ColumnSpec, DataFrameSpecs, DataFrameSpecs
+from project import ColumnSpec,DataSetLogEntry
 from .table_widgets import UnitsComboBox
 from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units
-from utilities import is_numeric
+from utilities import force_numeric, is_numeric
 import pandas as pd
 
 class DataLoaderDialogProject(QDialog):
@@ -29,7 +31,8 @@ class DataLoaderDialogProject(QDialog):
         #Define starting attributes
         self.imported_df:Optional[pd.DataFrame] = None #placeholder, will be replaced when the _create_dataframe function is run
         self.imported_column_specs: list[ColumnSpec] = []
-        self.imported_dataframe_specs: DataFrameSpecs = None
+        self.imported_name: str  = ""
+        self.info_log = []
         
         #Initilise with empty attributes
         self.data_rows = []
@@ -447,9 +450,6 @@ class DataLoaderDialogProject(QDialog):
         #Ensure the rows and columns to ingore list is alligned with the preview_table at its current state
         self._select_rows_to_ignore()
         self._select_columns_to_ignore()
-
-        #Bring in the decimal points limit
-        decimals = self.decimal_limit_spin.value() if self.decimal_limit_spin.isEnabled() else None
         
         #Exit the function if there is no data from the clipboard
         if not self.data_rows:
@@ -484,8 +484,10 @@ class DataLoaderDialogProject(QDialog):
    
             current_spec = ColumnSpec(name,quantity_key, units )
             self.imported_column_specs.append(current_spec)
-        
+
+            
         #Collect values in the data rows, ignoring the appropriate ones from the preview table
+        self.info_log= [] #reset each import attempt
         rows = []
         for r in range(len(self.data_rows)):  
             #Skip any rows that have been clicked to ignore
@@ -494,22 +496,49 @@ class DataLoaderDialogProject(QDialog):
 
             row_values_to_import = self.data_rows[r]
             row_vals_for_df = []
+            df_row_idx =len (rows) #rows in the final dataframe-i dont think this is needed
             
             for idx,mapping_col in enumerate(selected_mapping_cols):
                 source_column = mapping_col-1
-                value = row_values_to_import[source_column] if 0<=source_column<len(row_values_to_import) else ""
+                raw_value = row_values_to_import[source_column] if 0<=source_column<len(row_values_to_import) else ""
                 
                 # Normalise the numeric data
                 spec = self.imported_column_specs[idx]
                 quantity_key = spec.quantity_key
                 user_unit = spec.unit
                 
-                if is_numeric(value) and user_unit:
-                    value = normalise_from_user_units(user_unit,quantity_key,float(value))
-                elif is_numeric(value):
-                    value =float (value) # captures scenarios of undefined quantities with numeric values
-                elif isinstance(value,str) and value.strip()=="":
-                    value = None
+                # Is the quantity expected to be numeric?
+                qty = STANDARD_QUANTITIES.get(quantity_key, STANDARD_QUANTITIES["undefined"])
+                if  qty.is_numeric:
+                    coerced = force_numeric(raw_value)
+                
+                    if coerced is None and not (
+                        raw_value is None 
+                        or (isinstance(raw_value,str) and raw_value.strip()=="")):
+                        new_log_entry = DataSetLogEntry(
+                                        message=f"Non-numeric {quantity_key} value removed; set to None",
+                                        level="warning",
+                                        row=r,
+                                        column=spec.name,
+                                        column_idx= idx,
+                                        old_value = raw_value,
+                                        new_value = coerced,
+                                        quantity_key = quantity_key,
+                                        reason = f"Expected a numeric value for {quantity_key}"
+                                        )
+
+                        self.info_log.append(new_log_entry)
+                    if coerced is None:
+                        value = None
+                    elif user_unit:
+                        value = normalise_from_user_units(user_unit,quantity_key,coerced)
+                    else: value = coerced
+
+                else: # Non-numeric quantities (undefined, text, etc.)
+                    if isinstance (raw_value, str) and raw_value.strip()=="":
+                        value = None
+                    else:
+                        value = raw_value
 
                 row_vals_for_df.append(value)
             rows.append(row_vals_for_df)
@@ -521,8 +550,8 @@ class DataLoaderDialogProject(QDialog):
         self.imported_df = mydf
 
         # Create the dataframe metadata
-        name = self.name_line_edit.text().strip()
-        self.dataframe_specs = DataFrameSpecs(name)
+        self.imported_name = self.name_line_edit.text().strip()
+        
         
         #Call the preview window of the dataframe
         result = self._create_the_dataframe_preview_table(mydf, name)
@@ -530,6 +559,8 @@ class DataLoaderDialogProject(QDialog):
             self.imported_df = None
             self.imported_column_specs = []
             self.imported_dataframe_specs = []
+            self.imported_name = ""
+            self.info_log=[]
             return None
         
         self.accept()

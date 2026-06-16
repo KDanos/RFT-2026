@@ -1,13 +1,14 @@
-from typing import Iterable
+from typing import Any, Iterable
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator,QCheckBox, QDialog, QSpinBox, 
                             QTableWidget, QVBoxLayout)
 import pandas as pd
 from qtpy.QtWidgets import QTableWidgetItem
+from dataclasses import fields
 
 
-from project.models import ColumnSpec
+from project.models import ColumnSpec, DataSet, DataSetLogEntry
 
 
 
@@ -50,6 +51,18 @@ def is_numeric(value)-> bool:
     except ValueError:
         return False
     
+def force_numeric(value:Any)->float| None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value= value.strip()
+        if value =="":
+            return None
+    try:
+         return(float(value))
+    except(TypeError, ValueError):
+        return None
+
 def get_tree_top_level_item_by_name(tree:QTreeWidget, name:str)->QTreeWidgetItem:
     for i in range(tree.topLevelItemCount()):
         item = tree.topLevelItem(i)
@@ -111,7 +124,7 @@ def round_str_to_decimal_points(
         value = round(float(value),decimal_points)
     return(str(value))          
 
-def create_dataframe_table(df:pd.DataFrame, spec:ColumnSpec=None, title:str =None,parent = None)->QTableWidget:
+def create_dataframe_table(df:pd.DataFrame, spec:ColumnSpec=None, parent = None)->QTableWidget:
     from ui.widgets.table_widgets import UnitsComboBox
     rows, columns = df.shape
     data_table = QTableWidget(rows+1, columns,parent)
@@ -137,7 +150,49 @@ def show_data_frame_table(df:pd.DataFrame, spec:ColumnSpec=None,title:str=None, 
         |Qt.WindowType.WindowMaximizeButtonHint 
         |Qt.WindowType.WindowMinimizeButtonHint
     )
-    table = create_dataframe_table(df,spec, title, parent )
+    table = create_dataframe_table(df,spec, parent )
     layout = QVBoxLayout(window)
     layout.addWidget(table)
     window.show()
+
+def create_log_table(dataset:DataSet, parent = None)->QTableWidget:
+    
+    # Define Column Count and Name
+    log_fields = fields(DataSetLogEntry)  
+    columns = len(log_fields)
+    column_names = [f.name for f in log_fields]
+    # Define Row Count
+    rows = len(dataset.info_log)
+    # Define the table structure
+    table=QTableWidget(rows, columns, parent)
+    table.setHorizontalHeaderLabels(column_names)
+    # table.setVerticalHeader()
+    
+    for r, entry in enumerate(dataset.info_log):
+        for c, f in enumerate(log_fields):  
+            value = getattr(entry,f.name)
+            # optional:format datetimes for display
+            if value is None:
+                text = ""
+            else:
+                text = str(value)
+            table.setItem(r,c,QTableWidgetItem  (text))
+    return table
+
+def show_log_table(dataset:DataSet,title:str = None,parent=None)->QDialog:
+    if title is None or "":
+        title = "Data Table"
+    
+    window = QDialog(parent)
+    window.setWindowTitle(title)
+    window.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
+    window.setWindowFlags(window.windowFlags()
+        |Qt.WindowType.WindowMaximizeButtonHint 
+        |Qt.WindowType.WindowMinimizeButtonHint
+    )
+    table = create_log_table(dataset)
+    layout = QVBoxLayout(window)
+    layout.addWidget(table)
+    window.show()
+
+

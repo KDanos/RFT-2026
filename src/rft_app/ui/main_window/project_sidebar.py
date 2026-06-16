@@ -91,7 +91,7 @@ class ProjectSidebar(QFrame):
                     col_item = columns_node.child(k)
                     header = col_item.text(0).split(" [")[0]
                     units = dataset.column_specs[k].unit
-                    text = f"{header} [{units}]"
+                    text = f"{header} [{units}]" if units else f"{header}"
                     col_item.setText(0, text)
 
 

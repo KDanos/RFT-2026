@@ -1,9 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPoint
+from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMessageBox,QMenu, QTreeWidgetItem
+
+from utilities import show_log_table
 
 
 if TYPE_CHECKING:
@@ -40,6 +42,11 @@ def create_actions(tree,item)->list[QAction]:
     delete_action = QAction("Delete", tree)
     delete_action.triggered.connect(lambda _checked =False, item = item, tree = tree: delete_item(item, tree))
     list_of_actions.append(delete_action)
+
+    #Show import log
+    show_import_log_action = QAction("Show Import log", tree)
+    show_import_log_action.triggered.connect(lambda: show_import_log(item,tree))
+    list_of_actions.append(show_import_log_action)
     
     return list_of_actions
 
@@ -63,4 +70,10 @@ def delete_item(item:QTreeWidgetItem, tree:AllDataSetsTree)->None:
         return
     tree._delete_dataset(item)
 
+def show_import_log(item:QTreeWidgetItem, tree:AllDataSetsTree)->None:
+    dataset = item.data(0, Qt.ItemDataRole.UserRole)
+
+    name = dataset.name
+    
+    show_log_table(dataset, name, tree)
         

@@ -1,7 +1,7 @@
 
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
-from .models import AnalysisObject, ColumnSpec, DataSet, DataFrameSpecs
+from .models import AnalysisObject, ColumnSpec, DataSet, DataSetLogEntry
 from utilities import unique_name
 
 
@@ -30,7 +30,8 @@ class ProjectDataManager:
         self,
         df: pd.DataFrame,
         column_specs: list[ColumnSpec],
-        dataframe_specs: DataFrameSpecs,
+        name:str,
+        info_log:list[DataSetLogEntry]
                         ) -> str:
         """Store a DataFrame and its column specs under a unique key.
 
@@ -41,7 +42,7 @@ class ProjectDataManager:
         Returns the key actually used.
         """
         # Extract the dataset name from the dataset specs
-        name =  (dataframe_specs.name.strip() or "") or "Dataset"
+        name =  (name.strip() or "") or "Dataset"
 
         # Verify if the name is unique or requires changing
         existing_names = {dataset.name for dataset in self.datasets}
@@ -50,6 +51,7 @@ class ProjectDataManager:
             name = chosen,
             dataframe = df, 
             column_specs= list(column_specs),
+            info_log = list(info_log) if info_log else[]
         )
         self.datasets.append (loaded_dataset)
         return chosen
