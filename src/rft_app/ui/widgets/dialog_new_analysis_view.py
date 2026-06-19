@@ -1,9 +1,5 @@
-
-
-
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import (QDialog, QDialogButtonBox, QLabel,QComboBox, QHBoxLayout, QLineEdit, QPushButton, 
+from PyQt6.QtWidgets import (QDialog, QDialogButtonBox, QLabel,QComboBox, QHBoxLayout, QLineEdit, 
                             QVBoxLayout)
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
@@ -25,15 +21,11 @@ class NewViewDialog(QDialog):
         self.copy_from:AnalysisView = None  # the existing view which will form the basis of the new view
         self.new_view_name = ""
         self.df = None
-
         if analysis is not None and len(analysis.analysis_views)>0:
             self._offer_to_copy_existing_view()
         else: 
             self._create_new_empty_view()
-
         self._make_name_unique()
-        
-        self.analysis.analysis_views.append (self._create_new_view_instance())
 
     def _offer_to_copy_existing_view(self):
 
@@ -83,6 +75,9 @@ class NewViewDialog(QDialog):
         self.df = self.copy_from.df
 
     def _create_new_empty_view(self)->None:
+        if copy_view_dialog.exec() !=QDialog.DialogCode.Accepted:
+            return
+        
         # Start a dialog window
         copy_view_dialog = QDialog(self)
         copy_view_dialog.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
@@ -116,3 +111,12 @@ class NewViewDialog(QDialog):
             df = self.df
         )
         return new_view_object
+
+    def _on_accept(self)->None:
+        new_view = self._create_new_view_instance()
+        self.analysis.analysis_views.append(new_view)
+        self.accept()
+
+    def reject(self)->None:
+        #no append
+        super().reject()

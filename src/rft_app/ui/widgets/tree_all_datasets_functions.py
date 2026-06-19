@@ -5,7 +5,7 @@ from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMessageBox,QMenu, QTreeWidgetItem
 
-from utilities import show_log_table
+from utilities import show_dataframe_table, show_log_table
 
 
 if TYPE_CHECKING:
@@ -47,6 +47,11 @@ def create_actions(tree,item)->list[QAction]:
     show_import_log_action = QAction("Show Import log", tree)
     show_import_log_action.triggered.connect(lambda: show_import_log(item,tree))
     list_of_actions.append(show_import_log_action)
+
+    #Show Data
+    show_dataframe_action = QAction("Show Data", tree)
+    show_dataframe_action.triggered.connect(lambda: show_data_table(item, tree))
+    list_of_actions.append(show_dataframe_action)
     
     return list_of_actions
 
@@ -72,8 +77,14 @@ def delete_item(item:QTreeWidgetItem, tree:AllDataSetsTree)->None:
 
 def show_import_log(item:QTreeWidgetItem, tree:AllDataSetsTree)->None:
     dataset = item.data(0, Qt.ItemDataRole.UserRole)
-
     name = dataset.name
-    
     show_log_table(dataset, name, tree)
+
+def show_data_table(item:QTreeWidgetItem, tree:AllDataSetsTree)-> None:
+    dataset = item.data(0,Qt.ItemDataRole.UserRole)
+    df= dataset.dataframe
+    column_specs = dataset.column_specs
+    title = dataset.name
+    project= tree.project
+    show_dataframe_table(df, column_specs, title, tree,project)
         

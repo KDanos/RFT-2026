@@ -11,7 +11,7 @@ import pandas as pd
 class DataSetLogEntry:
     message: str
     level:str = "Warning"
-    timestamp:datetime= field(default_factory  = lambda:datetime.now(timezone.utc))
+    timestamp:datetime= field(default_factory  = lambda:datetime.now())
     row: int | None = None
     column:str | None = None
     column_idx: int | None = None
@@ -19,21 +19,6 @@ class DataSetLogEntry:
     new_value: Any = None
     quantity_key:str | None = None
     reason:str | None = None
-
-""" Example
-    DataSetLogEntry(
-    message="Non-numeric temperature value removed; set to None",
-    level="warning"
-    timestamp=datetime.now(timezone.utc),
-    row=12,
-    column="T",
-    old_value="abc",
-    new_value=None,
-    action="cell_cleared",
-    quantity_key="temperature",
-    reason="expected numeric value for quantity type temperature",
-)"""
-
 
 @dataclass(frozen=True)
 class ColumnSpec:

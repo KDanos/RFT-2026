@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QTreeWidgetItem
 from qtpy.QtWidgets import QMenu, QMessageBox, QTreeWidget
 
 from project import AnalysisObject, AnalysisView
-from utilities.global_functions import show_data_frame_table
+from utilities.global_functions import show_dataframe_table
 
 # from ui.widgets import AnalysesTree 
 
@@ -200,5 +200,6 @@ def show_data(item:QTreeWidgetItem, tree:QTreeWidget)->None:
     df = obj.analysis_dataset.dataframe
     specs = obj.analysis_dataset.column_specs
     name = obj.analysis_dataset.name
+    project = tree.project
     
-    show_data_frame_table(df, specs, name, tree.parent)
+    show_dataframe_table(df, specs, name, tree.parent, project)

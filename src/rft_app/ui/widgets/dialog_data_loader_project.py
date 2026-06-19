@@ -305,12 +305,6 @@ class DataLoaderDialogProject(QDialog):
             quantity_chosen = quantity_combo.currentData()
             units_combo = UnitsComboBox(quantity_chosen)
 
-            # Redundant, remove once UnitsCombo() is proven to work
-            # quantity_object = STANDARD_QUANTITIES[quantity_chosen]
-            # units_list = quantity_object.units
-            # units_combo = QComboBox()
-            # units_combo.addItems(units_list)
-
             default_unit = self._get_project_default_units(quantity_chosen)
             idx = units_combo.findText(default_unit)
             if idx >= 0:
@@ -484,8 +478,7 @@ class DataLoaderDialogProject(QDialog):
    
             current_spec = ColumnSpec(name,quantity_key, units )
             self.imported_column_specs.append(current_spec)
-
-            
+    
         #Collect values in the data rows, ignoring the appropriate ones from the preview table
         self.info_log= [] #reset each import attempt
         rows = []
@@ -496,7 +489,6 @@ class DataLoaderDialogProject(QDialog):
 
             row_values_to_import = self.data_rows[r]
             row_vals_for_df = []
-            df_row_idx =len (rows) #rows in the final dataframe-i dont think this is needed
             
             for idx,mapping_col in enumerate(selected_mapping_cols):
                 source_column = mapping_col-1
@@ -518,7 +510,7 @@ class DataLoaderDialogProject(QDialog):
                         new_log_entry = DataSetLogEntry(
                                         message=f"Non-numeric {quantity_key} value removed; set to None",
                                         level="warning",
-                                        row=r,
+                                        row=r-1, # +1 so that the row number reflects the source data row (index starting at 1 instead of 0). Unclear what happens with eliminated rows
                                         column=spec.name,
                                         column_idx= idx,
                                         old_value = raw_value,
@@ -552,9 +544,8 @@ class DataLoaderDialogProject(QDialog):
         # Create the dataframe metadata
         self.imported_name = self.name_line_edit.text().strip()
         
-        
         #Call the preview window of the dataframe
-        result = self._create_the_dataframe_preview_table(mydf, name)
+        result = self._create_the_dataframe_preview_table(mydf, self.imported_name)
         if result != QDialog.DialogCode.Accepted:
             self.imported_df = None
             self.imported_column_specs = []
@@ -571,7 +562,13 @@ class DataLoaderDialogProject(QDialog):
         
         #Load Preview Widget
         preview_dialog = QDialog(self)
-        preview_dialog.setWindowTitle(name)
+        preview_dialog.setWindowTitle(f"Data Load Preview Table: {name}")
+        preview_dialog.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
+        preview_dialog.setWindowFlags(preview_dialog.windowFlags()
+                        |Qt.WindowType.WindowMaximizeButtonHint 
+                        |Qt.WindowType.WindowMinimizeButtonHint
+                                        )
+        
         preview_table = QTableWidget()
         layout = QVBoxLayout()
         layout.addWidget(preview_table)

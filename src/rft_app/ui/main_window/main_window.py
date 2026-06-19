@@ -1,10 +1,8 @@
 from PyQt6.QtCore import QSize, Qt, QSignalBlocker
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import (QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow, QSizePolicy, 
-                            QSplitter,  QToolBar, QVBoxLayout, QWidget, QMessageBox)
+                            QSplitter, QTabWidget,  QToolBar, QVBoxLayout, QWidget, QMessageBox)
 from pathlib import Path
-
-from qtpy.QtWidgets import QTabWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
 from ui.widgets import (DataLoaderDialogAnalysis, DataLoaderDialogProject, NewViewDialog)
@@ -27,10 +25,10 @@ class MainWindowKD(QMainWindow):
 
         self._build_ui()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup()
+        self._load_default_project_on_startup("260619 Three Analyses KD")
 
-    def _load_default_project_on_startup(self) -> None:
-        default_path = Path(__file__).resolve().parent.parent.parent / "260611 Four Analyses KD.rftproj"
+    def _load_default_project_on_startup(self, project_name:str) -> None:
+        default_path = Path(__file__).resolve().parent.parent.parent / f"{project_name}.rftproj"
         print("Looking for:", default_path, "exists:", default_path.exists())
         if not default_path.exists():
             return
@@ -226,9 +224,7 @@ class MainWindowKD(QMainWindow):
                                             dlg.imported_name,
                                             info_log = dlg.info_log)
             new_data_set =self.project.get_dataset_by_name(new_data_set_name)
-            #************************************************************************
-            print (new_data_set.info_log)
-            #************************************************************************
+
             #Raise a "need to save flag" prior to exiting the project
             self.project.mark_modified()
             self.project_sidebar.refresh_all_loaded_datasets_tree()
@@ -374,10 +370,7 @@ class MainWindowKD(QMainWindow):
         # #Create a new analysis view
         new_analysis_view_obj = AnalysisView(name = "New View")
         analysis.analysis_views.append(new_analysis_view_obj)
-        self.analysis_workspace.add_view_tab(   tab, 
-                                                analysis, 
-                                                new_analysis_view_obj
-                                            )
+
         # #Update the project actions
         self.project.mark_modified()
         self.project_sidebar.refresh_all_analyses_tree()
@@ -385,7 +378,9 @@ class MainWindowKD(QMainWindow):
 
     def create_new_analysis_view(self, analysis:AnalysisObject)->None:
         # Launch the dialog window for the creation of a new view object
-        NewViewDialog(self, analysis, self.project)    
+        dlg = NewViewDialog(self, analysis, self.project)
+        if dlg.exec() !=QDialog.DialogCode.Accepted:
+            return
         
         # Update the project actions
         self.project.mark_modified()
