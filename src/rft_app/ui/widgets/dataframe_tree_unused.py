@@ -2,25 +2,25 @@ from PyQt6.QtWidgets import QTreeWidget, QWidget, QTreeWidgetItem
 from project import DataSet
 
 
-class DataFrameTree(QTreeWidget):
+class DataframeTree(QTreeWidget):
     def __init__(self, 
                 parent: QWidget | None = None, 
-                loaded_dataset: DataSet | None = None,
-                ) -> None:
+                dataset: DataSet | None = None,
+                title: str ="") -> None:
         super().__init__(parent)
         
-        if loaded_dataset is None:
+        if dataset is None:
             raise ValueError("DataFrameTree requires a LoadedDataSet")
-        self.loaded_dataset = loaded_dataset
-        self.setHeaderLabel(self.loaded_dataset.name)
+        self.dataset = dataset
+        self.setHeaderLabel(title)
         self._design_tree()
         
     def _design_tree(self):
         #Create the dataframe object
-        df = self.loaded_dataset.dataframe
+        df = self.dataset.dataframe
         
         #Add the top level
-        self.top_level = QTreeWidgetItem([self.loaded_dataset.name])
+        self.top_level = QTreeWidgetItem([self.dataset.name])
         self.addTopLevelItem(self.top_level)
 
         #Add second level item of dataframe shape
@@ -34,9 +34,9 @@ class DataFrameTree(QTreeWidget):
         self.top_level.addChild(self.columns_level)
         for idx,header in enumerate(df.columns):
             header_text = header 
-            unit = self.loaded_dataset.column_specs[idx].unit if not self.loaded_dataset.column_specs[idx].unit=="" else "no units"
-            column_text = f"{header_text} [{unit}]"
-            self.columns_level.addChild(QTreeWidgetItem([column_text]))
+            
+            # column_text = f"{header_text} [{unit}]"
+            self.columns_level.addChild(QTreeWidgetItem([header]))
 
 
 

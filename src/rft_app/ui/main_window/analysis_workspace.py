@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QFrame, QVBoxLayout,QWidget
 from qtpy.QtWidgets import QTabWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from ui.widgets import AnalysisViewWidget
+from ui.analysis_view import AnalysisViewWidget
 
 
 class AnalysisWorkspace(QFrame):
