@@ -149,7 +149,7 @@ def rename_view(item:QTreeWidgetItem, tree:QTreeWidget)->None:
     view = item.data(0,Qt.ItemDataRole.UserRole)
     if view is None or not isinstance(view, AnalysisView):
         return
-    tree.setCurrentItem(item,0)# focus on the row
+    tree.setCurrentItem(item,0) # focus on the row
     tree.editItem(item, 0)      # same as pressing F2
 
 def delete_view(item:QTreeWidgetItem, tree: QTreeWidget)->None:

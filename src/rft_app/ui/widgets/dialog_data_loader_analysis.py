@@ -209,11 +209,8 @@ class DataLoaderDialogAnalysis(QDialog):
                 header = header_list[c]
                 idx = all_columns.index(header)
                 quantity_key = self.selected_dataset.column_specs[idx].quantity_key
-                units_combo = UnitsComboBox(quantity_key=quantity_key)
+                units_combo = UnitsComboBox(quantity_key, self.project)
                 units_combo.currentTextChanged.connect(self._update_table_values)
-
-                with QSignalBlocker(units_combo):    
-                    units_combo.set_default_unit(self.project)
 
                 self.preview_table.setCellWidget(0, c, units_combo)
 

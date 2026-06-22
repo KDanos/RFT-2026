@@ -303,12 +303,7 @@ class DataLoaderDialogProject(QDialog):
 
             #Select the units associated with the quantity
             quantity_chosen = quantity_combo.currentData()
-            units_combo = UnitsComboBox(quantity_chosen)
-
-            default_unit = self._get_project_default_units(quantity_chosen)
-            idx = units_combo.findText(default_unit)
-            if idx >= 0:
-                units_combo.setCurrentIndex(idx)
+            units_combo = UnitsComboBox(quantity_chosen, self.project)
             
             self.mapping_table.setCellWidget(0,mapping_col,quantity_combo)
             self.mapping_table.setCellWidget(1,mapping_col,units_combo)
