@@ -32,12 +32,13 @@ class DataframeTree(QTreeWidget):
         #Add second level item of column headers
         self.columns_level = QTreeWidgetItem(["Columns"])
         self.top_level.addChild(self.columns_level)
-        for idx,header in enumerate(df.columns):
-            header_text = header 
-            
-            # column_text = f"{header_text} [{unit}]"
-            self.columns_level.addChild(QTreeWidgetItem([header]))
+        for c,header in enumerate(df.columns):            
+            header_item = QTreeWidgetItem([(header)])
+            self.columns_level.addChild(header_item)
 
+
+def make_tree_item_tristate(self)->None:
+    pass
 
 
 

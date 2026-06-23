@@ -25,7 +25,7 @@ class MainWindowKD(QMainWindow):
 
         self._build_ui()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("260619 Three Analyses KD")
+        self._load_default_project_on_startup("260623 Single Dataset KD")
 
     def _load_default_project_on_startup(self, project_name:str) -> None:
         default_path = Path(__file__).resolve().parent.parent.parent / f"{project_name}.rftproj"
@@ -51,7 +51,7 @@ class MainWindowKD(QMainWindow):
         self.project.mark_clean() 
 
     def _build_ui(self):
-        self._build_actions()
+        self._build_menu_actions()
         self._build_central_widget()
         self._build_menubar()
         # self._build_statusbar()
@@ -156,7 +156,7 @@ class MainWindowKD(QMainWindow):
         self.toolBar.addWidget(spacer)
         self.toolBar.addWidget(units_frame)
     
-    def _build_actions(self):      
+    def _build_menu_actions(self):      
         #Open Project
         self.actionOpenProject = QAction("Open Project", self)
         self.actionOpenProject.setIcon(app_icon("fa5.folder-open"))
@@ -368,7 +368,15 @@ class MainWindowKD(QMainWindow):
 
     def create_default_analysis_view(self,analysis:AnalysisObject,tab:QTabWidget|None=None,):
         # #Create a new analysis view
-        new_analysis_view_obj = AnalysisView(name = "New View")
+        dataset = analysis.analysis_dataset
+        df = dataset.dataframe.copy() if dataset is not None and dataset.dataframe is not None else None
+        column_specs = list(dataset.column_specs) if dataset is not None else []
+        new_analysis_view_obj = AnalysisView(
+            name = "New View", 
+            analysis_object = analysis,
+            df = df,
+            column_specs = column_specs
+        )
         analysis.analysis_views.append(new_analysis_view_obj)
 
         # #Update the project actions

@@ -1,8 +1,9 @@
+import pandas as pd
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QDialog, QDialogButtonBox, QLabel,QComboBox, QHBoxLayout, QLineEdit, 
                             QVBoxLayout)
 
-from project import AnalysisObject, AnalysisView, ProjectDataManager
+from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from utilities import unique_name
 
 class NewViewDialog(QDialog):
@@ -21,12 +22,12 @@ class NewViewDialog(QDialog):
         #Create attributes to support the functions
         self.copy_from:AnalysisView|None = None
         self.new_view_name = ""
-        self.df = None
+        self.df:pd.DataFrame = None
+        self.column_specs:list[ColumnSpec] = []
         self._has_existing_views = (analysis is not None and len(analysis.analysis_views)>0)
 
         self._build_ui()
         self._connect_signals()
-
 
     def _build_ui(self):
         # Design the window
@@ -95,7 +96,9 @@ class NewViewDialog(QDialog):
         new_view_object = AnalysisView(
             name = self.new_view_name,
             analysis_object= self.analysis,
-            df = self.df
+            df = self.df,
+            column_specs= self.column_specs
+
         )
         return new_view_object
 
@@ -103,11 +106,13 @@ class NewViewDialog(QDialog):
         if self._has_existing_views:
             self.copy_from = self.views_combo.currentData()
             self.new_view_name = self.name_line_edit.text().strip() or self.views_combo.currentText()
-            self.df = self.copy_from.df
+            self.df = self.copy_from.df.copy()
+            self.column_specs = list(self.copy_from.column_specs)
         else:
             self.copy_from = None
             self.new_view_name = self.name_line_edit.text().strip()
-            self.df = self.analysis.analysis_dataset.dataframe
+            self.df = self.analysis.analysis_dataset.dataframe.copy()
+            self.column_specs = list(self.analysis.analysis_dataset.column_specs)
         
         #Make sure the new view name is unique
         self._make_name_unique()
@@ -119,12 +124,12 @@ class NewViewDialog(QDialog):
     def _on_create_empty(self)->None:
         self.copy_from = None
         self.new_view_name = self.name_line_edit.text().strip()
-        self.df = self.analysis.analysis_dataset.dataframe
+        self.df = self.analysis.analysis_dataset.dataframe.copy()
+        self.column_specs = list(self.analysis.analysis_dataset.column_specs)
         self._make_name_unique()
         new_view = self._create_new_view_instance()
         self.analysis.analysis_views.append(new_view)
         self.accept()
-
 
     def reject(self)->None:
         #no append

@@ -51,7 +51,6 @@ class AnalysisObject:
     analysis_dataset:DataSet | None = None
     formation_pres_src_col: str = None
     vert_depth_src_col:str = None
-    displayed_dataframe: pd.DataFrame | None = None
     fluids:list[Fluid] = field (default_factory= list)
     parameters:dict[str,Any] = field (default_factory= dict)
     analysis_views: list[AnalysisView]  = field(default_factory=list)
@@ -67,6 +66,7 @@ class AnalysisView:
     analysis_object: AnalysisObject = None
     is_visible:bool = True
     df: pd.DataFrame= None
+    column_specs : list[ColumnSpec] =field (default_factory=list)
 
 
 @dataclass

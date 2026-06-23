@@ -5,7 +5,7 @@ from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMessageBox,QMenu, QTreeWidgetItem
 
-from utilities import show_dataframe_table, show_log_table
+from utilities import show_dataframe_table_dialog, show_log_table
 
 
 if TYPE_CHECKING:
@@ -86,5 +86,5 @@ def show_data_table(item:QTreeWidgetItem, tree:AllDataSetsTree)-> None:
     column_specs = dataset.column_specs
     title = dataset.name
     project= tree.project
-    show_dataframe_table(df, column_specs, title, tree,project)
+    show_dataframe_table_dialog(df, column_specs, title, tree,project)
         

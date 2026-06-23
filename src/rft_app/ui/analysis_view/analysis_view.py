@@ -42,7 +42,7 @@ class AnalysisViewWidget(QWidget):
         main_frame_layout.addWidget(main_frame_splitter)
 
         #Tabular Frame
-        tabular_frame = TabularFrame(main_frame_splitter)
+        tabular_frame = TabularFrame(main_frame_splitter,self.project,self.analysis, self.analysis_view_obj)
         
         #Graphical Frame
         graphical_frame = GraphicalFrame(main_frame_splitter)

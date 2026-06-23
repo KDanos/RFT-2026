@@ -257,7 +257,7 @@ class AnalysisWorkspace(QFrame):
         self,
         analysis: AnalysisObject,
         inner_tabs: QTabWidget,
-    ) -> None:
+        ) -> None:
         self._current_analysis = analysis
         widget = inner_tabs.currentWidget()
         self._current_view = widget.property("view_object") if widget else None

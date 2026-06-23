@@ -125,7 +125,7 @@ def round_str_to_decimal_points(
     return(str(value))          
 
 def create_dataframe_table( df:pd.DataFrame, 
-                            spec:ColumnSpec=None, 
+                            column_specs:list[ColumnSpec]|None=None, 
                             parent = None, 
                             project = None
                                 )->QTableWidget:
@@ -141,7 +141,7 @@ def create_dataframe_table( df:pd.DataFrame,
         if units_combo is None:
             return
         
-        quantity_key = spec[c].quantity_key
+        quantity_key = column_specs[c].quantity_key
         output_unit = units_combo.currentText()
         qty = STANDARD_QUANTITIES.get(quantity_key,STANDARD_QUANTITIES["undefined"])
 
@@ -163,7 +163,7 @@ def create_dataframe_table( df:pd.DataFrame,
 
     for c in range(columns):
         #Create the units combo box
-        quantity_key = spec[c].quantity_key
+        quantity_key = column_specs[c].quantity_key
         units_combo = UnitsComboBox(quantity_key,project)
         data_table.setCellWidget(0,c,units_combo)
         # units_combo.currentIndexChanged.connect (lambda _index, col=c: update_column_values(col))
@@ -173,12 +173,13 @@ def create_dataframe_table( df:pd.DataFrame,
 
     return data_table, update_column_values
 
-def show_dataframe_table(   df:pd.DataFrame,
-                            spec:ColumnSpec=None,
-                            title:str=None, 
-                            parent=None,
-                            project = None
-                            )->QDialog:
+def show_dataframe_table_dialog(
+    df:pd.DataFrame,
+    column_specs:list[ColumnSpec]|None=None,
+    title:str=None, 
+    parent=None,
+    project = None
+    )->QDialog:
     if not title:
         title = "Data Table"
     # Define the dialog window
@@ -188,7 +189,21 @@ def show_dataframe_table(   df:pd.DataFrame,
     window.setWindowFlags(window.windowFlags()
         |Qt.WindowType.WindowMaximizeButtonHint 
         |Qt.WindowType.WindowMinimizeButtonHint
-    )  
+    )
+    table_window = create_table_view_frame(df, column_specs,parent, project)
+    window_layout = QVBoxLayout(window)
+    window_layout.setContentsMargins(0,0,0,0)
+    window_layout.addWidget(table_window)
+    window.show()
+   
+def create_table_view_frame(
+    df:pd.DataFrame,
+        column_specs:list[ColumnSpec]|None=None,
+    parent=None,
+    project = None
+    )->QFrame:
+    
+    window = QFrame(parent)
     # Create the main layout
     main_layout = QVBoxLayout(window)
     widgets_frame = QFrame(window)
@@ -200,7 +215,7 @@ def show_dataframe_table(   df:pd.DataFrame,
     main_layout.addWidget(splitter)
 
     # Create and add the table
-    table, update_column_values = create_dataframe_table(df,spec, table_frame,project )
+    table, update_column_values = create_dataframe_table(df,column_specs, table_frame,project )
     table_layout = QVBoxLayout(table_frame)
     table_layout.setContentsMargins(0,0,0,0)
     table_layout.addWidget(table)
@@ -256,7 +271,8 @@ def show_dataframe_table(   df:pd.DataFrame,
     
     _connect_signals()
     refresh_all_columns()
-    window.show()
+    
+    return window
 
 def create_log_table(dataset:DataSet, parent = None)->QTableWidget:
     
@@ -326,3 +342,11 @@ def show_log_table(dataset:DataSet,title:str = None,parent=None)->QDialog:
     widget_layout.addWidget(bt2)
 
     window.show()
+
+def make_tree_item_checkable(item:QTreeWidgetItem)->None:
+    for idx in range(item.childCount()):     
+        column_item = item.child(idx)
+        column_item.setFlags(item.flags()
+        |Qt.ItemFlag.ItemIsUserCheckable
+        )
+        column_item.setCheckState(0, Qt.CheckState.Checked)
