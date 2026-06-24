@@ -98,7 +98,6 @@ class NewViewDialog(QDialog):
             analysis_object= self.analysis,
             df = self.df,
             column_specs= self.column_specs
-
         )
         return new_view_object
 

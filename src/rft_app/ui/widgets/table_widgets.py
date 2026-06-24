@@ -20,7 +20,6 @@ class UnitsComboBox(QtWidgets.QComboBox):
         self.clear()
         self.addItems(self.quantity_object.units)
         
-
     def set_default_unit(self,project:ProjectDataManager=None)->None:
         if project is None:
             return

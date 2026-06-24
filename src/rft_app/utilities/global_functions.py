@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator,QCheckBox, QDialog, QSpinBox, 
@@ -52,12 +52,12 @@ def is_numeric(value)-> bool:
         return False
 
 def force_numeric(value:Any)->float| None:
-    if value is None:
-        return None
-    if isinstance(value, str):
-        value= value.strip()
-        if value =="":
-            return None
+    # if value is None:
+    #     return None
+    # if isinstance(value, str):
+    #     value= value.strip()
+    #     if value =="":
+    #         return None
     try:
          return(float(value))
     except(TypeError, ValueError):
@@ -201,14 +201,14 @@ def create_table_view_frame(
         column_specs:list[ColumnSpec]|None=None,
     parent=None,
     project = None
-    )->QFrame:
+    )->(QFrame, QTableWidget, Callable[[int],None] ):
     
-    window = QFrame(parent)
+    frame = QFrame(parent)
     # Create the main layout
-    main_layout = QVBoxLayout(window)
-    widgets_frame = QFrame(window)
-    table_frame = QFrame(window)
-    splitter= QSplitter(window)
+    main_layout = QVBoxLayout(frame)
+    widgets_frame = QFrame(frame)
+    table_frame = QFrame(frame)
+    splitter= QSplitter(frame)
     splitter.addWidget(widgets_frame)
     splitter.addWidget(table_frame)
     splitter.setSizes([10000,50000])
@@ -253,7 +253,7 @@ def create_table_view_frame(
 
     def refresh_column(col:int)->None:
         update_column_values(col)       #convert units (from create dataframe_table)
-        apply_rounding_to_column(col)   # reound (only window knows these widgets)
+        apply_rounding_to_column(col)   # round (only frame knows these widgets)
     
     def refresh_all_columns()->None:
         for col in range(table.columnCount()):
@@ -272,7 +272,7 @@ def create_table_view_frame(
     _connect_signals()
     refresh_all_columns()
     
-    return window
+    return frame, table, update_column_values
 
 def create_log_table(dataset:DataSet, parent = None)->QTableWidget:
     
@@ -346,7 +346,7 @@ def show_log_table(dataset:DataSet,title:str = None,parent=None)->QDialog:
 def make_tree_item_checkable(item:QTreeWidgetItem)->None:
     for idx in range(item.childCount()):     
         column_item = item.child(idx)
-        column_item.setFlags(item.flags()
+        column_item.setFlags(column_item.flags()
         |Qt.ItemFlag.ItemIsUserCheckable
         )
         column_item.setCheckState(0, Qt.CheckState.Checked)

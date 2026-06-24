@@ -8,7 +8,8 @@ import csv
 from io import StringIO
 
 from project import ColumnSpec,DataSetLogEntry
-from .table_widgets import UnitsComboBox
+from ui.project_data_loader.model.project_data_loader_management import create_column_specs, define_column_names, populate_data_rows
+from ui.widgets.table_widgets import UnitsComboBox
 from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units
 from utilities import force_numeric, is_numeric
 import pandas as pd
@@ -451,85 +452,19 @@ class DataLoaderDialogProject(QDialog):
             QMessageBox.information(self, "Data Import", "No columns have been selected for import")
             return None
         
-        col_names = []
-        
-        #Ensure that the column specs are empty before appending 
-        self.imported_column_specs = []
-        
-        for mapping_col in selected_mapping_cols:
-            item = self.mapping_table.item(2,mapping_col)
-            name = item.text().strip() if item and item.text().strip() else f"col_{mapping_col}"
-            col_names.append(name)
-
-            #Create the column specs, to hold the units
-            quantity_combo = self.mapping_table.cellWidget(0,mapping_col)
-            quantity_key = (
-                quantity_combo.currentData()
-                if quantity_combo is not None and quantity_combo.currentData()
-                else "undefined"
-            )
-            units_combo = self.mapping_table.cellWidget(1,mapping_col)
-            units = units_combo.currentText() if units_combo is not None else ""
-   
-            current_spec = ColumnSpec(name,quantity_key, units )
-            self.imported_column_specs.append(current_spec)
-    
+        #Extract the list of column names
+        col_names  = define_column_names(selected_mapping_cols,self.mapping_table)
+        #Create the Column Specs
+        self.imported_column_specs = create_column_specs(selected_mapping_cols, self.mapping_table, col_names)
+ 
         #Collect values in the data rows, ignoring the appropriate ones from the preview table
-        self.info_log= [] #reset each import attempt
-        rows = []
-        for r in range(len(self.data_rows)):  
-            #Skip any rows that have been clicked to ignore
-            if r in self.rows_to_ignore:
-                continue
+        rows, self.info_log= populate_data_rows(
+            self.data_rows, 
+            set(self.rows_to_ignore),
+            selected_mapping_cols,
+            self.imported_column_specs
+            )
 
-            row_values_to_import = self.data_rows[r]
-            row_vals_for_df = []
-            
-            for idx,mapping_col in enumerate(selected_mapping_cols):
-                source_column = mapping_col-1
-                raw_value = row_values_to_import[source_column] if 0<=source_column<len(row_values_to_import) else ""
-                
-                # Normalise the numeric data
-                spec = self.imported_column_specs[idx]
-                quantity_key = spec.quantity_key
-                user_unit = spec.unit
-                
-                # Is the quantity expected to be numeric?
-                qty = STANDARD_QUANTITIES.get(quantity_key, STANDARD_QUANTITIES["undefined"])
-                if  qty.is_numeric:
-                    coerced = force_numeric(raw_value)
-                
-                    if coerced is None and not (
-                        raw_value is None 
-                        or (isinstance(raw_value,str) and raw_value.strip()=="")):
-                        new_log_entry = DataSetLogEntry(
-                                        message=f"Non-numeric {quantity_key} value removed; set to None",
-                                        level="warning",
-                                        row=r-1, # +1 so that the row number reflects the source data row (index starting at 1 instead of 0). Unclear what happens with eliminated rows
-                                        column=spec.name,
-                                        column_idx= idx,
-                                        old_value = raw_value,
-                                        new_value = coerced,
-                                        quantity_key = quantity_key,
-                                        reason = f"Expected a numeric value for {quantity_key}"
-                                        )
-
-                        self.info_log.append(new_log_entry)
-                    if coerced is None:
-                        value = None
-                    elif user_unit:
-                        value = normalise_from_user_units(user_unit,quantity_key,coerced)
-                    else: value = coerced
-
-                else: # Non-numeric quantities (undefined, text, etc.)
-                    if isinstance (raw_value, str) and raw_value.strip()=="":
-                        value = None
-                    else:
-                        value = raw_value
-
-                row_vals_for_df.append(value)
-            rows.append(row_vals_for_df)
-        
         if not rows: 
             QMessageBox.information(self, "Data Import", "No rows were selected for import")
             return None
@@ -544,7 +479,6 @@ class DataLoaderDialogProject(QDialog):
         if result != QDialog.DialogCode.Accepted:
             self.imported_df = None
             self.imported_column_specs = []
-            self.imported_dataframe_specs = []
             self.imported_name = ""
             self.info_log=[]
             return None

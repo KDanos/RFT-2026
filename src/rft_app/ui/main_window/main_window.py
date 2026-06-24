@@ -5,7 +5,8 @@ from PyQt6.QtWidgets import (QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QM
 from pathlib import Path
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
-from ui.widgets import (DataLoaderDialogAnalysis, DataLoaderDialogProject, NewViewDialog)
+from ui.widgets import (DataLoaderDialogAnalysis, NewViewDialog)
+from ui.project_data_loader.ui.dialog_data_loader_project import DataLoaderDialogProject
 from ui.main_window.analysis_workspace import AnalysisWorkspace
 from ui.main_window.project_sidebar import ProjectSidebar
 

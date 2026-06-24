@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QFrame, QTableWidget, QVBoxLayout, QWidget
 
-from project import AnalysisObject, AnalysisView, ProjectDataManager
+from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from utilities import create_table_view_frame
 class TabularFrame(QFrame):
     def __init__(self,
@@ -21,22 +21,29 @@ class TabularFrame(QFrame):
 
         #Build the sidebar
         self._build_ui()
+        self.update_column_specs()
+    
     #--------Public API--------
-    def update_column_spec(self):
-        for col in range(self.table.columnCount()):
-            combo_widget = self.table.getWidget
-
+    def update_column_specs(self):
+        self.view.column_specs = []
+        for c in range(self.table.columnCount()):
+            combo_widget = self.table.cellWidget(0,c)
+            name = self.table.horizontalHeaderItem(c).text()
+            quantity_key = combo_widget.quantity_key
+            current_unit = combo_widget.currentText()
+            spec = ColumnSpec(name, quantity_key, current_unit)
+            self.view.column_specs.append(spec)
 
     #--------Private UI--------
 
     def _build_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0,0,0,0)
-        self.table_frame= create_table_view_frame(
+        self.table_frame, self.table, update_columns_values = create_table_view_frame(
                                             self.view.df,
                                             self.dataset.column_specs, 
                                             self, 
                                             self.project )
         main_layout.addWidget(self.table_frame)
-        self.table = self.table_frame.table
+        
         
