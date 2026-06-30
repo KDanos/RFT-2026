@@ -1,5 +1,5 @@
 
-from datetime import datetime, timezone
+
 from typing import Optional
 from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtGui import QIcon
@@ -7,11 +7,11 @@ from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QDialog
 import csv
 from io import StringIO
 
-from project import ColumnSpec,DataSetLogEntry
+from project import ColumnSpec
 from ui.project_data_loader.model.project_data_loader_management import create_column_specs, define_column_names, populate_data_rows
 from ui.widgets.table_widgets import UnitsComboBox
-from units import STANDARD_QUANTITIES, normalise_from_user_units, convert_from_normalised_to_user_units
-from utilities import force_numeric, is_numeric
+from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
+from utilities import  is_numeric
 import pandas as pd
 
 class DataLoaderDialogProject(QDialog):

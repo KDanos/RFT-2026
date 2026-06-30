@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QM
 from pathlib import Path
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
+from ui.analysis_view import insert_excess_pressure_column
 from ui.widgets import (DataLoaderDialogAnalysis, NewViewDialog)
 from ui.project_data_loader.ui.dialog_data_loader_project import DataLoaderDialogProject
 from ui.main_window.analysis_workspace import AnalysisWorkspace
@@ -301,7 +302,7 @@ class MainWindowKD(QMainWindow):
         
         #Create a new analysis view
         self.create_default_analysis_view(new_analysis_object)
-    
+        
     def _check_if_project_has_path(self)-> None:
         has_path = self._project_path is not None
         self.actionSaveProject.setEnabled(has_path)
@@ -368,16 +369,20 @@ class MainWindowKD(QMainWindow):
         event.accept()
 
     def create_default_analysis_view(self,analysis:AnalysisObject,tab:QTabWidget|None=None,):
-        # #Create a new analysis view
+        
+        #Create a new analysis view
         dataset = analysis.analysis_dataset
         df = dataset.dataframe.copy() if dataset is not None and dataset.dataframe is not None else None
         column_specs = list(dataset.column_specs) if dataset is not None else []
+        df, column_specs = insert_excess_pressure_column(df, column_specs, self.project)
+        
         new_analysis_view_obj = AnalysisView(
             name = "New View", 
             analysis_object = analysis,
             df = df,
             column_specs = column_specs
         )
+        
         analysis.analysis_views.append(new_analysis_view_obj)
 
         # #Update the project actions

@@ -157,7 +157,7 @@ def create_dataframe_table( df:pd.DataFrame,
             else:
                 display = normalised_value
 
-            item = QTableWidgetItem(display)
+            item = QTableWidgetItem(str(display))
             data_table.setItem(r+1,c,item)
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -190,7 +190,7 @@ def show_dataframe_table_dialog(
         |Qt.WindowType.WindowMaximizeButtonHint 
         |Qt.WindowType.WindowMinimizeButtonHint
     )
-    table_window = create_table_view_frame(df, column_specs,parent, project)
+    _,table_window,_ = create_table_view_frame(df, column_specs,parent, project)
     window_layout = QVBoxLayout(window)
     window_layout.setContentsMargins(0,0,0,0)
     window_layout.addWidget(table_window)

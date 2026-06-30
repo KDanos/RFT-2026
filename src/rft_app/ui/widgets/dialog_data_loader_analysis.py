@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QCheckBox, QDialog, QGridLayout, QLabel, QSplitter,
                             QLineEdit, QSpinBox, QTableWidgetItem,QMessageBox, QPushButton)
 
 from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
+from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from .table_widgets import UnitsComboBox
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from .tree_all_datasets import AllDataSetsTree
@@ -229,7 +230,7 @@ class DataLoaderDialogAnalysis(QDialog):
             self.analysis_dataset = None
             return
         df = self.selected_dataset.dataframe[self.selected_columns].copy()
-
+        
         # Append the dataframe to the analysis dataset
         self._create_analysis_dataset(df)
 
@@ -237,6 +238,7 @@ class DataLoaderDialogAnalysis(QDialog):
         name = self._get_analysis_name()
         column_specs = self.selected_columns_specs
         self.analysis_dataset = DataSet(name, dataframe, column_specs)
+
 
     def _update_table_values(self):
 
@@ -286,9 +288,6 @@ class DataLoaderDialogAnalysis(QDialog):
         for analysis in self.project.analyses:
             existing_names.append(analysis.name)
         return existing_names
-
-    def _create_displayed_data_dataframe(self) -> None:
-        pass
 
     def _set_descendants(self, item: QTreeWidgetItem) -> None:
 
@@ -340,8 +339,6 @@ class DataLoaderDialogAnalysis(QDialog):
         self.pressure_combo.clear()
         self.pressure_combo.addItems(pressure_options)
 
-#Creating the new analysis
-    # function to be called from the main window, to extract the newly created analysis object
     def _start_analysis(self)->AnalysisObject:
         if not self.selected_columns:
             QMessageBox.warning(
@@ -350,7 +347,7 @@ class DataLoaderDialogAnalysis(QDialog):
                 "No columns have been selected. Check at least on column in the tree"
             )
             return
-        if self.depth_combo == "":
+        if not self.depth_combo.currentText().strip():
             QMessageBox.warning(
                 self,
                 "Start New Analysis",
@@ -358,30 +355,82 @@ class DataLoaderDialogAnalysis(QDialog):
                 as the base depth axis for the analysis"""
             )
             return
-        if self.pressure_combo == "":
+        if not self.pressure_combo.currentText().strip():
             QMessageBox.warning(
                 self,
                 "Start New Analysis",
                 """Ensure that a column defined as a 'pressure' quantity has been selected to serve 
                 as the base formation pressure for the analysis """
             )
+            return
         else:
             self.result_analysis = self._create_analysis_object()
             self.accept()
 
     def _create_analysis_object(self) -> AnalysisObject:
-        name = self.analysis_dataset.name
-        source_datasets = [self.selected_dataset.name]
-        analysis_dataset = self.analysis_dataset
-
-        formation_pressure_src_col =self.pressure_combo.currentText().strip()
+        formation_pres_src_col =self.pressure_combo.currentText().strip()
         vert_depth_src_col = self.depth_combo.currentText().strip()
 
-        new_analysis_object = AnalysisObject(
-            name=name,
-            source_datasets=source_datasets,
-            analysis_dataset=analysis_dataset,
-            formation_pres_src_col=formation_pressure_src_col,
-            vert_depth_src_col = vert_depth_src_col,
+        #Re-order the dataframe so that the depth and pressure are the first two columns
+        df, specs = self._build_ordered_analysis_dataframe(
+            self.analysis_dataset.dataframe,
+            self.analysis_dataset.column_specs,
+            vert_depth_src_col=vert_depth_src_col,
+            formation_pres_src_col=formation_pres_src_col
             )
+ 
+        #Re-create the dataset
+        self.analysis_dataset = DataSet(
+            self.analysis_dataset.name,
+            df,
+            specs
+            )
+              
+        new_analysis_object = AnalysisObject(
+            name=self.analysis_dataset.name,
+            source_datasets = [self.selected_dataset.name],
+            analysis_dataset=self.analysis_dataset,
+            vert_depth_src_col = vert_depth_src_col,
+            formation_pres_src_col=formation_pres_src_col,
+            )
+
         return new_analysis_object
+
+    def _build_ordered_analysis_dataframe(
+        self, 
+        source_df:pd.DataFrame, 
+        column_specs:list[ColumnSpec],
+        *,
+        vert_depth_src_col:str,
+        formation_pres_src_col:str
+        )->tuple[pd.DataFrame,list[ColumnSpec]]:
+        
+        #Map the original name -> ColumnSpec for quick Lookup
+        spec_by_name = {spec.name: spec for spec in column_specs} #ask for help on the syntax of this line
+
+        #Other selected columns (preserve stable order, exclude the two mapped cols)
+        other_cols = [
+            name for name in source_df.columns
+            if name not in (vert_depth_src_col, formation_pres_src_col)
+            ]
+        
+        ordered_src_names = [vert_depth_src_col, formation_pres_src_col, *other_cols] #ask for syntax clarification on the asterix before other_cols
+
+        df = source_df[ordered_src_names].copy() # ask for syntax explanation fo df = source_df[ordered_src_names]
+        df = df.rename(columns = {
+            vert_depth_src_col:CANONICAL_VERTICAL_DEPTH,
+            formation_pres_src_col:CANONICAL_FORMATION_PRESSURE,
+        })
+        #Rebuild specs in the same order, with updated names for the first two
+        new_specs:list[ColumnSpec]=[]
+        for col_name in df.columns:
+            if col_name == CANONICAL_VERTICAL_DEPTH:
+                old = spec_by_name[vert_depth_src_col]
+                new_specs.append(ColumnSpec(CANONICAL_VERTICAL_DEPTH, old.quantity_key, old.unit))
+            elif col_name == CANONICAL_FORMATION_PRESSURE:
+                old = spec_by_name[formation_pres_src_col]
+                new_specs.append(ColumnSpec(CANONICAL_FORMATION_PRESSURE, old.quantity_key, old.unit))
+            else:
+                new_specs.append(spec_by_name[col_name])
+        
+        return df, new_specs

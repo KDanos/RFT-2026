@@ -4,6 +4,9 @@ from PyQt6.QtWidgets import (QDialog, QDialogButtonBox, QLabel,QComboBox, QHBoxL
                             QVBoxLayout)
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
+from project.canonical_names import CANONICAL_EXCESS_PRESSURE
+from ui.analysis_view.model.analysis_view_data_manager import insert_excess_pressure_column
+
 from utilities import unique_name
 
 class NewViewDialog(QDialog):
@@ -99,6 +102,9 @@ class NewViewDialog(QDialog):
             df = self.df,
             column_specs= self.column_specs
         )
+        print(list(self.df.columns))
+        print([s.name for s in self.column_specs])
+        
         return new_view_object
 
     def _on_accept(self)->None:
@@ -107,12 +113,14 @@ class NewViewDialog(QDialog):
             self.new_view_name = self.name_line_edit.text().strip() or self.views_combo.currentText()
             self.df = self.copy_from.df.copy()
             self.column_specs = list(self.copy_from.column_specs)
+            self.df, self.column_specs = insert_excess_pressure_column(self.df, self.column_specs, self.project) #just in case something went wrong and a view ended up with the wrong content
         else:
             self.copy_from = None
             self.new_view_name = self.name_line_edit.text().strip()
             self.df = self.analysis.analysis_dataset.dataframe.copy()
             self.column_specs = list(self.analysis.analysis_dataset.column_specs)
-        
+            self.df, self.column_specs = insert_excess_pressure_column(self.df, self.column_specs, self.project)
+
         #Make sure the new view name is unique
         self._make_name_unique()
         #Create the new view instance
@@ -125,6 +133,7 @@ class NewViewDialog(QDialog):
         self.new_view_name = self.name_line_edit.text().strip()
         self.df = self.analysis.analysis_dataset.dataframe.copy()
         self.column_specs = list(self.analysis.analysis_dataset.column_specs)
+        self.df, self.column_specs = insert_excess_pressure_column(self.df, self.column_specs, self.project)
         self._make_name_unique()
         new_view = self._create_new_view_instance()
         self.analysis.analysis_views.append(new_view)
@@ -133,3 +142,6 @@ class NewViewDialog(QDialog):
     def reject(self)->None:
         #no append
         super().reject()
+
+   
+        
