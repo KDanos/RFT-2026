@@ -1,0 +1,214 @@
+/* Printable docs — portrait, readable fonts, full page width
+   Used via .vscode/settings.json → markdown.styles */
+
+@page {
+  size: A4 portrait;
+  margin: 14mm 12mm;
+}
+
+/* VS Code Markdown PDF wraps content in .vscode-body with a max-width */
+html,
+body,
+body.vscode-body,
+.vscode-body {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #1a1a1a;
+}
+
+/* ---- Tables: wrap text, readable size ---- */
+table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 0.4em 0 0.75em 0;
+  font-size: 9.5pt;
+  line-height: 1.35;
+}
+
+th,
+td {
+  border: 1px solid #bbb;
+  padding: 4px 5px;
+  vertical-align: top;
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+th {
+  background: #f0f0f0;
+  font-weight: 600;
+}
+
+/* 4-column function-map tables (§3) — slightly smaller but still readable */
+table:has(tr:first-child > th:nth-child(4)) {
+  font-size: 9pt;
+}
+
+table:has(tr:first-child > th:nth-child(4)) th:nth-child(1),
+table:has(tr:first-child > th:nth-child(4)) td:nth-child(1) {
+  width: 19%;
+}
+
+table:has(tr:first-child > th:nth-child(4)) th:nth-child(2),
+table:has(tr:first-child > th:nth-child(4)) td:nth-child(2) {
+  width: 23%;
+}
+
+table:has(tr:first-child > th:nth-child(4)) th:nth-child(3),
+table:has(tr:first-child > th:nth-child(4)) td:nth-child(3) {
+  width: 15%;
+}
+
+table:has(tr:first-child > th:nth-child(4)) th:nth-child(4),
+table:has(tr:first-child > th:nth-child(4)) td:nth-child(4) {
+  width: 43%;
+}
+
+/* 2-column tables */
+table:has(tr:first-child > th:nth-child(2):last-child):not(:has(tr:first-child > th:nth-child(3))) th:nth-child(1),
+table:has(tr:first-child > th:nth-child(2):last-child):not(:has(tr:first-child > th:nth-child(3))) td:nth-child(1) {
+  width: 30%;
+}
+
+table:has(tr:first-child > th:nth-child(2):last-child):not(:has(tr:first-child > th:nth-child(3))) th:nth-child(2),
+table:has(tr:first-child > th:nth-child(2):last-child):not(:has(tr:first-child > th:nth-child(3))) td:nth-child(2) {
+  width: 70%;
+}
+
+/* ---- Code: neutral gray (overrides VS Code yellow highlight.css) ---- */
+:not(pre) > code {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  color: #1a1a1a !important;
+  background-color: #e8eaed !important;
+  border: 1px solid #c4c9d0;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+pre,
+pre.hljs {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  line-height: 1.35;
+  color: #1a1a1a !important;
+  background-color: #f3f4f6 !important;
+  border: 1px solid #c4c9d0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 0.4em 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: visible;
+}
+
+pre code,
+pre code.hljs {
+  font-size: inherit;
+  color: inherit !important;
+  background: transparent !important;
+  border: none;
+  padding: 0;
+  white-space: pre-wrap;
+}
+
+pre .hljs,
+pre span[class*="hljs"] {
+  background: transparent !important;
+  color: #1a1a1a;
+}
+
+pre .hljs-comment,
+pre .hljs-quote {
+  color: #5c6370;
+}
+
+pre .hljs-string,
+pre .hljs-regexp {
+  color: #0b5394;
+}
+
+pre .hljs-keyword,
+pre .hljs-built_in,
+pre .hljs-literal {
+  color: #1f4788;
+}
+
+pre .hljs-number {
+  color: #2e5d2e;
+}
+
+h1 {
+  font-size: 18pt;
+  line-height: 1.2;
+  margin: 0 0 0.5em 0;
+  page-break-after: avoid;
+}
+
+h2 {
+  font-size: 14pt;
+  line-height: 1.25;
+  margin: 1em 0 0.4em 0;
+  page-break-after: avoid;
+}
+
+h3 {
+  font-size: 12pt;
+  line-height: 1.25;
+  margin: 0.75em 0 0.35em 0;
+  page-break-after: avoid;
+}
+
+p,
+ul,
+ol {
+  margin: 0.35em 0 0.5em 0;
+}
+
+li {
+  margin: 0.15em 0;
+}
+
+hr {
+  margin: 0.75em 0;
+}
+
+@media print {
+  body {
+    font-size: 11pt;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: auto;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+}

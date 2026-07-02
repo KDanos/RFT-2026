@@ -1,0 +1,13 @@
+{
+  "markdown.styles": [
+    "Design Assets/markdown-print.css"
+  ],
+  "markdown-pdf.displayHeaderFooter": false,
+  "markdown-pdf.orientation": "portrait",
+  "markdown-pdf.format": "A4",
+  "markdown-pdf.margin.top": "14mm",
+  "markdown-pdf.margin.bottom": "14mm",
+  "markdown-pdf.margin.left": "12mm",
+  "markdown-pdf.margin.right": "12mm",
+  "markdown-pdf.scale": 1
+}

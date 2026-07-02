@@ -2,9 +2,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import pandas as pd
+if TYPE_CHECKING:
+    from ui.analysis_view.model.filter_spec import FilterSpec
 
 
 @dataclass
@@ -67,6 +69,7 @@ class AnalysisView:
     is_visible:bool = True
     df: pd.DataFrame= None
     column_specs : list[ColumnSpec] =field (default_factory=list)
+    row_filters : list[FilterSpec] = field( default_factory=list)
 
 
 @dataclass

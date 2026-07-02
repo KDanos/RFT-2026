@@ -38,11 +38,20 @@ class AnalysisViewWidget(QWidget):
         main_frame_splitter = QSplitter(Qt.Orientation.Vertical)
         main_frame_layout.addWidget(main_frame_splitter)
 
-        self.tabular_frame = TabularFrame(main_frame_splitter,self.project,self.analysis, self.view)
+        self.tabular_frame = TabularFrame(
+            main_frame_splitter,
+            self.project,
+            self.analysis, 
+            self.view)
         
-        graphical_frame = GraphicalFrame(main_frame_splitter)
+        self.graphical_frame = GraphicalFrame(
+            main_frame_splitter,
+            self.project,
+            self.analysis,
+            self.view
+            )
         
-        main_frame_splitter.addWidget(graphical_frame)
+        main_frame_splitter.addWidget(self.graphical_frame)
         main_frame_splitter.addWidget(self.tabular_frame)
 
         main_vertical_splitter.addWidget(self.sidebar_frame)

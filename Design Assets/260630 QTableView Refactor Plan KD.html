@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Tableview Refactoring Plan</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        <style>
+/* Use with Markdown PDF extension: markdown.styles in .vscode/settings.json */
+
+body {
+  font-size: 10pt;
+  line-height: 1.35;
+}
+
+table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+
+th,
+td {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  vertical-align: top;
+  padding: 4px 6px;
+}
+
+code {
+  font-size: 8.5pt;
+  word-break: break-all;
+}
+
+pre,
+pre code {
+  font-size: 8pt;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+h1 {
+  font-size: 18pt;
+}
+
+h2 {
+  font-size: 14pt;
+  page-break-after: avoid;
+}
+
+h3,
+h4 {
+  page-break-after: avoid;
+}
+
+@media print {
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+}
+
+</style>
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="tableview-refactoring-plan">Tableview Refactoring Plan</h1>
+<p><em>Technical title: QTableView + PandasTableModel + QSortFilterProxyModel Refactor Plan</em></p>
+<p><strong>Document file:</strong> <code>Design Assets/260630 QTableView Refactor Plan KD.md</code><br>
+<strong>Project:</strong> RFT 2026 — Analysis View<br>
+<strong>Scope:</strong> Tabular frame + graphical frame (shared display data). Data loaders and <code>show_dataframe_table_dialog</code> remain on <code>QTableWidget</code>.<br>
+<strong>Date:</strong> 2026-06-30</p>
+<p>Follow this plan as explicitly as possible. Implementation proceeds <strong>phase by phase</strong>; request <strong>full code for each numbered item</strong> (e.g. “Phase 0, item 3”) when ready to build. Items <strong>1–55</strong> are listed in §6.</p>
+<hr>
+<h2 id="1-background">1. Background</h2>
+<h3 id="current-arrangement-qtablewidget">Current arrangement (<code>QTableWidget</code>)</h3>
+<pre><code>view.df  →  create_table_view_frame  →  copy every cell into QTableWidget  →  full rebuild on change
+</code></pre>
+<ul>
+<li>Row 0 holds <code>UnitsComboBox</code> widgets; data rows are <code>QTableWidgetItem</code> copies.</li>
+<li>Column tick/untick and unit changes trigger <code>tabular_frame.update_table()</code> — destroy widget tree and rebuild.</li>
+<li>Works for small tables; becomes sluggish with hundreds/thousands of rows and frequent Excel-style filtering/sorting.</li>
+</ul>
+<h3 id="target-arrangement-model--view--proxy">Target arrangement (Model / View / Proxy)</h3>
+<pre><code>view.df (source, column-selected)
+    ↓
+PandasTableModel          ← reads df on demand, formats for display
+    ↓
+ViewSortFilterProxyModel  ← row filter + sort (no full rebuild)
+    ↓
+QTableView (tabular)          GraphicalFrame (reads same visible rows)
+</code></pre>
+<p>Both <code>TabularFrame</code> and <code>GraphicalFrame</code> subscribe to one <strong>ViewDisplayController</strong> that owns the model + proxy and answers: <em>which rows are visible?</em></p>
+<h3 id="conceptual-comparison">Conceptual comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Current <code>QTableWidget</code></th>
+<th>Target <code>QTableView</code> + model + proxy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where data lives</td>
+<td><code>view.df</code> + copied into items</td>
+<td>Primarily <code>view.df</code>; model reads on demand</td>
+</tr>
+<tr>
+<td>Filter / sort</td>
+<td>Rebuild or manual row hide</td>
+<td>Proxy maps rows; <code>invalidateFilter()</code></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Slow on large rebuilds</td>
+<td>Only visible cells queried</td>
+</tr>
+<tr>
+<td>Units row</td>
+<td>Row 0 <code>setCellWidget</code></td>
+<td>Toolbar above table (not a data row)</td>
+</tr>
+<tr>
+<td>Sortable headers</td>
+<td>Custom code needed</td>
+<td><code>QTableView.setSortingEnabled(True)</code> on proxy</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-architecture">2. Architecture</h2>
+<h3 id="data-layers">Data layers</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>view.df</code></td>
+<td>Canonical working dataframe (column selection + excess pressure column applied)</td>
+</tr>
+<tr>
+<td><code>view.column_specs</code></td>
+<td>Display units and quantity keys aligned with <code>view.df</code> columns</td>
+</tr>
+<tr>
+<td><code>view.row_filters</code> <em>(new field)</em></td>
+<td>Persisted filter rules for save/load</td>
+</tr>
+<tr>
+<td><code>PandasTableModel</code></td>
+<td>Adapter: answers <code>data(row, col)</code> with formatted display strings</td>
+</tr>
+<tr>
+<td><code>ViewSortFilterProxyModel</code></td>
+<td>Hides/reorders rows without mutating <code>view.df</code></td>
+</tr>
+<tr>
+<td><code>ViewDisplayController</code></td>
+<td>Single owner of model + proxy; emits <code>display_changed</code></td>
+</tr>
+<tr>
+<td><code>GraphicalFrame</code></td>
+<td>Plots <code>get_visible_dataframe()</code>, not raw <code>view.df</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="signal-flow-orchestrator">Signal flow (orchestrator)</h3>
+<pre><code>ViewSidebar.view_df_changed
+    → on_view_df_change
+        → build_view_df_and_col_specs_from_column_selection
+        → controller.set_view_data(df, column_specs)
+        → mark_modified()
+
+TabularFrame.column_unit_change
+    → _on_column_unit_change
+        → on_column_unit_change(view, ...)
+        → controller.refresh_formatting()
+        → mark_modified()
+
+Filter UI / proxy
+    → on_row_filter_change
+        → controller.set_filters(...)
+        → display_changed
+            → graphical_frame.update_from_visible_data(...)
+</code></pre>
+<hr>
+<h2 id="3-function-map">3. Function map</h2>
+<p>Wide four-column tables are avoided here so PDF/HTML export fits the printable area. Each entry uses <strong>File</strong> and <strong>Replaces</strong> lines instead.</p>
+<h3 id="a-shared-display-formatting-extract-from-global_functionspy">A. Shared display formatting (extract from <code>global_functions.py</code>)</h3>
+<p>Keep unit conversion / rounding in one place. Data-loader dialogs keep <code>QTableWidget</code>; they may later call the same formatters.</p>
+<h4 id="format_normalised_cell_valuevalue-quantity_key-output_unit---str"><code>format_normalised_cell_value(value, quantity_key, output_unit) -&gt; str</code></h4>
+<p>Convert one normalized df value to user-unit display text (handles NA / non-numeric).</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/view_table_formatting.py</code></li>
+<li><strong>Replaces:</strong> Inner loop in <code>create_dataframe_table</code> → <code>update_column_values</code> (<code>global_functions.py</code> ~148–158)</li>
+</ul>
+<h4 id="apply_decimal_formattingdisplay_str--round_enabled-decimal_places---str"><code>apply_decimal_formatting(display_str, *, round_enabled, decimal_places) -&gt; str</code></h4>
+<p>Apply optional rounding to a display string.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/view_table_formatting.py</code></li>
+<li><strong>Replaces:</strong> <code>apply_rounding_to_column</code> + <code>round_str_to_decimal_points</code> path in <code>create_table_view_frame</code> → <code>refresh_column</code> (<code>global_functions.py</code> ~245–256)</li>
+</ul>
+<h4 id="format_cell_for_tablevalue-column_spec-output_unit-decimal_settings---str"><code>format_cell_for_table(value, column_spec, output_unit, decimal_settings) -&gt; str</code></h4>
+<p>Single entry point: unit convert + round for one cell.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/view_table_formatting.py</code></li>
+<li><strong>Replaces:</strong> Combined per-cell work in <code>update_column_values</code> + <code>apply_rounding_to_column</code></li>
+</ul>
+<p><strong>Note:</strong> <code>round_str_to_decimal_points</code> in <code>global_functions.py</code> <strong>stays</strong> (used by loaders). Analysis view calls the new wrappers above.</p>
+<hr>
+<h3 id="b-filter--view-data-model">B. Filter / view data model</h3>
+<h4 id="filterspec-dataclass"><code>FilterSpec</code> (dataclass)</h4>
+<p>One rule: column name, operator (<code>&gt;</code>, <code>&lt;</code>, <code>==</code>, <code>between</code>, <code>in</code>), value(s).</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/filter_spec.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="row_filter_maskdf-filter_specs-column_specs---pdseriesbool"><code>row_filter_mask(df, filter_specs, column_specs) -&gt; pd.Series[bool]</code></h4>
+<p>Pure pandas AND mask across all active filters.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/analysis_view_data_manager.py</code></li>
+<li><strong>Replaces:</strong> Future ad-hoc filter code</li>
+</ul>
+<h4 id="on_row_filter_changeview-filter_specs---none"><code>on_row_filter_change(view, filter_specs) -&gt; None</code></h4>
+<p>Store filters on <code>AnalysisView</code>, ready for proxy invalidation.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/analysis_view_data_manager.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="get_visible_row_indicesproxy---listint"><code>get_visible_row_indices(proxy) -&gt; list[int]</code></h4>
+<p>Map proxy row 0..n-1 to source df row indices (for graph).</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/analysis_view_data_manager.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="get_visible_dataframeview-proxy---pddataframe"><code>get_visible_dataframe(view, proxy) -&gt; pd.DataFrame</code></h4>
+<p><code>view.df.iloc[visible_indices]</code> — single source for table + plot.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/analysis_view_data_manager.py</code></li>
+<li><strong>Replaces:</strong> Implicit “whole df” reads in future graph code</li>
+</ul>
+<h4 id="get_plot_seriesview-visible_df---dict"><code>get_plot_series(view, visible_df) -&gt; dict</code></h4>
+<p>Extract depth / pressure / excess columns for plotting (canonical names).</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/analysis_view_data_manager.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<p><strong>Model field to add:</strong> <code>AnalysisView.row_filters: list[FilterSpec]</code> in <code>project/models.py</code>.</p>
+<p><strong>Unchanged:</strong> <code>build_view_df_and_col_specs_from_column_selection</code>, <code>insert_excess_pressure_column</code>, <code>on_column_unit_change</code>.</p>
+<hr>
+<h3 id="c-qt-model--proxy-layer">C. Qt model / proxy layer</h3>
+<h4 id="pandastablemodel"><code>PandasTableModel</code></h4>
+<p><code>QAbstractTableModel</code> reading <code>view.df</code>; <code>data()</code> calls <code>format_cell_for_table</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/pandas_table_model.py</code></li>
+<li><strong>Replaces:</strong> <code>create_dataframe_table</code> for analysis view only (<code>global_functions.py</code> 127–174)</li>
+</ul>
+<h4 id="pandastablemodelset_dataframedf-column_specs-project-decimal_settings"><code>PandasTableModel.set_dataframe(df, column_specs, project, decimal_settings)</code></h4>
+<p>Swap underlying data and emit <code>modelReset</code> (column tick/untick).</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> Full <code>tabular_frame.update_table()</code> rebuild</li>
+</ul>
+<h4 id="pandastablemodelset_column_unitcol-unit"><code>PandasTableModel.set_column_unit(col, unit)</code></h4>
+<p>Update display unit for one column; emit <code>dataChanged</code> for that column.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> <code>update_column_values(col)</code> in <code>create_dataframe_table</code></li>
+</ul>
+<h4 id="pandastablemodelset_decimal_settings"><code>PandasTableModel.set_decimal_settings(...)</code></h4>
+<p>Reformat all numeric cells without structural rebuild.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> <code>refresh_all_columns</code> in <code>create_table_view_frame</code> (<code>global_functions.py</code> 258–260)</li>
+</ul>
+<h4 id="viewsortfilterproxymodel"><code>ViewSortFilterProxyModel</code></h4>
+<p><code>QSortFilterProxyModel</code> subclass; <code>filterAcceptsRow</code> uses <code>row_filter_mask</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/view_filter_proxy_model.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="viewsortfilterproxymodelset_filtersfilter_specs"><code>ViewSortFilterProxyModel.set_filters(filter_specs)</code></h4>
+<p>Update rules and <code>invalidateFilter()</code>.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="viewsortfilterproxymodelsource_row_atproxy_row---int"><code>ViewSortFilterProxyModel.source_row_at(proxy_row) -&gt; int</code></h4>
+<p>Thin wrapper over <code>mapToSource</code> for graph code.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<hr>
+<h3 id="d-display-coordinator-shared-table--graph">D. Display coordinator (shared table + graph)</h3>
+<h4 id="viewdisplaycontroller"><code>ViewDisplayController</code></h4>
+<p>Owns <code>PandasTableModel</code>, <code>ViewSortFilterProxyModel</code>, decimal settings.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/model/view_display_controller.py</code></li>
+<li><strong>Replaces:</strong> Ad-hoc model/proxy creation inside <code>tabular_frame</code></li>
+</ul>
+<h4 id="viewdisplaycontrollerset_view_datadf-column_specs"><code>ViewDisplayController.set_view_data(df, column_specs)</code></h4>
+<p>Push new df/specs into source model after column selection.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> <code>tabular_frame.update_table()</code> on column change</li>
+</ul>
+<h4 id="viewdisplaycontrollerset_filtersfilter_specs"><code>ViewDisplayController.set_filters(filter_specs)</code></h4>
+<p>Push filters into proxy.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="viewdisplaycontrollerget_visible_dataframe---pddataframe"><code>ViewDisplayController.get_visible_dataframe() -&gt; pd.DataFrame</code></h4>
+<p>Delegates to <code>get_visible_dataframe(view, proxy)</code>.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="viewdisplaycontrollerrefresh_formatting"><code>ViewDisplayController.refresh_formatting()</code></h4>
+<p>Unit or decimal change → <code>dataChanged</code> only.</p>
+<ul>
+<li><strong>File:</strong> same class</li>
+<li><strong>Replaces:</strong> <code>tabular_frame.update_table()</code> on unit change; <code>refresh_column</code> / <code>refresh_all_columns</code> in <code>create_table_view_frame</code></li>
+</ul>
+<p><strong>Signal:</strong> <code>display_changed</code> — emitted when filter, sort, df, or format changes; tabular and graphical frames listen.</p>
+<hr>
+<h3 id="e-tabular-ui">E. Tabular UI</h3>
+<h4 id="_build_table_view_once"><code>_build_table_view_once()</code></h4>
+<p>Create <code>QTableView</code>, attach proxy, enable header sort — once in <code>__init__</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/ui/tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> <code>_build_ui</code> + <code>_create_table</code> destroy/recreate pattern</li>
+</ul>
+<h4 id="_build_display_toolbar"><code>_build_display_toolbar()</code></h4>
+<p>Units combos per column + decimal checkbox/spin (not data row 0).</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/ui/table_display_toolbar.py</code></li>
+<li><strong>Replaces:</strong> <code>widgets_frame</code> in <code>create_table_view_frame</code> (<code>global_functions.py</code> 223–270)</li>
+</ul>
+<h4 id="_sync_units_toolbar_from_specs"><code>_sync_units_toolbar_from_specs()</code></h4>
+<p>Set combo texts from <code>view.column_specs</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>table_display_toolbar.py</code> or <code>tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> <code>_update_table_units_combo_from_specs</code></li>
+</ul>
+<h4 id="_on_toolbar_unit_changedcol-unit"><code>_on_toolbar_unit_changed(col, unit)</code></h4>
+<p>Emit <code>column_unit_change</code> + <code>controller.refresh_formatting()</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> <code>_link_table_units_combo_with_signal</code> + units wiring in <code>create_table_view_frame._connect_signals</code></li>
+</ul>
+<h4 id="_on_decimal_settings_changed"><code>_on_decimal_settings_changed()</code></h4>
+<p>Forward to <code>controller.refresh_formatting()</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> Decimal spin/checkbox connections in <code>create_table_view_frame</code></li>
+</ul>
+<h4 id="bind_display_controllercontroller"><code>bind_display_controller(controller)</code></h4>
+<p>Connect view to shared controller.</p>
+<ul>
+<li><strong>File:</strong> <code>tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> <code>create_table_view_frame(...)</code> call in <code>_create_table</code></li>
+</ul>
+<h4 id="set_view_datadf-column_specs"><code>set_view_data(df, column_specs)</code></h4>
+<p><code>controller.set_view_data(...)</code> — no widget destroy.</p>
+<ul>
+<li><strong>File:</strong> <code>tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> <code>update_table()</code></li>
+</ul>
+<h4 id="set_row_filtersfilter_specs"><code>set_row_filters(filter_specs)</code></h4>
+<p><code>controller.set_filters(...)</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<p><strong>Removed after refactor (tabular only):</strong> <code>update_table()</code>, <code>_create_table()</code>, <code>_update_table_units_combo_from_specs()</code>, <code>_link_table_units_combo_with_signal()</code> — all in <code>tabular_frame.py</code>.</p>
+<hr>
+<h3 id="f-filter-ui-excel-style--phase-4">F. Filter UI (Excel-style — Phase 4)</h3>
+<h4 id="filterableheaderview"><code>FilterableHeaderView</code></h4>
+<p>Header click opens filter popup for that column.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/ui/filterable_header_view.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="columnfilterpopup"><code>ColumnFilterPopup</code></h4>
+<p>Operator combo + value field + optional unique-value checklist.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/ui/column_filter_popup.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="_on_filter_appliedcol-filter_spec"><code>_on_filter_applied(col, filter_spec)</code></h4>
+<p>Tabular handler → orchestrator → <code>on_row_filter_change</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>tabular_frame.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<p>Sortable headers: <code>QTableView.setSortingEnabled(True)</code> on the proxy — no custom sort code required.</p>
+<hr>
+<h3 id="g-graphical-frame">G. Graphical frame</h3>
+<h4 id="bind_display_controllercontroller-1"><code>bind_display_controller(controller)</code></h4>
+<p>Hold reference; connect <code>display_changed</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>ui/analysis_view/ui/graphical_frame.py</code></li>
+<li><strong>Replaces:</strong> Nothing</li>
+</ul>
+<h4 id="update_from_visible_datavisible_df-column_specs"><code>update_from_visible_data(visible_df, column_specs)</code></h4>
+<p>Public refresh when table filter/sort/df changes.</p>
+<ul>
+<li><strong>File:</strong> same file</li>
+<li><strong>Replaces:</strong> Empty <code>_build_ui</code></li>
+</ul>
+<h4 id="_render_plotvisible_df"><code>_render_plot(visible_df)</code></h4>
+<p>Draw depth vs pressure (library TBD).</p>
+<ul>
+<li><strong>File:</strong> same file</li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="_clear_plot"><code>_clear_plot()</code></h4>
+<p>Clear when no visible rows.</p>
+<ul>
+<li><strong>File:</strong> same file</li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<p><strong>Rule:</strong> Graph uses <code>controller.get_visible_dataframe()</code>, not <code>view.df</code> directly.</p>
+<p><strong>Fix required:</strong> <code>analysis_view.py</code> currently assigns <code>graphical_frame</code> as a local variable; refactor must use <code>self.graphical_frame</code>.</p>
+<hr>
+<h3 id="h-orchestrator-analysis_viewpy">H. Orchestrator (<code>analysis_view.py</code>)</h3>
+<h4 id="_init_display_controller"><code>_init_display_controller()</code></h4>
+<p>Create one <code>ViewDisplayController</code> for tabular + graph.</p>
+<ul>
+<li><strong>File:</strong> <code>analysis_view.py</code></li>
+<li><strong>Replaces:</strong> Implicit per-frame df binding</li>
+</ul>
+<h4 id="_on_display_changed"><code>_on_display_changed()</code></h4>
+<p><code>graphical_frame.update_from_visible_data(...)</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>analysis_view.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<h4 id="on_view_df_change-extend"><code>on_view_df_change()</code> (extend)</h4>
+<p>After updating <code>view.df</code> / specs → <code>controller.set_view_data(...)</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>analysis_view.py</code></li>
+<li><strong>Replaces:</strong> <code>self.tabular_frame.update_table()</code></li>
+</ul>
+<h4 id="_on_column_unit_change-extend"><code>_on_column_unit_change()</code> (extend)</h4>
+<p>After <code>on_column_unit_change</code> → <code>controller.refresh_formatting()</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>analysis_view.py</code></li>
+<li><strong>Replaces:</strong> Full table rebuild on unit change</li>
+</ul>
+<h4 id="_on_row_filter_change-new"><code>_on_row_filter_change()</code> (new)</h4>
+<p>Filter UI → <code>on_row_filter_change</code> + <code>controller.set_filters</code>.</p>
+<ul>
+<li><strong>File:</strong> <code>analysis_view.py</code></li>
+<li><strong>Replaces:</strong> Nothing (new)</li>
+</ul>
+<hr>
+<h2 id="4-what-stays-untouched">4. What stays untouched</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Stays as-is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dialog_data_loader_project.py</code></td>
+<td><code>QTableWidget</code> preview/mapping</td>
+</tr>
+<tr>
+<td><code>dialog_data_loader_analysis.py</code></td>
+<td>Own <code>_update_table</code> / <code>_update_table_values</code></td>
+</tr>
+<tr>
+<td><code>create_dataframe_table</code>, <code>create_table_view_frame</code></td>
+<td>Used by <code>show_dataframe_table_dialog</code> (tree “view dataset”)</td>
+</tr>
+<tr>
+<td><code>create_log_table</code>, <code>show_log_table</code></td>
+<td>Log viewer</td>
+</tr>
+<tr>
+<td><code>view_sidebar.py</code></td>
+<td>Column tick/untick (structural column filter)</td>
+</tr>
+<tr>
+<td><code>build_view_df_and_col_specs_from_column_selection</code></td>
+<td>Column subset + excess pressure column</td>
+</tr>
+<tr>
+<td>Excess pressure <strong>calculation</strong></td>
+<td>Future work (stub remains)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5-proposed-folder-layout">5. Proposed folder layout</h2>
+<pre><code>ui/analysis_view/
+  model/
+    filter_spec.py                 # FilterSpec dataclass
+    view_table_formatting.py       # format_cell_for_table, etc.
+    pandas_table_model.py          # PandasTableModel
+    view_filter_proxy_model.py     # ViewSortFilterProxyModel
+    view_display_controller.py     # shared coordinator
+    analysis_view_data_manager.py  # existing + row filter helpers
+  ui/
+    tabular_frame.py               # QTableView host
+    table_display_toolbar.py       # units + decimals
+    filterable_header_view.py      # Phase 4
+    column_filter_popup.py         # Phase 4
+    graphical_frame.py             # plot from visible df
+    analysis_view.py               # orchestrator
+    view_sidebar.py                # unchanged (column selection)
+</code></pre>
+<hr>
+<h2 id="6-phased-implementation-plan-items-155">6. Phased implementation plan (items 1–55)</h2>
+<p>Numbered steps below replace checklist boxes. Each step maps to the function map in §3. When implementing, ask for full code by <strong>phase and item number</strong> (e.g. Phase 1, item 15).</p>
+<h3 id="phase-0--prerequisites-no-ui-change">Phase 0 — Prerequisites (no UI change)</h3>
+<ol>
+<li>Add <code>FilterSpec</code> dataclass in <code>filter_spec.py</code></li>
+<li>Add <code>AnalysisView.row_filters: list[FilterSpec]</code> to <code>project/models.py</code></li>
+<li>Create <code>view_table_formatting.py</code> with <code>format_normalised_cell_value</code>, <code>apply_decimal_formatting</code>, <code>format_cell_for_table</code></li>
+<li>Verify formatting output matches current <code>create_dataframe_table</code> for a sample df (manual or quick test)</li>
+<li>Fix <code>self.graphical_frame</code> reference in <code>analysis_view.py</code> (store on widget, pass <code>view</code> + <code>project</code> to <code>GraphicalFrame</code>)</li>
+</ol>
+<p><strong>Exit criteria:</strong> Formatting helpers exist; model field ready for persistence; graphical frame reachable from orchestrator.</p>
+<hr>
+<h3 id="phase-1--model--table-view-no-row-filters-yet">Phase 1 — Model + table view (no row filters yet)</h3>
+<ol start="6">
+<li>Implement <code>PandasTableModel</code> class in <code>pandas_table_model.py</code> (including <code>data()</code>, <code>rowCount</code>, <code>columnCount</code>, <code>headerData</code>)</li>
+<li>Implement <code>PandasTableModel.set_dataframe(df, column_specs, project, decimal_settings)</code></li>
+<li>Implement <code>PandasTableModel.set_column_unit(col, unit)</code></li>
+<li>Implement <code>PandasTableModel.set_decimal_settings(...)</code></li>
+<li>Implement <code>ViewDisplayController</code> class in <code>view_display_controller.py</code> (source model only; proxy stub or pass-through)</li>
+<li>Implement <code>ViewDisplayController.set_view_data(df, column_specs)</code></li>
+<li>Implement <code>ViewDisplayController.refresh_formatting()</code></li>
+<li>Create <code>table_display_toolbar.py</code> with <code>_build_display_toolbar()</code> (units combos + decimal controls)</li>
+<li>Implement <code>_sync_units_toolbar_from_specs()</code> in toolbar or <code>tabular_frame.py</code></li>
+<li>Refactor <code>TabularFrame._build_table_view_once()</code> with <code>QTableView</code> attached to controller proxy</li>
+<li>Implement <code>TabularFrame.bind_display_controller(controller)</code></li>
+<li>Implement <code>TabularFrame.set_view_data(df, column_specs)</code> (replaces <code>update_table()</code> for data changes)</li>
+<li>Implement <code>TabularFrame._on_toolbar_unit_changed(col, unit)</code> (emit <code>column_unit_change</code> + <code>controller.refresh_formatting()</code>)</li>
+<li>Implement <code>TabularFrame._on_decimal_settings_changed()</code></li>
+<li>Remove <code>TabularFrame._create_table</code>, <code>update_table</code>, <code>_update_table_units_combo_from_specs</code>, <code>_link_table_units_combo_with_signal</code></li>
+<li>Implement <code>AnalysisViewWidget._init_display_controller()</code></li>
+<li>Wire <code>on_view_df_change</code> → <code>controller.set_view_data</code> in <code>analysis_view.py</code></li>
+<li>Wire <code>_on_column_unit_change</code> → <code>controller.refresh_formatting()</code> in <code>analysis_view.py</code></li>
+<li>Enable <code>QTableView.setSortingEnabled(True)</code> on proxy</li>
+<li>Confirm column tick/untick, unit change, and decimal rounding still work</li>
+<li>Confirm <code>mark_modified()</code> still fires on column and unit changes</li>
+</ol>
+<p><strong>Exit criteria:</strong> Analysis view table uses <code>QTableView</code> + model; no full widget rebuild on unit/decimal change; column selection still updates structure via <code>modelReset</code>.</p>
+<p><strong>Replaces:</strong> Analysis-view usage of <code>create_table_view_frame</code> in <code>tabular_frame.py</code>.</p>
+<hr>
+<h3 id="phase-2--row-filter-proxy-backend-only">Phase 2 — Row filter proxy (backend only)</h3>
+<ol start="27">
+<li>Implement <code>row_filter_mask(df, filter_specs, column_specs)</code> in <code>analysis_view_data_manager.py</code></li>
+<li>Implement <code>on_row_filter_change(view, filter_specs)</code> in <code>analysis_view_data_manager.py</code></li>
+<li>Implement <code>get_visible_row_indices(proxy)</code> in <code>analysis_view_data_manager.py</code></li>
+<li>Implement <code>get_visible_dataframe(view, proxy)</code> in <code>analysis_view_data_manager.py</code></li>
+<li>Implement <code>ViewSortFilterProxyModel</code> class with <code>filterAcceptsRow</code> using <code>row_filter_mask</code> in <code>view_filter_proxy_model.py</code></li>
+<li>Implement <code>ViewSortFilterProxyModel.set_filters(filter_specs)</code></li>
+<li>Implement <code>ViewSortFilterProxyModel.source_row_at(proxy_row)</code></li>
+<li>Wire proxy into <code>ViewDisplayController.set_filters</code> and <code>ViewDisplayController.get_visible_dataframe</code></li>
+<li>Implement <code>TabularFrame.set_row_filters(filter_specs)</code></li>
+<li>Add temporary dev UI (e.g. simple filter line or test button) to verify proxy filtering without Excel popup</li>
+<li>Verify sort + filter compose correctly (sort visible subset)</li>
+</ol>
+<p><strong>Exit criteria:</strong> Programmatic filters hide rows without rebuild; visible row count matches pandas mask.</p>
+<hr>
+<h3 id="phase-3--graphical-frame-sync">Phase 3 — Graphical frame sync</h3>
+<ol start="38">
+<li>Implement <code>get_plot_series(view, visible_df)</code> in <code>analysis_view_data_manager.py</code></li>
+<li>Implement <code>GraphicalFrame.bind_display_controller(controller)</code></li>
+<li>Implement <code>GraphicalFrame.update_from_visible_data(visible_df, column_specs)</code></li>
+<li>Implement <code>GraphicalFrame._render_plot(visible_df)</code> (minimal plot: depth vs formation pressure)</li>
+<li>Implement <code>GraphicalFrame._clear_plot()</code></li>
+<li>Implement <code>AnalysisViewWidget._on_display_changed()</code> and connect <code>controller.display_changed</code></li>
+<li>Verify: table row filter reduces plotted points</li>
+<li>Verify: column selection updates both table and plot</li>
+</ol>
+<p><strong>Exit criteria:</strong> Tabular and graphical views show the same visible row set.</p>
+<hr>
+<h3 id="phase-4--excel-style-filter-ui">Phase 4 — Excel-style filter UI</h3>
+<ol start="46">
+<li>Implement <code>FilterableHeaderView</code> in <code>filterable_header_view.py</code></li>
+<li>Implement <code>ColumnFilterPopup</code> in <code>column_filter_popup.py</code></li>
+<li>Implement <code>TabularFrame._on_filter_applied(col, filter_spec)</code></li>
+<li>Implement <code>AnalysisViewWidget._on_row_filter_change()</code> (calls <code>on_row_filter_change</code> + <code>controller.set_filters</code>)</li>
+<li>Persist <code>view.row_filters</code> on apply; restore on view open</li>
+<li>Call <code>mark_modified()</code> on filter change</li>
+</ol>
+<p><strong>Exit criteria:</strong> User can filter columns from header UI; filters survive save/load.</p>
+<hr>
+<h3 id="phase-5--optional-cleanup">Phase 5 — Optional cleanup</h3>
+<ol start="52">
+<li>Refactor <code>create_dataframe_table</code> in <code>global_functions.py</code> to call <code>format_cell_for_table</code> (DRY with model path)</li>
+<li>Trim unused re-exports in <code>ui/analysis_view/__init__.py</code> if desired</li>
+<li>Remove dead backup files (<code>analysis_view_old.py</code>, <code>tabular_frame_old.py</code>) if still present</li>
+<li>Performance check on 1000+ row dataset (filter, sort, unit change)</li>
+</ol>
+<p><strong>Exit criteria:</strong> No duplicated display logic; acceptable performance on large tables.</p>
+<hr>
+<h3 id="plan-item-index-all-55-numbered-steps">Plan item index (all 55 numbered steps)</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Items</th>
+<th>§3 function map</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1–5</td>
+<td>A (formatting), B (<code>FilterSpec</code>, model field), G (graphical_frame fix)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>6–26</td>
+<td>A, C (<code>PandasTableModel</code>), D (<code>ViewDisplayController</code>), E (tabular + toolbar), H (orchestrator)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>27–37</td>
+<td>B (filter helpers), C (<code>ViewSortFilterProxyModel</code>), D, E (<code>set_row_filters</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>38–45</td>
+<td>B (<code>get_plot_series</code>), G, H (<code>_on_display_changed</code>)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>46–51</td>
+<td>F (filter UI), E, H (<code>_on_row_filter_change</code>)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>52–55</td>
+<td>Optional DRY and housekeeping</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="7-summary-counts">7. Summary counts</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>New items</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Formatting</td>
+<td>3 functions</td>
+</tr>
+<tr>
+<td>Data manager + types</td>
+<td>1 type + 5 functions + 1 model field</td>
+</tr>
+<tr>
+<td>Qt model/proxy</td>
+<td>2 classes, ~6 methods</td>
+</tr>
+<tr>
+<td>Display controller</td>
+<td>1 class, ~5 methods</td>
+</tr>
+<tr>
+<td>Tabular UI</td>
+<td>~8 functions; <strong>4 removed</strong></td>
+</tr>
+<tr>
+<td>Filter UI (Phase 4)</td>
+<td>2 classes + 1 handler</td>
+</tr>
+<tr>
+<td>Graphical</td>
+<td>4 functions</td>
+</tr>
+<tr>
+<td>Orchestrator</td>
+<td>4 functions (2 new, 2 extended)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total:</strong> ~35 named units (functions + class methods + types), expanded to <strong>55 numbered implementation steps</strong> in §6 (includes verification steps and class methods listed separately).</p>
+<hr>
+<h2 id="8-related-documents">8. Related documents</h2>
+<ul>
+<li><code>Design Assets/260623 Connect Column Selection Change Plan KD.md</code> — column selection workflow (completed)</li>
+<li><code>Design Assets/Analysis_Module_Blueprint.md</code> — broader analysis module design</li>
+</ul>
+<hr>
+<h2 id="9-references">9. References</h2>
+<ul>
+<li><a href="https://www.pythonguis.com/tutorials/pyqt6-modelview-sort-filter-tables/">PyQt6 Model/View sort and filter tutorial</a></li>
+<li><a href="https://www.riverbankcomputing.com/static/Docs/PyQt6/api/qtcore/qsortfilterproxymodel.html">QSortFilterProxyModel documentation</a></li>
+<li><a href="https://stackoverflow.com/questions/8384309/how-to-implement-excel-like-filter-mechanism-on-qtablewidget">Excel-like filter on QTableWidget (Stack Overflow)</a> — header popup pattern for Phase 4</li>
+</ul>
+<hr>
+<h2 id="10-printing--pdf-export">10. Printing / PDF export</h2>
+<p>Tables in §3 use a <strong>stacked layout</strong> (heading + bullet lines) instead of four columns, so they fit A4/Letter width.</p>
+<h3 id="cursor--vs-code--markdown-pdf-extension">Cursor / VS Code — Markdown PDF extension</h3>
+<ol>
+<li>Workspace settings (<code>.vscode/settings.json</code>) already point to <code>Design Assets/markdown-print.css</code>.</li>
+<li>Open the <code>.md</code> file → <strong>Ctrl+Shift+P</strong> → <strong>Markdown PDF: Export (pdf)</strong>.</li>
+<li>Re-export after editing the markdown (delete or overwrite the old PDF if needed).</li>
+</ol>
+<p>Optional: set <code>&quot;markdown-pdf.orientation&quot;: &quot;landscape&quot;</code> in <code>.vscode/settings.json</code> if any remaining two-column tables still feel tight.</p>
+<h3 id="pandoc-landscape-pdf">Pandoc (landscape PDF)</h3>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> <span class="hljs-string">&quot;C:\Users\KonstantinDanos\OneDrive - KD CyPRES Energy ltd\Constantinos Danos\Career\Training\Coding\Python\RFT 2026&quot;</span>
+pandoc <span class="hljs-string">&quot;Design Assets/260630 QTableView Refactor Plan KD.md&quot;</span> <span class="hljs-literal">-o</span> <span class="hljs-string">&quot;Design Assets/260630 QTableView Refactor Plan KD.pdf&quot;</span> <span class="hljs-literal">--css</span>=<span class="hljs-string">&quot;Design Assets/markdown-print.css&quot;</span> <span class="hljs-literal">-V</span> geometry:margin=<span class="hljs-number">1.5</span>cm
+</code></pre>
+<p>Add <code>-V papersize:a4</code> or use a landscape template if required.</p>
+<h3 id="why-tables-overflowed-before">Why tables overflowed before</h3>
+<p>Four-column function maps with long file paths and “Replaces” text exceed typical page width (~17 cm printable). HTML/PDF renderers do not shrink tables automatically unless CSS forces <code>table-layout: fixed</code> and word wrapping — or the table structure is simplified.</p>
+
+            
+            
+        </body>
+        </html>
