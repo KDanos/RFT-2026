@@ -23,7 +23,7 @@ class ViewDisplayController(QObject):
 
     def set_view_data(
         self, 
-        df:pd.DataFrame,
+        df:pd.DataFrame|None,
         column_specs:list[ColumnSpec],
         )->None:
         """Push new df/specs into source model (e.g. column selection)"""
@@ -35,6 +35,9 @@ class ViewDisplayController(QObject):
         )
         
         self.display_changed.emit()
+
+    def set_decimal_settings(self, decimal_settings: DecimalDisplaySettings) -> None:
+        self._decimal_settings = decimal_settings
 
     @property
     def source_model(self)-> PandasTableModel:
@@ -49,9 +52,9 @@ class ViewDisplayController(QObject):
         return self._decimal_settings
 
     def refresh_formatting(self,column_specs:list[ColumnSpec]|None = None)->None:
-        """Re-apply units/decimals already stored on model specs and settings."""
+        """Re-apply units/decimals after toolbar or view changes."""
         if column_specs is not None:
             for col, spec in enumerate(column_specs):
-                    self._source_model.set_column_unit(col, spec.unit or "")
+                self._source_model.set_column_unit(col, spec.unit or "")
         self._source_model.set_decimal_settings(self._decimal_settings)
         self.display_changed.emit()

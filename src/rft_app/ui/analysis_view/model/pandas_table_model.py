@@ -100,7 +100,9 @@ class PandasTableModel(QAbstractTableModel):
             if self._df is not None and section <self._df.shape[1]:
                 return str(self._df.columns[section])    
             return None
-        return None #no header rows for now
+        if orientation == Qt.Orientation.Vertical:
+            return str(section + 1)
+        return None
 
     def data(self, index:QModelIndex, role:int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid() or self._df is None or self._df.empty:

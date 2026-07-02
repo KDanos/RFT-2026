@@ -8,6 +8,7 @@ from .view_sidebar import ViewSidebar
 from .tabular_frame import TabularFrame
 from .graphical_frame import GraphicalFrame
 from ..model.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, on_column_unit_change
+from ..model.view_display_controller import ViewDisplayController
 
 
 
@@ -25,6 +26,7 @@ class AnalysisViewWidget(QWidget):
         self.project = project
         
         self._build_ui()
+        self._init_display_controller()
         self._connect_signals()
         
     def _build_ui(self):
@@ -63,8 +65,14 @@ class AnalysisViewWidget(QWidget):
         self.sidebar_frame.view_df_changed.connect(self.on_view_df_change)
         self.tabular_frame.column_unit_change.connect(self._on_column_unit_change)
 
+    def _init_display_controller(self) -> None:
+        self.display_controller = ViewDisplayController(self.project, self)
+        self.tabular_frame.bind_display_controller(self.display_controller)
+        self.tabular_frame.set_view_data(self.view.df, self.view.column_specs)
+
     def _on_column_unit_change(self, col: int, header: str, unit: str) -> None:
         on_column_unit_change(self.view, col, header, unit)
+        self.display_controller.refresh_formatting(self.view.column_specs)
         self.project.mark_modified()
 
     def on_view_df_change(self):
@@ -86,5 +94,5 @@ class AnalysisViewWidget(QWidget):
         self.view.df = new_df
         self.view.column_specs = merged_specs
         
-        self.tabular_frame.update_table()
+        self.tabular_frame.set_view_data(new_df, merged_specs)
         self.project.mark_modified()
