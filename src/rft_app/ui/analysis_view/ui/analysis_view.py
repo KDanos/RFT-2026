@@ -7,7 +7,15 @@ from project import AnalysisObject, AnalysisView, ColumnSpec,  ProjectDataManage
 from .view_sidebar import ViewSidebar
 from .tabular_frame import TabularFrame
 from .graphical_frame import GraphicalFrame
-from ..model.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, on_column_unit_change
+from ..model.analysis_view_data_manager import (
+    apply_column_filter,
+    build_view_df_and_col_specs_from_column_selection,
+    clear_column_filter,
+    on_column_unit_change,
+    on_row_filter_change,
+    prune_row_filters_for_columns,
+)
+from ..model.filter_spec import FilterSpec
 from ..model.view_display_controller import ViewDisplayController
 
 
@@ -64,15 +72,30 @@ class AnalysisViewWidget(QWidget):
     def _connect_signals(self):
         self.sidebar_frame.view_df_changed.connect(self.on_view_df_change)
         self.tabular_frame.column_unit_change.connect(self._on_column_unit_change)
+        self.tabular_frame.row_filter_applied.connect(self._on_row_filter_applied)
+        self.tabular_frame.row_filter_cleared.connect(self._on_row_filter_cleared)
 
     def _init_display_controller(self) -> None:
         self.display_controller = ViewDisplayController(self.project, self)
         self.tabular_frame.bind_display_controller(self.display_controller)
         self.tabular_frame.set_view_data(self.view.df, self.view.column_specs)
+        self.tabular_frame.refresh_filter_header()
 
     def _on_column_unit_change(self, col: int, header: str, unit: str) -> None:
         on_column_unit_change(self.view, col, header, unit)
         self.display_controller.refresh_formatting(self.view.column_specs)
+        self.project.mark_modified()
+
+    def _on_row_filter_applied(self, _section: int, filter_spec: FilterSpec) -> None:
+        updated = apply_column_filter(self.view, filter_spec)
+        on_row_filter_change(self.view, updated)
+        self.tabular_frame.refresh_filter_header()
+        self.project.mark_modified()
+
+    def _on_row_filter_cleared(self, column_name: str) -> None:
+        updated = clear_column_filter(self.view, column_name)
+        on_row_filter_change(self.view, updated)
+        self.tabular_frame.refresh_filter_header()
         self.project.mark_modified()
 
     def on_view_df_change(self):
@@ -93,6 +116,11 @@ class AnalysisViewWidget(QWidget):
         ]
         self.view.df = new_df
         self.view.column_specs = merged_specs
-        
+        active_names = {spec.name for spec in merged_specs}
+        on_row_filter_change(
+            self.view,
+            prune_row_filters_for_columns(self.view, active_names),
+        )
+
         self.tabular_frame.set_view_data(new_df, merged_specs)
         self.project.mark_modified()

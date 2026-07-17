@@ -1,7 +1,11 @@
-from project.canonical_names import CANONICAL_EXCESS_PRESSURE
-from project import AnalysisView, ColumnSpec, ProjectDataManager
-from units import get_project_default_units
+from __future__ import annotations
+
 import pandas as pd
+
+from project import AnalysisView, ColumnSpec, ProjectDataManager
+from project.canonical_names import CANONICAL_EXCESS_PRESSURE
+from ui.analysis_view.model.filter_spec import FilterSpec
+from units import get_project_default_units
 
 
 def insert_excess_pressure_column(df:pd.DataFrame, col_specs:list[ColumnSpec],project:ProjectDataManager)->tuple[pd.DataFrame, list[ColumnSpec]]:
@@ -49,3 +53,21 @@ def on_column_unit_change(view:AnalysisView,col:int, header:str, unit:str)->None
         else:
             updated.append(spec)
     view.column_specs = updated
+
+
+def on_row_filter_change(view: AnalysisView, filter_specs: list[FilterSpec]) -> None:
+    """Store active row filters on the view (proxy filtering wired in Phase 2)."""
+    view.row_filters = list(filter_specs)
+
+
+def apply_column_filter(view: AnalysisView, filter_spec: FilterSpec) -> list[FilterSpec]:
+    remaining = [f for f in view.row_filters if f.column_name != filter_spec.column_name]
+    return remaining + [filter_spec]
+
+
+def clear_column_filter(view: AnalysisView, column_name: str) -> list[FilterSpec]:
+    return [f for f in view.row_filters if f.column_name != column_name]
+
+
+def prune_row_filters_for_columns(view: AnalysisView, column_names: set[str]) -> list[FilterSpec]:
+    return [f for f in view.row_filters if f.column_name in column_names]
