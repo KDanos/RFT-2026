@@ -52,12 +52,6 @@ def is_numeric(value)-> bool:
         return False
 
 def force_numeric(value:Any)->float| None:
-    # if value is None:
-    #     return None
-    # if isinstance(value, str):
-    #     value= value.strip()
-    #     if value =="":
-    #         return None
     try:
          return(float(value))
     except(TypeError, ValueError):

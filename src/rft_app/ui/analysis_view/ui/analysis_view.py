@@ -7,7 +7,7 @@ from project import AnalysisObject, AnalysisView, ColumnSpec,  ProjectDataManage
 from .view_sidebar import ViewSidebar
 from .tabular_frame import TabularFrame
 from .graphical_frame import GraphicalFrame
-from ..model.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, on_column_unit_change
+from ..services.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, on_column_unit_change
 
 
 

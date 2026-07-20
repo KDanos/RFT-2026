@@ -1,9 +1,10 @@
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QPushButton, QTreeWidget, QTreeWidgetItem
 from qtpy.QtCore import QSignalBlocker
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
+from utilities.filterable_table.filterable_table import FilterableTableView
 from utilities import make_tree_item_checkable
 from ui.widgets import DataframeTree
 
@@ -31,10 +32,10 @@ class ViewSidebar(QFrame):
 
     def _build_ui(self):
         self.main_layout = QVBoxLayout(self)
-        btn1 = QPushButton("placeholder 11")
-        btn2 = QPushButton("placeholder 12")
-        self.main_layout.addWidget(btn1)
-        self.main_layout.addWidget(btn2)
+        self.btn1 = QPushButton("Test Filtered Table View")
+        self.btn2 = QPushButton("placeholder 12")
+        self.main_layout.addWidget(self.btn1)
+        self.main_layout.addWidget(self.btn2)
         
         analysis_dataset = self.analysis.analysis_dataset
         self.data_tree = DataframeTree(self,analysis_dataset,"Data")
@@ -46,6 +47,8 @@ class ViewSidebar(QFrame):
 
     def _connect_signals(self):
         self.data_tree.itemChanged.connect(self._on_column_selection_change)
+        self.btn1.clicked.connect(self._test_filterable_table)
+        
 
     def _on_column_selection_change(self, item:QTreeWidgetItem, column:int)->None:
         if column != 0:
@@ -86,3 +89,11 @@ class ViewSidebar(QFrame):
                 item = columns_level.child(i)
                 checked = item.text(0) in view_optional
                 item.setCheckState(0, Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
+
+    def _test_filterable_table(self)->None:
+        window = QDialog(self)
+        table_view = FilterableTableView(self,self.project, self.analysis, self.view)
+        table_frame= table_view.frame
+        window_layout = QVBoxLayout(window)
+        window_layout.addWidget(table_frame)
+        window.show()

@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QDialog, QDialogButtonBox, QLabel,QComboBox, QHBoxL
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE
-from ui.analysis_view.model.analysis_view_data_manager import insert_excess_pressure_column
+from ui.analysis_view.services.analysis_view_data_manager import insert_excess_pressure_column
 
 from utilities import unique_name
 
