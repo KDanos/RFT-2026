@@ -1,20 +1,32 @@
-from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
+
+from PyQt6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
+from PyQt6.QtWidgets import QSpinBox,QCheckBox
 import pandas as pd
 
 from project import ProjectDataManager
 from project.models import ColumnSpec
+from utilities import round_str_to_decimal_points
 
 
 class PandasTableModel(QAbstractTableModel):
     """QT table model over a normalised view dataframe (display-only)."""
     
-    def __init__(self, parent=None)->None:
+    def __init__(
+            self, 
+            parent:QObject,
+            decimals_check_box:QCheckBox,
+            decimal_limit_spin:QSpinBox,
+            )->None:
+
         super().__init__(parent)
         self.df:pd.DataFrame = pd.DataFrame()
         self.column_specs:list[ColumnSpec] = []
         self.project:ProjectDataManager|None = None
+
+        self.decimals_check_box = decimals_check_box
+        self.decimal_limit_spin = decimal_limit_spin
         
-    #--------Private UI--------
+
 
     def set_dataframe(
         self, 
@@ -38,7 +50,7 @@ class PandasTableModel(QAbstractTableModel):
                             #self.parent = parent under __init__? How is this function accessing the parent in the class instantiation if it is not allocated to the class via self.parent = parent?
         return len(self.df) 
 
-    def columnCount(self, parent:QModelIndex())->int:
+    def columnCount(self, parent:QModelIndex = QModelIndex())->int:
         if parent.isValid():
             return 0
         if self.df.empty:
@@ -68,17 +80,35 @@ class PandasTableModel(QAbstractTableModel):
     def data(
         self, 
         index:QModelIndex, 
-        role:int=Qt.ItemDataRole.DisplayRole
+        role:int=Qt.ItemDataRole.DisplayRole,
         )->str:
 
         if not index.isValid() or self.df.empty:
             return None
         row, col = index.row(), index.column()
+        
         if row <0 or col <0 or row >=len(self.df) or col >= self.df.shape[1]:
             return None
-        if role ==Qt.ItemDataRole.DisplayRole: #what is the purpose of this guard? role is defined by default as DisplayRole
+        
+        if role ==Qt.ItemDataRole.DisplayRole:           
             value = self.df.iat[row,col]
-            return "" if pd.isna(value) else str(value)
-        if role ==Qt.ItemDataRole.TextAlignmentRole:
-            return Qt.AlignmentFlag.AlignCenter # is the ItemDataRole passed by a signal? You 
+            if pd.isna(value): 
+                return ""
+            #Round the value to the desired decimal points
+            value =round_str_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
+            return str(value)
+        
+        if role ==Qt.ItemDataRole.TextAlignmentRole: #how under what circomstances is this role called?
+            return Qt.AlignmentFlag.AlignCenter  
+        
         return None
+
+    def refresh_display(self)->None:
+        if self.df.empty:
+            return
+        top_left= self.index(0,0)
+        bottom_right = self.index(
+            self.rowCount()-1, 
+            self.columnCount()-1
+        )
+        self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])

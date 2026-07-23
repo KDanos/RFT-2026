@@ -1,9 +1,7 @@
-from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout,QHBoxLayout
-from PyQt6.QtCore import QObject
-
+from PyQt6.QtWidgets import QFrame, QLabel, QSpinBox, QVBoxLayout,QHBoxLayout, QCheckBox
+from PyQt6.QtCore import QObject, Qt
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from utilities import print_current_location_function
 from ui.filterable_table.custom_table_view import CustomTableView
 
 
@@ -22,6 +20,7 @@ class FilterableTable(QFrame):
         self.analysis = analysis
         self.view = view
         self._build_ui()
+        self._connect_signals()
 
     #--------Private UI--------
     def _build_ui(self)->None:
@@ -33,27 +32,55 @@ class FilterableTable(QFrame):
         #Create the widgets frame on top
         widgets_frame = QFrame(self)
         main_layout.addWidget(widgets_frame)
-        
         widgets_layout = QHBoxLayout(widgets_frame)
-        temp_label = QLabel("This is a placeholder")
-        widgets_layout.addWidget(temp_label)
         
-        #Create the table frame at the bottom
+        # Define number of decimals to view
+        self.decimals_container = QHBoxLayout()
+        self.decimals_check_box = QCheckBox("Round decimals")
+        self.decimals_check_box.setCheckState(Qt.CheckState.Checked)
+        self.decimal_limit_spin = QSpinBox()
+        self.decimal_limit_spin.setValue(1)
+        self.decimal_limit_spin.setMaximum(10000)
+        self.decimal_limit_spin.setEnabled(True)
+        self.decimals_container.addWidget(self.decimals_check_box)
+        self.decimals_container.addWidget(self.decimal_limit_spin)
+        widgets_layout.addLayout(self.decimals_container)
+        widgets_layout.addStretch()# pushes everything to the left
+        
+        # Ensure manual typing works in the decimals spinbox
+        self.decimal_limit_spin.setReadOnly(False)
+        self.decimal_limit_spin.lineEdit().setReadOnly(False)
+        self.decimal_limit_spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.decimal_limit_spin.setKeyboardTracking(False)
+        
+        #Create the table frame at the bottom and ad the tableview
         table_frame= QFrame(self)
-        main_layout.addWidget(table_frame)
-        
-        
-        self.table = CustomTableView(self, self.project, self.analysis, self.view)
+        main_layout.addWidget(table_frame)        
+        self.table = CustomTableView(
+                self, 
+                self.project, 
+                self.analysis, 
+                self.view, 
+                self.decimals_check_box,
+                self.decimal_limit_spin)
         table_layout = QVBoxLayout(table_frame)
         table_layout.addWidget(self.table)
     
+    def _connect_signals(self):
+        self.decimal_limit_spin.valueChanged.connect(self.refresh_display)
+        self.decimals_check_box.toggled.connect(self.refresh_display)
     def update_filterable_table(self):
         pass
         
         self._create_table()
-    #--------Private UI--------
+
+    #--------Public API--------
     def load_from_view(self)->None:
-        print_current_location_function(self)
         self.table.load_from_view()
+    
+    def refresh_display(self)->None:
+        self.table.model.refresh_display()
+
+
 
 
