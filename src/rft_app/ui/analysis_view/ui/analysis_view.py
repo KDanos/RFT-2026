@@ -4,10 +4,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSplitter,  QVBoxLayout, QWidget,QHBoxLayout, QFrame 
 
 from project import AnalysisObject, AnalysisView, ColumnSpec,  ProjectDataManager
+from utilities import print_current_location_function
 from .view_sidebar import ViewSidebar
 from .tabular_frame import TabularFrame
 from .graphical_frame import GraphicalFrame
-from ..services.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, on_column_unit_change
+from ..services.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, on_column_unit_change, refresh_view_object_from_column_tree_selection
 
 
 
@@ -51,7 +52,8 @@ class AnalysisViewWidget(QWidget):
         main_layout.addWidget(main_vertical_splitter)
 
     def _connect_signals(self):
-        self.sidebar_frame.view_df_changed.connect(self.on_view_df_change)
+        self.sidebar_frame.view_df_changed.connect(self.on_view_df_change)#to be deleted, linked to the old QTableWidget
+        # self.sidebar_frame.view_df_changed.connect(self.on_view_df_change)
         self.tabular_frame.column_unit_change.connect(self._on_column_unit_change)
 
     def _on_column_unit_change(self, col: int, header: str, unit: str) -> None:
@@ -59,23 +61,10 @@ class AnalysisViewWidget(QWidget):
         self.project.mark_modified()
 
     def on_view_df_change(self):
+        print_current_location_function(self)
         selected_columns = self.sidebar_frame.get_selected_columns_names()
         
-        units_by_name = {s.name:s.unit for s in self.view.column_specs}
-
-        new_df, new_col_specs = build_view_df_and_col_specs_from_column_selection(
-            self.analysis.analysis_dataset.dataframe,
-            self.analysis.analysis_dataset.column_specs,
-            selected_columns,
-            self.project,
-        )
-
-        merged_specs = [
-            ColumnSpec(s.name, s.quantity_key, units_by_name.get(s.name, s.unit))
-            for s in new_col_specs
-        ]
-        self.view.df = new_df
-        self.view.column_specs = merged_specs
+        refresh_view_object_from_column_tree_selection(self.view, self.analysis, self.project, selected_columns)
         
-        self.tabular_frame.update_table()
+        self.tabular_frame.update_table()#replace shortly with the new filterable table widget
         self.project.mark_modified()

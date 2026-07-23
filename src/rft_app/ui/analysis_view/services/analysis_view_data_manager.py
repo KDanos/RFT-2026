@@ -1,5 +1,5 @@
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE
-from project import AnalysisView, ColumnSpec, ProjectDataManager
+from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from units import get_project_default_units
 import pandas as pd
 
@@ -49,3 +49,22 @@ def on_column_unit_change(view:AnalysisView,col:int, header:str, unit:str)->None
         else:
             updated.append(spec)
     view.column_specs = updated
+
+def refresh_view_object_from_column_tree_selection(
+    view:AnalysisView,
+    analysis:AnalysisObject,
+    project:ProjectDataManager,
+    selected_columns:list[str]
+    )->None:
+    units_by_name = {s.name:s.unit for s in view.column_specs}
+    new_df, new_col_specs = build_view_df_and_col_specs_from_column_selection(
+        analysis.analysis_dataset.dataframe,
+        analysis.analysis_dataset.column_specs,
+        selected_columns,
+        project,
+    )
+    view.df = new_df
+    view.column_specs = [
+        ColumnSpec(s.name, s.quantity_key, units_by_name.get(s.name, s.unit))
+        for s in new_col_specs
+    ]

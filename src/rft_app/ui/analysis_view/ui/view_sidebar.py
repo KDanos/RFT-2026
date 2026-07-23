@@ -1,3 +1,4 @@
+import inspect
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QPushButton, QTreeWidget, QTreeWidgetItem
 from qtpy.QtCore import QSignalBlocker
@@ -5,9 +6,9 @@ from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from ui.filterable_table.filterable_table import FilterableTable
-from ui.analysis_view.services.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection
+from ui.analysis_view.services.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, refresh_view_object_from_column_tree_selection
 
-from utilities import make_tree_item_checkable
+from utilities import make_tree_item_checkable, print_current_location_function
 from ui.widgets import DataframeTree
 
 
@@ -52,6 +53,7 @@ class ViewSidebar(QFrame):
         self.btn1.clicked.connect(self._test_filterable_table)
         
     def _on_column_selection_change(self, item:QTreeWidgetItem, column:int)->None:
+        print_current_location_function(self)
         if column != 0:
             return
         
@@ -92,33 +94,19 @@ class ViewSidebar(QFrame):
                 item.setCheckState(0, Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
 
     def _test_filterable_table(self)->None:
+        print_current_location_function(self)
         #Keep view.df in sync with tree checboxes(same logic as AnalysisViewWidget)
         selected_columns= self.get_selected_columns_names()
-        units_by_name = {s.name: s.unit for s in self.view.column_specs}
-
-        #Create a new view df (and associated column specs) from the tree selected columns
-        new_df, new_col_specs = build_view_df_and_col_specs_from_column_selection(
-            self.analysis.analysis_dataset.dataframe,
-            self.analysis.analysis_dataset.column_specs,
-            selected_columns, 
-            self.project
-        )
-        
-        merged_specs = [ #i have no idea neither what this list compahension achieved not how
-            type(s)(s.name, s.quantity_key, units_by_name.get(s.name, s.unit)) #please explain to me this syntax of type(...)(...)
-            for s in new_col_specs
-        ]
-        
-        self.view.df = new_df
-        self.view.column_specs =merged_specs
+        refresh_view_object_from_column_tree_selection(self.view, self.analysis, self.project, selected_columns)
         
         #Create a window to hold the table
         window = QDialog(self)
+        window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)   # TO BE DELETED:actually destroy on close
         window.setWindowTitle("Test filterable table")
         
         table_container = FilterableTable(self,self.project, self.analysis, self.view)
+        self.view_df_changed.connect(table_container.load_from_view)
         table_container.load_from_view()
-        
         
         window_layout = QVBoxLayout(window)
         window_layout.addWidget(table_container)
