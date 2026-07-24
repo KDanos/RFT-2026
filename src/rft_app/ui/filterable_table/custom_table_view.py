@@ -22,8 +22,10 @@ class CustomTableView(QTableView):
         self.decimal_limit_spin = decimal_limit_spin
         
         self.model = PandasTableModel(self, self.decimals_check_box, self.decimal_limit_spin)
-        self.setModel(self.model) #what does this method achieve?
+        self.setModel(self.model) 
 
+    #--------Public API--------
+  
     #--------Public API--------
     def load_from_view(self)->None:
         """Show current view.df +view.column_specs"""

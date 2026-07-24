@@ -5,6 +5,7 @@ import pandas as pd
 
 from project import ProjectDataManager
 from project.models import ColumnSpec
+from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from utilities import round_str_to_decimal_points
 
 
@@ -25,8 +26,6 @@ class PandasTableModel(QAbstractTableModel):
 
         self.decimals_check_box = decimals_check_box
         self.decimal_limit_spin = decimal_limit_spin
-        
-
 
     def set_dataframe(
         self, 
@@ -37,7 +36,7 @@ class PandasTableModel(QAbstractTableModel):
 
         self.beginResetModel() 
         self.df = df.copy() if df is not None else pd.DataFrame()
-        self.column_specs = list(column_specs) 
+        self.column_specs = column_specs
         self.project = project 
         self.endResetModel() 
 
@@ -94,8 +93,16 @@ class PandasTableModel(QAbstractTableModel):
             value = self.df.iat[row,col]
             if pd.isna(value): 
                 return ""
-            #Round the value to the desired decimal points
-            value =round_str_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
+            
+            #Convert from stored units to user selected units
+            user_unit = self.column_specs[col].unit
+            quantity_type = self.column_specs[col].quantity_key
+            if STANDARD_QUANTITIES[quantity_type].is_numeric:
+                value = convert_from_normalised_to_user_units(user_unit, quantity_type, value)
+            
+                #Round the value to the desired decimal points
+                value =round_str_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
+            
             return str(value)
         
         if role ==Qt.ItemDataRole.TextAlignmentRole: #how under what circomstances is this role called?
