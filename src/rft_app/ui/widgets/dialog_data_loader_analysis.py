@@ -8,7 +8,7 @@ from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERT
 from .table_widgets import UnitsComboBox
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from .tree_all_datasets import AllDataSetsTree
-from utilities import get_tree_top_level_item_by_name, get_tree_item_by_name, is_numeric, round_str_to_decimal_points, unique_name, update_tree_descendants, update_tree_ancestors
+from utilities import get_tree_top_level_item_by_name, get_tree_item_by_name, is_numeric, round_value_to_decimal_points, unique_name, update_tree_descendants, update_tree_ancestors
 import pandas as pd
 
 
@@ -268,7 +268,7 @@ class DataLoaderDialogAnalysis(QDialog):
                             value=value)
                 
                         #Round the values to selected decimal points
-                        value = round_str_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
+                        value = round_value_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
                 display = str(value)
                 
                 item = QTableWidgetItem(display)

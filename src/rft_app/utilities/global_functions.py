@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterat
 import pandas as pd
 from dataclasses import fields
 
+from qtpy.QtWidgets import QTableView
+
 from project.models import ColumnSpec, DataSet, DataSetLogEntry
 
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
@@ -99,7 +101,7 @@ def update_tree_descendants(item: QTreeWidgetItem, state: Qt.CheckState):
         child.setCheckState(0, state)
         update_tree_descendants(child, state)
 
-def round_str_to_decimal_points(
+def round_value_to_decimal_points(
                                 value:Any, #str | int | float
                                 check_box:QCheckBox,
                                 spin_box: QSpinBox
@@ -241,7 +243,7 @@ def create_table_view_frame(
             item = table.item(row, col)
             if item is None: 
                 continue
-            rounded_value =round_str_to_decimal_points(
+            rounded_value =round_value_to_decimal_points(
                 item.text(),decimals_check_box, decimal_limit_spin)
             item.setText(rounded_value)
 
@@ -344,3 +346,4 @@ def make_tree_item_checkable(item:QTreeWidgetItem)->None:
         |Qt.ItemFlag.ItemIsUserCheckable
         )
         column_item.setCheckState(0, Qt.CheckState.Checked)
+

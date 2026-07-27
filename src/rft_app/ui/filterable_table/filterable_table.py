@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QFrame, QLabel, QSpinBox, QTableWidget, QVBoxLayout,QHBoxLayout, QCheckBox
+from PyQt6.QtWidgets import QFrame,  QSpinBox, QTableWidget, QVBoxLayout,QHBoxLayout, QCheckBox
 from PyQt6.QtCore import QObject, Qt
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
@@ -15,8 +15,7 @@ class FilterableTable(QFrame):
             view:AnalysisView
             )->None:
         super().__init__(parent)
-        
-        parent=parent
+
         self.project = project
         self.analysis = analysis
         self.view = view
@@ -86,9 +85,10 @@ class FilterableTable(QFrame):
         column_count = self.view.df.shape[1]
         self.units_table.setColumnCount(column_count)
         self.units_table.setRowCount(1)
+        self.units_table.setVerticalHeaderLabels([""])
         self.units_table.horizontalHeader().hide()
         
-        for i in range(self.view.df.shape[1]):
+        for i in range(column_count):
             quantity_key = self.view.column_specs[i].quantity_key
             units_combo = UnitsComboBox(quantity_key, self.project)
             #Connect to a function to initiate the update in changing the units
@@ -108,14 +108,30 @@ class FilterableTable(QFrame):
         self.units_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
     def _sync_units_table_width_to_data_table(self)->None:
-        for i in range(self.view.df.shape[1]):
+        data_cols = self.table.model.columnCount()
+        units_cols = self.units_table.columnCount()
+        sync_cols = min(data_cols, units_cols)
+        
+        for i in range(sync_cols):
             column_width = self.table.columnWidth(i)
             self.units_table.setColumnWidth(i,column_width)
-        self.units_table.setVerticalHeaderLabels([""])
+        
         v_header_width = self.table.verticalHeader().width()
-
         self.units_table.verticalHeader().setFixedWidth(v_header_width)
        
+    def _resize_units_column(self,idx:int)->None:
+        column_width = self.table.columnWidth(idx)
+        self.units_table.setColumnWidth(idx, column_width)
+
+    def _on_units_change(self,idx:int)->None:
+        combo = self.sender()
+        if not isinstance(combo, UnitsComboBox):
+            return
+        
+        spec = self.view.column_specs[idx]
+        self.view.column_specs[idx] = ColumnSpec(spec.name, spec.quantity_key,combo.currentText())
+        self.refresh_display()
+
     #--------Public API--------
     def load_from_view(self)->None:
         self.table.load_from_view()
@@ -126,13 +142,3 @@ class FilterableTable(QFrame):
         self.table.resizeColumnsToContents()
         self._sync_units_table_width_to_data_table()
 
-    def _resize_units_column(self,idx:int)->None:
-        column_width = self.table.columnWidth(idx)
-        self.units_table.setColumnWidth(idx, column_width)
-
-    def _on_units_change(self,idx)->None:
-        # combo = self.units_table.cellWidget(0, idx)
-        combo = self.sender()
-        spec = self.view.column_specs[idx]
-        self.view.column_specs[idx] = ColumnSpec(spec.name, spec.quantity_key,combo.currentText())
-        self.refresh_display()

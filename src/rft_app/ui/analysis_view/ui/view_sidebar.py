@@ -94,7 +94,6 @@ class ViewSidebar(QFrame):
                 item.setCheckState(0, Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
 
     def _test_filterable_table(self)->None:
-        print_current_location_function(self)
         #Keep view.df in sync with tree checboxes(same logic as AnalysisViewWidget)
         selected_columns= self.get_selected_columns_names()
         refresh_view_object_from_column_tree_selection(self.view, self.analysis, self.project, selected_columns)
@@ -103,7 +102,9 @@ class ViewSidebar(QFrame):
         window = QDialog(self)
         window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)   # TO BE DELETED:actually destroy on close
         window.setWindowTitle("Test filterable table")
-        
+        window.setWindowFlag(window.windowFlags()
+            |Qt.WindowType.WindowMaximizeButtonHint
+            |Qt.WindowType.WindowMinimizeButtonHint)
         table_container = FilterableTable(self,self.project, self.analysis, self.view)
         self.view_df_changed.connect(table_container.load_from_view)
         table_container.load_from_view()

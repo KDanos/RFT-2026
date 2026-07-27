@@ -345,7 +345,7 @@ class DataLoaderDialogProject(QDialog):
         self.mapping_table.verticalHeader().setFixedWidth(v_header_width)
         self.preview_table.verticalHeader().setFixedWidth(v_header_width)
         
-    def _sync_resizing_table_column_width(self,logical_index:int, old_zise:int, new_size:int):
+    def _sync_resizing_table_column_width(self,logical_index:int, old_size:int, new_size:int):
         #Exit the function if already in it
         if self._is_syncing_columns:
             return
@@ -367,7 +367,7 @@ class DataLoaderDialogProject(QDialog):
         try:
             target.setColumnWidth(logical_index,new_size)
         finally:
-            #Remore the guard to allow entry into the function again
+            #Remove the guard to allow entry into the function again
             self._is_syncing_columns = False
 
     def _sync_scroller_position(self,new_position_value)->None:
