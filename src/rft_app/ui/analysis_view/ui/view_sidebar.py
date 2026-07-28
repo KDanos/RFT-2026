@@ -1,12 +1,9 @@
-import inspect
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QPushButton, QTreeWidget, QTreeWidgetItem
 from qtpy.QtCore import QSignalBlocker
-from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from ui.filterable_table.filterable_table import FilterableTable
-from ui.analysis_view.services.analysis_view_data_manager import build_view_df_and_col_specs_from_column_selection, refresh_view_object_from_column_tree_selection
 
 from utilities import make_tree_item_checkable, print_current_location_function
 from ui.widgets import DataframeTree
@@ -35,9 +32,7 @@ class ViewSidebar(QFrame):
 
     def _build_ui(self):
         self.main_layout = QVBoxLayout(self)
-        self.btn1 = QPushButton("Test Filtered Table View")
         self.btn2 = QPushButton("placeholder 12")
-        self.main_layout.addWidget(self.btn1)
         self.main_layout.addWidget(self.btn2)
         
         analysis_dataset = self.analysis.analysis_dataset
@@ -50,8 +45,7 @@ class ViewSidebar(QFrame):
 
     def _connect_signals(self):
         self.data_tree.itemChanged.connect(self._on_column_selection_change)
-        self.btn1.clicked.connect(self._test_filterable_table)
-        
+
     def _on_column_selection_change(self, item:QTreeWidgetItem, column:int)->None:
         print_current_location_function(self)
         if column != 0:
@@ -71,6 +65,8 @@ class ViewSidebar(QFrame):
             item = node.child(i)
             item.setFlags (Qt.ItemFlag.ItemIsSelectable|Qt.ItemFlag.ItemIsUserCheckable)
 
+    #--------Public API--------
+
     def get_selected_columns_names (self)->list[str]:
         names = []
         columns_level = self.data_tree.columns_level
@@ -82,8 +78,6 @@ class ViewSidebar(QFrame):
     
     def sync_checkboxes_from_view(self, view:AnalysisView)->None:
         """On open, reflect which optional columns are currently in view.df"""
-        if view.df is None:
-            return
         
         view_optional = set(view.df.columns[3:])
         with QSignalBlocker(self.data_tree):
@@ -93,22 +87,3 @@ class ViewSidebar(QFrame):
                 checked = item.text(0) in view_optional
                 item.setCheckState(0, Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
 
-    def _test_filterable_table(self)->None:
-        #Keep view.df in sync with tree checboxes(same logic as AnalysisViewWidget)
-        selected_columns= self.get_selected_columns_names()
-        refresh_view_object_from_column_tree_selection(self.view, self.analysis, self.project, selected_columns)
-        
-        #Create a window to hold the table
-        window = QDialog(self)
-        window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)   # TO BE DELETED:actually destroy on close
-        window.setWindowTitle("Test filterable table")
-        window.setWindowFlag(window.windowFlags()
-            |Qt.WindowType.WindowMaximizeButtonHint
-            |Qt.WindowType.WindowMinimizeButtonHint)
-        table_container = FilterableTable(self,self.project, self.analysis, self.view)
-        self.view_df_changed.connect(table_container.load_from_view)
-        table_container.load_from_view()
-        
-        window_layout = QVBoxLayout(window)
-        window_layout.addWidget(table_container)
-        window.show()

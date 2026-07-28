@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QFrame,  QSpinBox, QTableWidget, QVBoxLayout,QHBoxLayout, QCheckBox
-from PyQt6.QtCore import QObject, Qt
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from ui.widgets import UnitsComboBox
@@ -7,6 +7,9 @@ from ui.filterable_table.custom_table_view import CustomTableView
 
 
 class FilterableTable(QFrame):
+    #Custom Signals
+    column_unit_change = pyqtSignal(int, str, str) #column index, column header and new unit
+
     def __init__(
             self, 
             parent:QObject,
@@ -108,7 +111,7 @@ class FilterableTable(QFrame):
         self.units_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
     def _sync_units_table_width_to_data_table(self)->None:
-        data_cols = self.table.model.columnCount()
+        data_cols = self.table.table_model.columnCount()
         units_cols = self.units_table.columnCount()
         sync_cols = min(data_cols, units_cols)
         
@@ -129,8 +132,10 @@ class FilterableTable(QFrame):
             return
         
         spec = self.view.column_specs[idx]
-        self.view.column_specs[idx] = ColumnSpec(spec.name, spec.quantity_key,combo.currentText())
+        new_unit = combo.currentText()
+        self.view.column_specs[idx] = ColumnSpec(spec.name, spec.quantity_key, new_unit)
         self.refresh_display()
+        self.column_unit_change.emit(idx, spec.name, new_unit)
 
     #--------Public API--------
     def load_from_view(self)->None:
@@ -138,7 +143,7 @@ class FilterableTable(QFrame):
         self._sync_units_table_width_to_data_table()
     
     def refresh_display(self)->None:
-        self.table.model.refresh_display()
+        self.table.table_model.refresh_display()
         self.table.resizeColumnsToContents()
         self._sync_units_table_width_to_data_table()
 
