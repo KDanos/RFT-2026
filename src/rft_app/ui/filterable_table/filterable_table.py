@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QFrame,  QSpinBox, QTableWidget, QVBoxLayout,QHBoxLa
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
+from utilities import print_current_location_function
 from ui.widgets import UnitsComboBox
 from ui.filterable_table.custom_table_view import CustomTableView
 
@@ -62,9 +63,6 @@ class FilterableTable(QFrame):
         self.table_layout.setContentsMargins(0,0,0,0)
         self.table_layout.setSpacing(0)
         self.main_layout.addWidget(self.table_frame)       
-       
-        #Create the units combo widgets
-        self._create_units_combos()
 
         #Create the table itself
         self.table = CustomTableView(
@@ -82,9 +80,14 @@ class FilterableTable(QFrame):
         self.decimals_check_box.toggled.connect(self.refresh_display)
         self.table.horizontalHeader().sectionResized.connect(self._resize_units_column)
     
-    def _create_units_combos(self)->None:
-        self.units_table = QTableWidget(self.table_frame)
+    def _create_or_update_units_combos(self)->None:
+        print_current_location_function(self)
+        #Used only in update, rather than create on load.
+        if hasattr(self, "units_table"):
+            self.table_layout.removeWidget(self.units_table)
+            self.units_table.deleteLater()
         
+        self.units_table = QTableWidget(self.table_frame)
         column_count = self.view.df.shape[1]
         self.units_table.setColumnCount(column_count)
         self.units_table.setRowCount(1)
@@ -100,7 +103,7 @@ class FilterableTable(QFrame):
             #Update the column_specs to reflect the units of the units_combo
             spec = self.view.column_specs[i]
             self.view.column_specs[i] = ColumnSpec(spec.name, spec.quantity_key, units_combo.currentText())
-        self.table_layout.addWidget(self.units_table,0)
+        self.table_layout.insertWidget(0,self.units_table)
         
         #Ensure the units table takes as little vertical space as possible and no scrolling appears
         self.units_table.resizeRowsToContents()
@@ -110,7 +113,7 @@ class FilterableTable(QFrame):
         self.units_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.units_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-    def _sync_units_table_width_to_data_table(self)->None:
+    def _sync_units_table_column_widths(self)->None:
         data_cols = self.table.table_model.columnCount()
         units_cols = self.units_table.columnCount()
         sync_cols = min(data_cols, units_cols)
@@ -122,7 +125,9 @@ class FilterableTable(QFrame):
         v_header_width = self.table.verticalHeader().width()
         self.units_table.verticalHeader().setFixedWidth(v_header_width)
        
-    def _resize_units_column(self,idx:int)->None:
+    def _resize_units_column(self,idx:int)->None:  
+        if not hasattr(self, "units_table"): #guard for initial load. No units_table is available when this function is called on load.
+            return     
         column_width = self.table.columnWidth(idx)
         self.units_table.setColumnWidth(idx, column_width)
 
@@ -140,10 +145,11 @@ class FilterableTable(QFrame):
     #--------Public API--------
     def load_from_view(self)->None:
         self.table.load_from_view()
-        self._sync_units_table_width_to_data_table()
+        self._create_or_update_units_combos()
+        self._sync_units_table_column_widths()
     
     def refresh_display(self)->None:
         self.table.table_model.refresh_display()
         self.table.resizeColumnsToContents()
-        self._sync_units_table_width_to_data_table()
+        self._sync_units_table_column_widths()
 
