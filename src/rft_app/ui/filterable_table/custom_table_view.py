@@ -1,7 +1,8 @@
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, Qt
 from PyQt6.QtWidgets import QCheckBox, QSpinBox, QTableView
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
+from ui.filterable_table.filterable_header_view import FilterableHeaderView
 from ui.filterable_table.pandas_table_model import PandasTableModel
 
 
@@ -21,6 +22,9 @@ class CustomTableView(QTableView):
         self.decimals_check_box = decimals_check_box
         self.decimal_limit_spin = decimal_limit_spin
         
+        #Repalce the default header with the custom one to capture the filtering options
+        self.setHorizontalHeader(FilterableHeaderView(Qt.Orientation.Horizontal, self))
+
         self.table_model = PandasTableModel(self, self.decimals_check_box, self.decimal_limit_spin)
         self.setModel(self.table_model) 
 
@@ -34,7 +38,7 @@ class CustomTableView(QTableView):
             self.view.column_specs,
             self.project
         )
-        self.resizeColumnsToContents() #is this a TableWidget method? Wasnt this available to my other tablewidgets or tableviewWidgets?
+        self.resizeColumnsToContents() 
 
 
 
