@@ -63,9 +63,16 @@ class FilterableHeaderView(QHeaderView):
             if current_filter_icon.contains(pos):
                 #Convert from local (i.e. icon rect corner from header poistion to global screen coordinates)
                 global_pos = self.mapToGlobal(current_filter_icon.bottomLeft())            
-                #Call the filtering menu
-                menu = FilterByRowMenu(logical_index)
+                #Call the filtering menu and pass in the column name
+                column_name = self.model().headerData(logical_index, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
+                print (column_name)
+                menu = FilterByRowMenu(
+                        logical_index,
+                        column_name, 
+                        self.parent().proxy_model
+                        )
                 menu.exec(global_pos)
+                
                 # Swallow the event and do not proceed to default mousePress event bahaviour (e.g. resize sort columns)
                 return 
         

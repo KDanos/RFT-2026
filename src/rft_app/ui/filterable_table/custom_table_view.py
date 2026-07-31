@@ -2,6 +2,7 @@ from PyQt6.QtCore import QObject, Qt
 from PyQt6.QtWidgets import QCheckBox, QSpinBox, QTableView
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
+from ui.filterable_table.proxy_model import ProxyFilterModel
 from ui.filterable_table.filterable_header_view import FilterableHeaderView
 from ui.filterable_table.pandas_table_model import PandasTableModel
 
@@ -22,11 +23,17 @@ class CustomTableView(QTableView):
         self.decimals_check_box = decimals_check_box
         self.decimal_limit_spin = decimal_limit_spin
         
-        #Repalce the default header with the custom one to capture the filtering options
+        #Replace the default header with the custom one to capture the filtering options
         self.setHorizontalHeader(FilterableHeaderView(Qt.Orientation.Horizontal, self))
 
+        #Create a model to read the dataframe. 
         self.table_model = PandasTableModel(self, self.decimals_check_box, self.decimal_limit_spin)
-        self.setModel(self.table_model) 
+        
+        #Define the proxy model. It reads the PandasTableModel, applies the filters and feeds into the tabular and graphical views
+        self.proxy_model = ProxyFilterModel(self)
+        self.proxy_model.setSourceModel(self.table_model)
+        self.setSortingEnabled(True)
+        self.setModel(self.proxy_model) 
 
     #--------Private UI--------
   

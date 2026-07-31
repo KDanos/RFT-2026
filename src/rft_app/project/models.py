@@ -68,7 +68,6 @@ class AnalysisView:
     df: pd.DataFrame= None
     column_specs : list[ColumnSpec] =field (default_factory=list)
 
-
 @dataclass
 class Fluid:
     """An interpreted fluid in the reservoir"""

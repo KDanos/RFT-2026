@@ -1,10 +1,23 @@
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QFrame, QLineEdit, QMenu, QPushButton, QWidgetAction, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import (QFrame, QLineEdit, QMenu, QPushButton, 
+                            QWidgetAction, QVBoxLayout, QHBoxLayout)
+from qtpy.QtWidgets import QDialog
+
+from ui.filterable_table.proxy_model import ProxyFilterModel
+from ui.filterable_table.filter_combos import NumberFilters
+from ui.filterable_table.filter_window import FilteringWindow
 
 class FilterByRowMenu(QMenu):
-    def __init__(self, column_index:int)->None:
+    def __init__(
+            self, 
+            column_index:int, 
+            column_name:str, 
+            proxy_model:ProxyFilterModel
+            )->None:
         super().__init__()
         self.column_index = column_index
+        self.column_name = column_name
+        self.proxy_model = proxy_model
         self._build_ui()
         self._connect_actions_to_slots()
         
@@ -67,15 +80,35 @@ class FilterByRowMenu(QMenu):
 
     def _define_number_filter_actions(self)->None:
         self.actionNumberEquals = QAction("Equals...", self)
+        self.actionNumberEquals.setData(NumberFilters.EQUALS)
+        
         self.actionNumberDoesNotEqual = QAction("Does Not Equal...", self)
+        self.actionNumberDoesNotEqual.setData(NumberFilters.DOESNOTEQUAL)
+        
         self.actionGreaterThan = QAction("Greater Than...", self)
+        self.actionGreaterThan.setData(NumberFilters.GREATERTHAN)
+
         self.actionGreaterThanOrEqualTo = QAction("Greater Than Or Equal to...", self)
+        self.actionGreaterThanOrEqualTo.setData(NumberFilters.GREATERTHANOREQUALTO)
+
         self.actionLessThan = QAction("Less Than...", self)
+        self.actionLessThan.setData(NumberFilters.LESSTHAN)
+
         self.actionLessThanOrEqualTo = QAction("Less Than Or Equal To...", self)
+        self.actionLessThanOrEqualTo.setData(NumberFilters.LESSTHANOREQUALTO)
+
         self.actionBetween = QAction("Between...", self)
+
+
         self.actionTop10 = QAction("Top 10...", self)
+
+
         self.actionAboveAverage = QAction("Above Average...", self)
+        
+
         self.actionBelowAverage = QAction("Below Average...", self)
+        
+
         self.actionCustomNumberFilter = QAction("Custom Filter...", self)
 
     def _define_text_filter_actions(self)->None:
@@ -118,7 +151,7 @@ class FilterByRowMenu(QMenu):
         for action in self.actions():
             action.triggered.connect(lambda checked=False, a=action:self._on_action(a.text())) #why do i need the checked = False argument after lambda? Where does that come from?
         for action in self.number_filter_menu.actions():
-            action.triggered.connect(lambda checked=False, a=action:self._on_action(a.text()))
+            action.triggered.connect(lambda checked = False, action=action : self._launch_number_filtering_window(action))
         for action in self.text_filter_menu.actions():
             action.triggered.connect(lambda checked=False, a=action:self._on_action(a.text()))
 
@@ -130,3 +163,17 @@ class FilterByRowMenu(QMenu):
 
     def _on_clicked_cancel(self):
         print ("Cancel has been selected")
+
+    def _launch_number_filtering_window(self, action:QAction)->None:
+        
+        filter_name = action.data().label if action.data() else ""
+        
+        #is a gate required here if filter_name = "", to return
+        window = FilteringWindow(self, self.column_name, filter_name)
+        if window.exec() == QDialog.DialogCode.Accepted:
+            new_spec = window.result_spec
+            self.proxy_model.active_filters[self.column_index]=new_spec
+            # Command the proxy model to re-run the filterAcceptsRow method
+            self.proxy_model.invalidateFilter() 
+        
+    
