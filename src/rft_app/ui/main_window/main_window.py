@@ -27,7 +27,7 @@ class MainWindowKD(QMainWindow):
 
         self._build_ui()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("260623 Single Dataset KD")
+        self._load_default_project_on_startup("260804 Color Dataset KD")
 
     def _load_default_project_on_startup(self, project_name:str) -> None:
         default_path = Path(__file__).resolve().parent.parent.parent / f"{project_name}.rftproj"
