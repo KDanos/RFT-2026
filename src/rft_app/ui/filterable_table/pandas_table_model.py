@@ -6,7 +6,7 @@ import pandas as pd
 from project import ProjectDataManager
 from project.models import ColumnSpec
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
-from utilities import round_value_to_decimal_points
+from utilities import is_numeric, round_value_to_decimal_points
 
 
 class PandasTableModel(QAbstractTableModel):
@@ -79,7 +79,7 @@ class PandasTableModel(QAbstractTableModel):
         self, 
         index:QModelIndex, 
         role:int=Qt.ItemDataRole.DisplayRole,
-        )->str:
+        )-> str | float | Qt.AlignmentFlag | None:
 
         if not index.isValid() or self.df.empty:
             return None
@@ -88,24 +88,41 @@ class PandasTableModel(QAbstractTableModel):
         if row <0 or col <0 or row >=len(self.df) or col >= self.df.shape[1]:
             return None
         
-        if role ==Qt.ItemDataRole.DisplayRole:           
-            value = self.df.iat[row,col]
-            if pd.isna(value): 
+        #Extract the value from the df and convert to user selected units
+        value = self.df.iat[row,col]
+
+        # 1. blanks - all roles
+        if pd.isna(value):
+            if role == Qt.ItemDataRole.DisplayRole:
                 return ""
-            
-            #Convert from stored units to user selected units
-            user_unit = self.column_specs[col].unit
-            quantity_type = self.column_specs[col].quantity_key
-            if STANDARD_QUANTITIES[quantity_type].is_numeric:
-                value = convert_from_normalised_to_user_units(user_unit, quantity_type, value)
-            
-                #Round the value to the desired decimal points
-                value =round_value_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
-            
-            return str(value)
+            if role == Qt.ItemDataRole.UserRole:
+                return None
+            if role == Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignCenter
+            return # all other roles (EditRole, BackgroundRole, ToolTipRole etc.)
+         
+         # 2. alignment only, nor conversion needed:
+        if role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignCenter
+
+        # 3. Numeric columns
+        user_unit = self.column_specs[col].unit
+        quantity_type = self.column_specs[col].quantity_key
+        if STANDARD_QUANTITIES[quantity_type].is_numeric:
+            value = convert_from_normalised_to_user_units(user_unit, quantity_type, value)
+            value =round_value_to_decimal_points(value,self.decimals_check_box, self.decimal_limit_spin)
         
-        if role ==Qt.ItemDataRole.TextAlignmentRole: 
-            return Qt.AlignmentFlag.AlignCenter  
+            if role == Qt.ItemDataRole.DisplayRole:
+                return str(value)
+            if role == Qt.ItemDataRole.UserRole:
+                return float(value)
+            return None
+
+        # 4. Text Columns
+        if role == Qt.ItemDataRole.DisplayRole:
+            return str(value)
+        if role ==Qt.ItemDataRole.UserRole: 
+            return str(value)
         
         return None
 

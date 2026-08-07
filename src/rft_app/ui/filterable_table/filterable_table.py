@@ -1,5 +1,6 @@
-from PyQt6.QtWidgets import QFrame,  QSpinBox, QTableWidget, QVBoxLayout,QHBoxLayout, QCheckBox
+from PyQt6.QtWidgets import QButtonGroup, QFrame, QRadioButton,  QSpinBox, QTableWidget, QVBoxLayout,QHBoxLayout, QCheckBox
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from qtpy.QtWidgets import QLabel
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from utilities import print_current_location_function
@@ -23,6 +24,7 @@ class FilterableTable(QFrame):
         self.project = project
         self.analysis = analysis
         self.view = view
+        self.arithmetic_ops_src_model:str = "full"
         self._build_ui()
         self._connect_signals()
 
@@ -57,6 +59,28 @@ class FilterableTable(QFrame):
         self.decimal_limit_spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.decimal_limit_spin.setKeyboardTracking(False)
         
+        # Add a toggle for the user to select filtering on visible or view data
+        self.filtering_radio_layout= QVBoxLayout()
+        
+        self.filter_options_label = QLabel("Apply arithmetic operations to:")
+        self.filter_options_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.filtering_radio_layout.addWidget(self.filter_options_label)
+        
+        self.filtered_dataset_radio = QRadioButton("Filtered Dataset",self.widgets_frame)
+        self.full_dataset_radio = QRadioButton("Full Dataset",self.widgets_frame)
+        self.filtered_dataset_radio.setChecked(True)
+        self.filter_options_group = QButtonGroup(self)
+        self.filter_options_group.addButton(self.filtered_dataset_radio)
+        self.filter_options_group.addButton(self.full_dataset_radio)
+        self.filter_options_group.buttonClicked.connect(self._on_radio_button_change)
+        
+        self.radio_btn_layout = QHBoxLayout()
+        self.radio_btn_layout.addWidget(self.full_dataset_radio)
+        self.radio_btn_layout.addWidget(self.filtered_dataset_radio)
+        self.filtering_radio_layout.addLayout(self.radio_btn_layout)
+
+        self.widgets_layout.addLayout(self.filtering_radio_layout)
+
         #Create the table frame at the bottom and ad the tableview
         self.table_frame= QFrame(self)      
         self.table_layout = QVBoxLayout(self.table_frame)
@@ -81,7 +105,7 @@ class FilterableTable(QFrame):
         self.table.horizontalHeader().sectionResized.connect(self._resize_units_column)
     
     def _create_or_update_units_combos(self)->None:
-        print_current_location_function(self)
+        
         #Used only in update, rather than create on load.
         if hasattr(self, "units_table"):
             self.table_layout.removeWidget(self.units_table)
@@ -142,6 +166,11 @@ class FilterableTable(QFrame):
         self.refresh_display()
         self.column_unit_change.emit(idx, spec.name, new_unit)
 
+    def _on_radio_button_change(self, button:QRadioButton)->None:
+        use_filtered = button is self.filtered_dataset_radio
+        self.table.proxy_model.use_filtered_rows_for_stats = use_filtered
+        self.arithmetic_ops_src_model = "filtered" if use_filtered else "full"
+    
     #--------Public API--------
     def load_from_view(self)->None:
         self.table.load_from_view()

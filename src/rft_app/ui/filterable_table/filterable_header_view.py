@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt, QRect, QSize
 from PyQt6.QtGui import QIcon, QPainter
 from PyQt6.QtWidgets import QHeaderView
 
+from ui.filterable_table.proxy_model import ProxyFilterModel
 from ui.filterable_table.filter_by_row_menu import FilterByRowMenu
 from ui import app_icon
 
@@ -15,7 +16,8 @@ class FilterableHeaderView(QHeaderView):
     def __init__(self, orientation:Qt.Orientation, parent = None)->None:
         super().__init__(orientation, parent)
         # self.filter_icon:QIcon = app_icon("fa5s.filter")
-        self.filter_icon:QIcon = app_icon("mdi.filter-menu")
+        self.filter_icon_active:QIcon = app_icon("mdi.filter-menu")
+        self.filter_icon_idle:QIcon = app_icon("fa5s.sort-down")
 
     def icon_rect (self, section_rect:QRect) ->QRect:
         """ Icon_rect takes a QRect a argument, representing the whole header section.
@@ -32,9 +34,14 @@ class FilterableHeaderView(QHeaderView):
         #First the original, built-in implementation, before applying changes in the next lines
         super().paintSection(painter, rect, logicalIndex)
         
+        #Chose an icon, based on whether active filters are in place
+        proxy = self.model()
+        has_filter = (isinstance(proxy,ProxyFilterModel) and logicalIndex in proxy.active_filters)
+
         #Create a new QRect object to sit inside the QRect assigned to the header
+        icon = self.filter_icon_active if has_filter else self.filter_icon_idle
         icon_rect = self.icon_rect(rect)
-        self.filter_icon.paint(painter, icon_rect)  
+        icon.paint(painter, icon_rect)  
 
     def sectionSizeFromContents(self, logicalIndex: int) -> QSize: 
         # This is what QHeaderView.sectionSizeHint()/resizeColumnsToContents()
