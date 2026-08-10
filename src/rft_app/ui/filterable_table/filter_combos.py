@@ -21,6 +21,17 @@ class NumberFilters(Enum):
         self.symbol = symbol
         self.kind = kind
 
+class TextFilters(Enum):
+    EQUALS = ("Equals")
+    DOESNOTEQUAL = ("Does Not Equal")
+    BEGINSWITH = ("Begins With")
+    ENDSWITH = ("Ends With")
+    CONTAINS = ("Contains")
+    DOESNOTCONTAIN = ("Does Not Contain")
+    
+    def __init__(self, label:str)->None:
+        self.label = label  
+
 class NumberFilterCombo(QComboBox):
     
     def __init__(self,parent = None):
@@ -33,9 +44,11 @@ class NumberFilterCombo(QComboBox):
             self.addItem(entry.label, entry)
 
 class TextFilterCombo(QComboBox):
+    
     def __init__(self,parent = None):
         super().__init__(parent)
+        self._create_list_of_filters()
 
-class AlphanumericFilterCombo(QComboBox):
-    def __init__(self,parent = None):
-        super().__init__(parent)
+    def _create_list_of_filters(self)->None:
+        for entry in TextFilters:
+            self.addItem(entry.label, entry)

@@ -1,13 +1,20 @@
 
-from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, Qt
+from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, pyqtSignal
 
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units, normalise_from_user_units
 from utilities import round_value_to_decimal_points
-from ui.filterable_table.filter_specs import FilterSpec, FilterSpecNumber
+from ui.filterable_table.filter_specs import (
+    FilterSpec,
+    FilterSpecNumber,
+    filter_spec_from_dict,
+    filter_spec_to_dict,
+)
 
 import pandas as pd
 
 class ProxyFilterModel(QSortFilterProxyModel):
+    filters_changed = pyqtSignal()
+
     def __init__(self, parent=None)->None:
         super().__init__(parent)
         self.active_filters:dict[int, FilterSpec ]={}
@@ -24,7 +31,13 @@ class ProxyFilterModel(QSortFilterProxyModel):
         if len(self.active_filters)==0:
             return True
         
+        col_count = source_model.df.shape[1]
         for col,filter_spec in self.active_filters.items():
+            
+            # Safeguard against invalid column indices
+            if col<0 or col>= col_count:
+                continue
+            
             cell_value = source_model.df.iat[source_row, col]
             if self._needs_display_rounded_si(filter_spec):
                 cell_value = self._to_display_rounded_si(source_model, col, cell_value)
@@ -61,6 +74,64 @@ class ProxyFilterModel(QSortFilterProxyModel):
         except (TypeError, ValueError):
             return raw_cell_value
         return normalise_from_user_units(unit, quantity_key, rounded_float)
+
+    def notify_filters_changed(self) -> None:
+        """Re-run row filtering and repaint header filter icons.
+
+        invalidateFilter() updates which rows the proxy shows, but does not
+        guarantee the horizontal header is repainted. The header draws its
+        filter icon from active_filters in paintSection(), so we must call
+        viewport().update() whenever filters are applied or cleared.
+        """
+        self.invalidateFilter()
+        parent = self.parent()
+        if parent is not None:
+            header = parent.horizontalHeader()
+            if header is not None:
+                header.viewport().update()
+        self.filters_changed.emit()
+
+    def set_column_filter(self, column_index: int, spec: FilterSpec) -> None:
+        self.active_filters[column_index] = spec
+        self.sync_filters_to_view()
+        self.notify_filters_changed()
+
+    def clear_column_filter(self, column_index: int) -> None:
+        self.active_filters.pop(column_index, None)
+        self.sync_filters_to_view()
+        self.notify_filters_changed()
+
+    def clear_all_filters(self) -> None:
+        if not self.active_filters:
+            return
+        self.active_filters.clear()
+        self.sync_filters_to_view()
+        self.notify_filters_changed()
+
+    def sync_filters_to_view(self) -> None:
+        analysis_view = self._analysis_view()
+        if analysis_view is None:
+            return
+        analysis_view.column_filters = {
+            col: filter_spec_to_dict(spec)
+            for col, spec in self.active_filters.items()
+        }
+
+    def restore_filters_from_view(self) -> None:
+        self.active_filters.clear()
+        analysis_view = self._analysis_view()
+        if analysis_view is None or not analysis_view.column_filters:
+            return
+
+        source_model = self.sourceModel()
+        col_count = source_model.df.shape[1] if source_model is not None else 0
+        for col, spec_dict in analysis_view.column_filters.items():
+            column_index = int(col)
+            if column_index < 0 or column_index >= col_count:
+                continue
+            self.active_filters[column_index] = filter_spec_from_dict(spec_dict)
+
+    def _analysis_view(self):
+        parent = self.parent()
+        return getattr(parent, "view", None) if parent is not None else None
        
-    
-    

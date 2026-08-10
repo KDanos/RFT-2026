@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import QButtonGroup, QFrame, QRadioButton,  QSpinBox, QTableWidget, QVBoxLayout,QHBoxLayout, QCheckBox
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from qtpy.QtWidgets import QLabel
+from qtpy.QtWidgets import QLabel, QPushButton
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
-from utilities import print_current_location_function
+from ui import app_icon
 from ui.widgets import UnitsComboBox
 from ui.filterable_table.custom_table_view import CustomTableView
 
@@ -81,7 +81,7 @@ class FilterableTable(QFrame):
 
         self.widgets_layout.addLayout(self.filtering_radio_layout)
 
-        #Create the table frame at the bottom and ad the tableview
+        #Create the table frame at the bottom and add the tableview
         self.table_frame= QFrame(self)      
         self.table_layout = QVBoxLayout(self.table_frame)
         self.table_layout.setContentsMargins(0,0,0,0)
@@ -98,12 +98,28 @@ class FilterableTable(QFrame):
                 self.decimal_limit_spin)
         
         self.table_layout.addWidget(self.table,1)
-    
+
+        self.clear_filters_btn = QPushButton("Clear all filters")
+        self.clear_filters_btn.setIcon(app_icon("mdi.filter-off-outline"))
+        self.clear_filters_btn.setEnabled(False)
+        self.clear_filters_btn.clicked.connect(self._on_clear_all_filters)
+        self.widgets_layout.insertWidget(1, self.clear_filters_btn)
+
     def _connect_signals(self):
         self.decimal_limit_spin.valueChanged.connect(self.refresh_display)
         self.decimals_check_box.toggled.connect(self.refresh_display)
-        self.table.horizontalHeader().sectionResized.connect(self._resize_units_column)
+        self.table.horizontalHeader().sectionResized.connect(lambda *_: self._sync_units_table_column_widths())
+        self.table.horizontalScrollBar().valueChanged.connect(self._sync_units_horizontal_scroll)
+        self.table.proxy_model.filters_changed.connect(self._update_clear_filters_button)
     
+    def _update_clear_filters_button(self) -> None:
+        has_filters = bool(self.table.proxy_model.active_filters)
+        self.clear_filters_btn.setEnabled(has_filters)
+
+    def _on_clear_all_filters(self) -> None:
+        self.table.proxy_model.clear_all_filters()
+        self.project.mark_modified()
+
     def _create_or_update_units_combos(self)->None:
         
         #Used only in update, rather than create on load.
@@ -138,6 +154,9 @@ class FilterableTable(QFrame):
         self.units_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
     def _sync_units_table_column_widths(self)->None:
+        if not hasattr(self, "units_table"):
+            return
+        
         data_cols = self.table.table_model.columnCount()
         units_cols = self.units_table.columnCount()
         sync_cols = min(data_cols, units_cols)
@@ -148,13 +167,12 @@ class FilterableTable(QFrame):
         
         v_header_width = self.table.verticalHeader().width()
         self.units_table.verticalHeader().setFixedWidth(v_header_width)
-       
-    def _resize_units_column(self,idx:int)->None:  
-        if not hasattr(self, "units_table"): #guard for initial load. No units_table is available when this function is called on load.
-            return     
-        column_width = self.table.columnWidth(idx)
-        self.units_table.setColumnWidth(idx, column_width)
 
+    def _sync_units_horizontal_scroll(self, value:int)-> None: 
+        if not hasattr(self,"units_table"):
+            return
+        self.units_table.horizontalScrollBar().setValue(value)
+    
     def _on_units_change(self,idx:int)->None:
         combo = self.sender()
         if not isinstance(combo, UnitsComboBox):
@@ -176,9 +194,9 @@ class FilterableTable(QFrame):
         self.table.load_from_view()
         self._create_or_update_units_combos()
         self._sync_units_table_column_widths()
+        self._update_clear_filters_button()
     
     def refresh_display(self)->None:
         self.table.table_model.refresh_display()
         self.table.resizeColumnsToContents()
         self._sync_units_table_column_widths()
-

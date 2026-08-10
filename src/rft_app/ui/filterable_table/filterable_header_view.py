@@ -15,7 +15,6 @@ class FilterableHeaderView(QHeaderView):
 
     def __init__(self, orientation:Qt.Orientation, parent = None)->None:
         super().__init__(orientation, parent)
-        # self.filter_icon:QIcon = app_icon("fa5s.filter")
         self.filter_icon_active:QIcon = app_icon("mdi.filter-menu")
         self.filter_icon_idle:QIcon = app_icon("fa5s.sort-down")
 
@@ -72,7 +71,6 @@ class FilterableHeaderView(QHeaderView):
                 global_pos = self.mapToGlobal(current_filter_icon.bottomLeft())            
                 #Call the filtering menu and pass in the column name
                 column_name = self.model().headerData(logical_index, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
-                print (column_name)
                 menu = FilterByRowMenu(
                         logical_index,
                         column_name, 

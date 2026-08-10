@@ -1,6 +1,6 @@
 
-from PyQt6.QtCore import QAbstractTableModel, Qt
-from PyQt6.QtGui import QAction, QFont, QStandardItem, QStandardItemModel
+from PyQt6.QtCore import  Qt
+from PyQt6.QtGui import QAction, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (QFrame, QLabel, QLineEdit, QMenu, QPushButton, QDialog,
                             QWidgetAction, QVBoxLayout, QHBoxLayout, QTreeView, QGridLayout)
 
@@ -9,7 +9,7 @@ from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from ui import app_icon
 from ui.filterable_table.filter_specs import FilterSpecNumberSpecial, FilterSpecValues
 from ui.filterable_table.proxy_model import ProxyFilterModel
-from ui.filterable_table.filter_combos import NumberFilters
+from ui.filterable_table.filter_combos import NumberFilters, TextFilters
 from ui.filterable_table.filter_window import FilteringWindow
 
 import pandas as pd
@@ -68,11 +68,12 @@ class FilterByRowMenu(QMenu):
 
             self.addAction(self.actionSortSmallesttoLargest)
             self.addAction(self.actionSortLargestoSmallest)
-            self.addAction(self.actionClearSorting)
+            
         else:
             self.addAction(self.actionSortAtoZ)
             self.addAction(self.actionSortZtoA)
         
+        self.addAction(self.actionClearSorting)
         self.addSeparator()
         self.addAction(self.actionClearFilter)
         if self.column_is_numeric:
@@ -108,8 +109,6 @@ class FilterByRowMenu(QMenu):
         self.text_filter_menu.addSeparator()
         self.text_filter_menu.addAction(self.actionContains)
         self.text_filter_menu.addAction(self.actionDoesNotContain)
-        self.text_filter_menu.addSeparator()
-        self.text_filter_menu.addAction(self.actionCustomTextFilter)
 
     def _define_main_menu_actions(self)->None:
         
@@ -126,12 +125,23 @@ class FilterByRowMenu(QMenu):
             )
         
         # Action Clear Sorting
-        self.actionClearSorting = QAction(app_icon("msc.remove"), "Restore", self)
+        self.actionClearSorting = QAction(app_icon("msc.remove"), "Clear Sorting", self)
         self.actionClearSorting.triggered.connect(lambda checked=False: self.proxy_model.sort(-1))
         
         #Action Clear Column Filter        
         self.actionClearFilter = QAction(app_icon("mdi.filter-off"),"Clear Filter", self)
 
+        # Action Sort A to z 
+        self.actionSortAtoZ= QAction(app_icon("fa5s.sort-alpha-down"), "Sort A to Z")
+        self.actionSortAtoZ.triggered.connect(
+            lambda checked= False: self._sort_ascending_or_descending(Qt.SortOrder.AscendingOrder)
+        )
+
+        self.actionSortZtoA= QAction(app_icon("fa5s.sort-alpha-down-alt"), "Sort Z to A")
+        self.actionSortZtoA.triggered.connect(
+            lambda checked=False: self._sort_ascending_or_descending(Qt.SortOrder.DescendingOrder)
+        )   
+    
     def _define_number_filter_actions(self)->None:
         #Number Filters with operators
         self.actionNumberEquals = QAction("Equals...", self)
@@ -169,13 +179,24 @@ class FilterByRowMenu(QMenu):
         self.actionBelowAverage.setData(NumberFilters.BELOWAVERAGE)
 
     def _define_text_filter_actions(self)->None:
+        
         self.actionTextEquals = QAction("Equals...", self)
+        self.actionTextEquals.setData(TextFilters.EQUALS)
+
         self.actionTextDoesNotEqual = QAction("Does Not Equal...", self)
+        self.actionTextDoesNotEqual.setData(TextFilters.DOESNOTEQUAL)
+        
         self.actionBeginsWith = QAction("Begins With...", self)
+        self.actionBeginsWith.setData(TextFilters.BEGINSWITH)
+
         self.actionEndsWith = QAction("Ends With...", self)
+        self.actionEndsWith.setData(TextFilters.ENDSWITH)
+
         self.actionContains = QAction("Contains...", self)
+        self.actionContains.setData(TextFilters.CONTAINS)
+        
         self.actionDoesNotContain = QAction("Does Not Contain...", self)
-        self.actionCustomTextFilter = QAction("Custom Filter...", self)
+        self.actionDoesNotContain.setData(TextFilters.DOESNOTCONTAIN)
 
     def _create_stats_widget(self)->QWidgetAction:
         
@@ -268,9 +289,6 @@ class FilterByRowMenu(QMenu):
 
     def _connect_actions_to_slots(self):
         
-        for action in self.actions():
-            action.triggered.connect(lambda checked=False, a=action:self._on_action(a.text())) #why do i need the checked = False argument after lambda? Where does that come from?
-        
         #Main menu filters
         self.actionClearFilter.triggered.connect(lambda checked= False, idx = self.column_index: self._clear_column_filters(idx))
         
@@ -284,9 +302,9 @@ class FilterByRowMenu(QMenu):
             self.actionLessThanOrEqualTo,
             self.actionBetween
             ]:
-            action.triggered.connect(lambda checked = False, action=action : self._launch_number_filtering_window(action))
+            action.triggered.connect(lambda checked = False, action=action : self._launch_filtering_window(action))
        
-       #Numeric filters without operators
+        #Numeric filters without operators
         for action in [
             self.actionBelowAverage,
             self.actionAboveAverage,
@@ -294,11 +312,17 @@ class FilterByRowMenu(QMenu):
             self.actionBottom10
         ]:
             action.triggered.connect (lambda checked = False, action=action:self._on_special_numeric_filter(action))
-        for action in self.text_filter_menu.actions():
-            action.triggered.connect(lambda checked=False, a=action:self._on_action(a.text()))
-
-    def _on_action(self, action_name:str)->None:
-        print(action_name, self.column_index)
+        
+        #Text filters 
+        for action in [
+            self.actionTextEquals,
+            self.actionTextDoesNotEqual,
+            self.actionBeginsWith,
+            self.actionEndsWith,
+            self.actionContains,
+            self.actionDoesNotContain,
+            ]:
+            action.triggered.connect(lambda checked = False, action=action: self._launch_filtering_window(action))
 
     def _on_clicked_ok(self):
         
@@ -314,21 +338,18 @@ class FilterByRowMenu(QMenu):
                 if stored: 
                     selected_values.update(stored)
 
-        self.proxy_model.active_filters[self.column_index] = FilterSpecValues(selected_values)
-        self.proxy_model.invalidateFilter()
-        self.proxy_model.parent().horizontalHeader().viewport().update() # i dont think this line is necessary. This function is performed elsewhere already
+        self.proxy_model.set_column_filter(self.column_index, FilterSpecValues(selected_values))
+        self._mark_project_modified()
         self.close()
 
-    def _launch_number_filtering_window(self, action:QAction)->None:
+    def _launch_filtering_window(self, action:QAction)->None:
 
         filter_name = action.data().label if action.data() else ""
 
         window = FilteringWindow(self, self.column_name, filter_name)
         if window.exec() == QDialog.DialogCode.Accepted:
-            new_spec = window.result_spec
-            self.proxy_model.active_filters[self.column_index]=new_spec
-            # Command the proxy model to re-run the filterAcceptsRow method
-            self.proxy_model.invalidateFilter()   
+            self.proxy_model.set_column_filter(self.column_index, window.result_spec)
+            self._mark_project_modified()
 
     def _on_special_numeric_filter(self, action:QAction):
         data= action.data()
@@ -336,26 +357,26 @@ class FilterByRowMenu(QMenu):
         if data is None:
             return
         
+        filter_applied = False
         if data is NumberFilters.TOP10 or data is NumberFilters.BOTTOM10:
-            self._run_top_or_bottom_10_filter(action)
+            filter_applied = self._run_top_or_bottom_10_filter(action)
         
         if data is NumberFilters.ABOVEAVERAGE or data is NumberFilters.BELOWAVERAGE:
-            self._run_above_or_below_average_filter(action)
+            filter_applied = self._run_above_or_below_average_filter(action) or filter_applied
 
-        # Command the proxy model to re-run the filterAcceptsRow method
-        self.proxy_model.invalidateFilter()  
+        if filter_applied:
+            self.proxy_model.sync_filters_to_view()
+            self.proxy_model.notify_filters_changed()
+            self._mark_project_modified()
     
     def _clear_column_filters(self, idx:int)->None:
-        self.proxy_model.active_filters.pop(idx, None) 
-        self.proxy_model.invalidateFilter() 
-        self.proxy_model.parent().horizontalHeader().viewport().update()
+        self.proxy_model.clear_column_filter(idx)
+        self._mark_project_modified()
 
-        #mark the project as modified
-
-    def _run_top_or_bottom_10_filter(self, action:QAction)->None:
+    def _run_top_or_bottom_10_filter(self, action:QAction)->bool:
         data = action.data()
         if data is None: 
-            return
+            return False
         
         # Create a list  in si units of the filtered numeric only values of the columns of choice
         active_rows = self.get_active_rows()
@@ -365,7 +386,7 @@ class FilterByRowMenu(QMenu):
             ).dropna()
 
         if series.empty:
-            return
+            return False
         
         #Remove duplicates by creating a set
         values = set(series)
@@ -374,16 +395,17 @@ class FilterByRowMenu(QMenu):
         elif data.symbol == "bottom10":
             unique = sorted(values)[:10]
         else: 
-            return # in case symbol is neither top 10 nor bottom 10
+            return False
         
         threshold = float(unique[-1]) 
         new_spec = FilterSpecNumberSpecial(data.label, threshold)
         self.proxy_model.active_filters[self.column_index]=new_spec
+        return True
 
-    def _run_above_or_below_average_filter(self, action:QAction)-> None:
+    def _run_above_or_below_average_filter(self, action:QAction)-> bool:
         data = action.data()
         if data is None:
-            return
+            return False
 
         active_rows = self.get_active_rows()
         series = pd.to_numeric(
@@ -392,11 +414,12 @@ class FilterByRowMenu(QMenu):
         ).dropna()
         
         if series.empty:
-            return
+            return False
 
         average = series.mean()
         new_spec = FilterSpecNumberSpecial(data.label, average)
         self.proxy_model.active_filters[self.column_index]= new_spec
+        return True
 
     def _build_value_tree_model(self)->QStandardItemModel:
         
@@ -405,7 +428,10 @@ class FilterByRowMenu(QMenu):
         groups = self._get_unique_value_groups_for_tree()
 
         if self.column_is_numeric:
-            labels = sorted(groups.keys(), key = lambda s: float(s) if s != "" else float("-inf"))
+            labels = sorted(
+                groups.keys(),
+                key=lambda label: float("-inf") if label == "(blank)" else float(label),
+            )
         else: 
             labels = sorted(groups.keys())
 
@@ -432,6 +458,8 @@ class FilterByRowMenu(QMenu):
         if self.column_is_numeric:
             for si_value in series:
                 if pd.isna(si_value):
+                    label = "(blank)"
+                    groups.setdefault(label, set()).add(float("nan"))
                     continue
                 user_value = convert_from_normalised_to_user_units(self.column_units, self.column_quantity_key, si_value)
                 user_value = round_value_to_decimal_points(user_value, self.decimals_check_box, self.decimal_limit_spin)
@@ -446,6 +474,7 @@ class FilterByRowMenu(QMenu):
     def _on_tree_item_changed(self, item:QStandardItem)->None:
         if self.tree_model is None:
             return
+        
         if item.row()==0:
             state=item.checkState()
             for row in range(1, self.tree_model.rowCount()):
@@ -478,3 +507,9 @@ class FilterByRowMenu(QMenu):
             #Return a list of indexes for corresponding to the pandas model listing all row indexes of the model
             active_rows = list(range(len(self.df_si)))
         return active_rows
+
+    def _mark_project_modified(self) -> None:
+        table_view = self.proxy_model.parent()
+        project = getattr(table_view, "project", None)
+        if project is not None:
+            project.mark_modified()

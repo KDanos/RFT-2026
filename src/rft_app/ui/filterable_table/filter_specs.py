@@ -17,6 +17,11 @@ class NumberClause:
     value_b: float|int | None = None # only for 'between' operator
 
 @dataclass
+class TextClause:
+    label:str
+    text:str
+
+@dataclass
 class FilterSpecNumber():
     clause1:NumberClause
     connector:str | None = None # and / or 
@@ -127,7 +132,143 @@ class FilterSpecValues:
                 continue
         return False
 
+@dataclass
+class FilterSpecText():
+    clause1:TextClause
+    connector:str | None = None # and / or 
+    clause2:TextClause | None = None
+
+    def pass_filter(self, cell_string:str)-> bool:
+        clause1_result =  self.test_a_clause(self.clause1, cell_string)
+        
+        if not self.clause2:
+            return clause1_result
+        else:
+            clause2_result = self.test_a_clause(self.clause2, cell_string)
+            if self.connector == "or":
+                return clause1_result or clause2_result
+            else: return clause1_result and clause2_result
 
 
+    def test_a_clause(self, clause:TextClause, cell_string: str)->bool:
+        needle = str(clause.text).strip().casefold()
+        check = clause.label
+        if cell_string is None or (isinstance(cell_string, float) and math.isnan(cell_string)):
+            haystack = ""
+        else:
+            haystack = str(cell_string).strip().casefold()
+        
+        
+        if check == "Equals":
+            return needle == haystack
 
+        if check =="Does Not Equal":
+            return needle != haystack
+
+        if check == "Begins With":
+            return haystack.startswith(needle)
+        
+        if check == "Ends With":
+            return haystack.endswith(needle)
+
+        if check == "Contains":
+            return needle in haystack
+
+        if check == "Does Not Contain":
+            return not needle in haystack
+
+        return False
+
+
+def _serialize_scalar(value: float | int | str) -> float | int | str | None:
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    return value
+
+
+def _deserialize_scalar(value: float | int | str | None) -> float | int | str:
+    if value is None:
+        return float("nan")
+    return value
+
+
+def _number_clause_to_dict(clause: NumberClause) -> dict:
+    return {
+        "operator": clause.operator,
+        "value": clause.value,
+        "value_b": clause.value_b,
+    }
+
+
+def _number_clause_from_dict(data: dict) -> NumberClause:
+    return NumberClause(
+        operator=data["operator"],
+        value=data["value"],
+        value_b=data.get("value_b"),
+    )
+
+
+def _text_clause_to_dict(clause: TextClause) -> dict:
+    return {"label": clause.label, "text": clause.text}
+
+
+def _text_clause_from_dict(data: dict) -> TextClause:
+    return TextClause(label=data["label"], text=data["text"])
+
+
+def filter_spec_to_dict(spec: FilterSpec) -> dict:
+    if isinstance(spec, FilterSpecNumber):
+        return {
+            "type": "number",
+            "clause1": _number_clause_to_dict(spec.clause1),
+            "connector": spec.connector,
+            "clause2": _number_clause_to_dict(spec.clause2) if spec.clause2 else None,
+        }
+    if isinstance(spec, FilterSpecNumberSpecial):
+        return {
+            "type": "number_special",
+            "operator": spec.operator,
+            "value": spec.value,
+        }
+    if isinstance(spec, FilterSpecValues):
+        return {
+            "type": "values",
+            "values": [_serialize_scalar(v) for v in spec.values],
+        }
+    if isinstance(spec, FilterSpecText):
+        return {
+            "type": "text",
+            "clause1": _text_clause_to_dict(spec.clause1),
+            "connector": spec.connector,
+            "clause2": _text_clause_to_dict(spec.clause2) if spec.clause2 else None,
+        }
+    raise TypeError(f"Unsupported filter spec type: {type(spec)!r}")
+
+
+def filter_spec_from_dict(data: dict) -> FilterSpec:
+    spec_type = data["type"]
+    if spec_type == "number":
+        clause2 = data.get("clause2")
+        return FilterSpecNumber(
+            clause1=_number_clause_from_dict(data["clause1"]),
+            connector=data.get("connector"),
+            clause2=_number_clause_from_dict(clause2) if clause2 else None,
+        )
+    if spec_type == "number_special":
+        return FilterSpecNumberSpecial(
+            operator=data["operator"],
+            value=data["value"],
+        )
+    if spec_type == "values":
+        return FilterSpecValues(
+            values={_deserialize_scalar(v) for v in data["values"]},
+        )
+    if spec_type == "text":
+        clause2 = data.get("clause2")
+        return FilterSpecText(
+            clause1=_text_clause_from_dict(data["clause1"]),
+            connector=data.get("connector"),
+            clause2=_text_clause_from_dict(clause2) if clause2 else None,
+        )
+    raise ValueError(f"Unknown filter spec type: {spec_type!r}")
 

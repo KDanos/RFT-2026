@@ -39,13 +39,16 @@ class CustomTableView(QTableView):
   
     #--------Public API--------
     def load_from_view(self)->None:
-        """Show current view.df +view.column_specs"""
+        """Show current view.df + view.column_specs"""
         self.table_model.set_dataframe(
             self.view.df,
             self.view.column_specs,
-            self.project
+            self.project,
         )
-        self.resizeColumnsToContents() 
+        self.proxy_model.restore_filters_from_view()
+        self.proxy_model.notify_filters_changed()
+        self.resizeColumnsToContents()
+
 
 
 

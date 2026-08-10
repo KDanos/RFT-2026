@@ -67,6 +67,7 @@ class AnalysisView:
     is_visible:bool = True
     df: pd.DataFrame= None
     column_specs : list[ColumnSpec] =field (default_factory=list)
+    column_filters: dict[int, dict] = field(default_factory=dict)
 
 @dataclass
 class Fluid:
