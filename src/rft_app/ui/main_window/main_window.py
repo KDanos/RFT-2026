@@ -4,7 +4,9 @@ from PyQt6.QtWidgets import (QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QM
                             QSplitter, QTabWidget,  QToolBar, QVBoxLayout, QWidget, QMessageBox)
 from pathlib import Path
 
+
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
+from units.custom_units_dialog import CustomUnitsDialog
 from ui.analysis_view import insert_excess_pressure_column
 from ui.widgets import (DataLoaderDialogAnalysis, NewViewDialog)
 from ui.project_data_loader.ui.dialog_data_loader_project import DataLoaderDialogProject
@@ -23,13 +25,27 @@ class MainWindowKD(QMainWindow):
         
         #Create empty variables and objects
         self.project = ProjectDataManager()
-        self._project_path :Path|None = None
+        self.project_path :Path|None = None
 
         self._build_ui()
         self._check_if_project_has_path()
         self._load_default_project_on_startup("260810 Testing Table Filtering KD")
 
     #--------Private UI--------
+    def _apply_loaded_project(self, project:ProjectDataManager, path:Path)->None:
+        self.project = project
+        self.project_path = path
+        self.setWindowTitle(f"CyPRES RFT Plotter - {path.name}")
+
+        self.project_sidebar.set_project(self.project)
+        self.project_sidebar.refresh()
+
+        self.analysis_workspace.set_project(self.project)
+        self.analysis_workspace.refresh_tabs_from_project()
+
+        self.project.mark_clean()
+        self._check_if_project_has_path()
+    
     def _build_central_widget(self):
         central_widget = QWidget(self)
         hbox = QHBoxLayout(central_widget)
@@ -147,6 +163,8 @@ class MainWindowKD(QMainWindow):
         units_label = QLabel("Project Units")
         self.units_combo = QComboBox(self)
 
+        #Create option for custom user units
+        self.units_combo.addItem("Manage custom unit sets...")
         for system in self.project.available_unit_systems:
             self.units_combo.addItem(system.label,system) #text + payload
         
@@ -172,7 +190,7 @@ class MainWindowKD(QMainWindow):
         self.setWindowState(self.windowState() | Qt.WindowState.WindowMaximized)
 
     def _check_if_project_has_path(self)-> None:
-        has_path = self._project_path is not None
+        has_path = self.project_path is not None
         self.actionSaveProject.setEnabled(has_path)
 
     def _close_project(self)-> None:
@@ -181,7 +199,7 @@ class MainWindowKD(QMainWindow):
             return
         #New empty in-memeory project
         self.project = ProjectDataManager()
-        self._project_path = None
+        self.project_path = None
         self.setWindowTitle("CyPRES RFT Plotter")
 
         # Clear the sidebar
@@ -307,57 +325,41 @@ class MainWindowKD(QMainWindow):
         if not default_path.exists():
             return
         try:
-            self.project = load_project(default_path)
+            project = load_project(default_path)
         except Exception as e:
             QMessageBox.warning(self, "Startup Project", f"Could not load default project:\n{e}")
             return
-        self._project_path = default_path
-        self.setWindowTitle(f"CyPRES RFT Plotter - {default_path.name}")
-        
-        # Update the sidebar
-        self.project_sidebar.set_project(self.project)
-        self.project_sidebar.refresh()
-        # Update the workspace
-        self.analysis_workspace.set_project(self.project)
-        self.analysis_workspace.refresh_tabs_from_project()
-        # Update the save action
-        self._check_if_project_has_path() 
-        self.project.mark_clean() 
+        self._apply_loaded_project(project, default_path)
 
-    def _on_project_units_changed(self, _index:int)-> None:
+    def _on_project_units_changed(self, index:int)-> None:
 
-        selected_system = self.units_combo.currentData()
-        if selected_system is not None:
-            self.project.current_unit_system = selected_system
+        if index == 0:
+            self._open_custom_unit_manager()
+        else: 
+            selected_system = self.units_combo.currentData()
+            if selected_system is not None:
+                self.project.current_unit_system = selected_system
 
-            #Raise a "need to save flag" prior to exiting the project
-            self.project.mark_modified()
+                #Raise a "need to save flag" prior to exiting the project
+                self.project.mark_modified()
     
+    def _open_custom_unit_manager(self)->None:
+        units_manager = CustomUnitsDialog(self)
+
     def _open_project (self):
-        result = open_project_dialog(self, self._project_path)
+        result = open_project_dialog(self, self.project_path)
         if result is None:
             return
 
-        self.project, path = result
-        self._project_path = path
-        
-        self.setWindowTitle (f"CyPRES RFT Plotter - {self._project_path.name}")
-        
-        self.project_sidebar.set_project(self.project)
-        self.project_sidebar.refresh()
-        
-        self.analysis_workspace.set_project(self.project)
-        self.analysis_workspace.refresh_tabs_from_project()
-
-        self.project.mark_clean()
-        self._check_if_project_has_path()   
+        project, path = result
+        self._apply_loaded_project(project, path)
     
     def _save_project(self)->None:
-        if self._project_path is None: 
+        if self.project_path is None: 
             self._save_project_as()
             return
         try:
-            save_project(self.project, self._project_path)
+            save_project(self.project, self.project_path)
             #Mark the project as clean and no save required
             self.project.mark_clean()
         except OSError as e: 
@@ -365,12 +367,12 @@ class MainWindowKD(QMainWindow):
     
     def _save_project_as (self)->None: 
         
-        path = save_project_as(self, self.project, self._project_path)
+        path = save_project_as(self, self.project, self.project_path)
         
         #Update the path of the current project
         if path is None:
             return #cancelled or save failed
-        self._project_path = path
+        self.project_path = path
         self.setWindowTitle(f"CyPRES RFT Plotter - {path.name}")
         self._check_if_project_has_path()
 

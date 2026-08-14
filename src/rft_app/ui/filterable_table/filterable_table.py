@@ -14,7 +14,7 @@ from qtpy.QtWidgets import QLabel, QPushButton
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from ui import app_icon
 from ui.filterable_table.custom_table_view import CustomTableView
-from ui.widgets import UnitsComboBox
+from ui.widgets.table_widgets import UnitsComboBox
 
 
 class FilterableTable(QFrame):

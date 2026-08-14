@@ -18,7 +18,6 @@ def print_current_location_function(obj: QObject) -> None:
         f"inside the class {obj.__class__.__name__}"
     )
 
-
 def reload_app(entry_script: str | None = None) -> None:
     """Dev-only: replace this process with a fresh run of the entry script.
 
@@ -32,7 +31,6 @@ def reload_app(entry_script: str | None = None) -> None:
     python = sys.executable
     script_path = os.path.abspath(entry_script or sys.argv[0])
     os.execl(python, python, script_path)
-
 
 class DevReloadMixin:
     """Dev-only mixin: hold A+F together to restart the app.
