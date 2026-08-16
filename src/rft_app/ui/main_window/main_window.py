@@ -29,7 +29,7 @@ class MainWindowKD(QMainWindow):
 
         self._build_ui()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("260810 Testing Table Filtering KD")
+        self._load_default_project_on_startup("260814 Unit ManagetrTesting")
 
     #--------Private UI--------
     def _apply_loaded_project(self, project:ProjectDataManager, path:Path)->None:
@@ -37,6 +37,8 @@ class MainWindowKD(QMainWindow):
         self.project_path = path
         self.setWindowTitle(f"CyPRES RFT Plotter - {path.name}")
 
+        self.reset_units_combo()
+        
         self.project_sidebar.set_project(self.project)
         self.project_sidebar.refresh()
 
@@ -162,16 +164,7 @@ class MainWindowKD(QMainWindow):
         units_frame.setLayout(units_layout)
         units_label = QLabel("Project Units")
         self.units_combo = QComboBox(self)
-
-        #Create option for custom user units
-        self.units_combo.addItem("Manage custom unit sets...")
-        for system in self.project.available_unit_systems:
-            self.units_combo.addItem(system.label,system) #text + payload
-        
-        idx = self.units_combo.findData(self.project.current_unit_system)
-        if idx >=0: 
-            self.units_combo.setCurrentIndex(idx)
-        
+        self.reset_units_combo()
         units_layout.addWidget(units_label)
         units_layout.addWidget(self.units_combo)
         
@@ -211,14 +204,9 @@ class MainWindowKD(QMainWindow):
         self.analysis_workspace.clear()
 
         #Reset the units combo to match the new project (set default)
-        with QSignalBlocker(self.units_combo): 
-            self.units_combo.clear()
-            for system in self.project.available_unit_systems:
-                self.units_combo.addItem(system.label, system)
-            idx = self.units_combo.findData(self.project.current_unit_system)
-            if idx >= 0:
-                self.units_combo.setCurrentIndex(idx)
+        self.reset_units_combo()
 
+        # Enable the save button if appropriate
         self._check_if_project_has_path()
 
     def _confirm_discard_or_save_if_modified(self)->bool:
@@ -353,7 +341,7 @@ class MainWindowKD(QMainWindow):
 
         project, path = result
         self._apply_loaded_project(project, path)
-    
+
     def _save_project(self)->None:
         if self.project_path is None: 
             self._save_project_as()
@@ -404,3 +392,17 @@ class MainWindowKD(QMainWindow):
             event.ignore() #keep the window open
             return
         event.accept()
+
+    def reset_units_combo(self)->None:
+        with QSignalBlocker(self.units_combo): 
+            self.units_combo.clear()
+            
+            
+            # Fill the combo box
+            self.units_combo.addItem("Manage custom units sets...")
+            for system in self.project.available_unit_systems:
+                self.units_combo.addItem(system.label, system)
+
+            idx = self.units_combo.findText(self.project.current_unit_system.label)
+            if idx >= 0:
+                self.units_combo.setCurrentIndex(idx)

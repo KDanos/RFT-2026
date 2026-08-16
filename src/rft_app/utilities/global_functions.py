@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Callable, Iterable
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import (QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator,QCheckBox, QDialog, QSpinBox, 
+from PyQt6.QtWidgets import (QLayout, QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator,QCheckBox, QDialog, QSpinBox, 
                             QTableWidget, QVBoxLayout,QFrame, QHBoxLayout, QPushButton, QSplitter, QTableWidgetItem)
 import pandas as pd
 from dataclasses import fields
@@ -13,6 +13,20 @@ from project.models import ColumnSpec, DataSet, DataSetLogEntry
 
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 
+
+def clear_layout_items (layout:QLayout)->None:
+    while layout.count():
+        item = layout.takeAt(0)
+        if item is None:
+            continue
+        widget = item.widget()
+        if widget is not None:
+            widget.deleteLater()
+        else:
+            sub_layout = item.layout()
+            if sub_layout is not None:
+                clear_layout_items(sub_layout)
+                sub_layout.deleteLater()
 
 def create_dataframe_table( df:pd.DataFrame, 
                             column_specs:list[ColumnSpec]|None=None, 
