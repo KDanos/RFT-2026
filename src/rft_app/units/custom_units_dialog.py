@@ -1,6 +1,7 @@
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, Qt
 from PyQt6.QtWidgets import  (QDialog, QDialogButtonBox, QFrame,  QGridLayout, QLineEdit, QComboBox, 
-                            QLabel, QPushButton, QHBoxLayout, QMessageBox, QVBoxLayout)
+                            QLabel, QPushButton, QHBoxLayout, QMessageBox, QVBoxLayout, QScrollArea,
+                            QSizePolicy)
 
 from project import ProjectDataManager
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
@@ -81,6 +82,9 @@ class CustomUnitsDialog(QDialog):
         self.ok_btn.setVisible(False)
         self.button_box_layout.addStretch()
         self.button_box_layout.addWidget(self.button_box)
+        
+        #Ensure the button box is always at the bottom
+        self.main_layout.addStretch()
         self.main_layout.addLayout(self.button_box_layout)
 
     def _connect_signals(self) -> None:
@@ -104,14 +108,21 @@ class CustomUnitsDialog(QDialog):
         self.editor_layout.addWidget(frame)
         self.ok_btn.setVisible(True)
 
-    def _create_quantity_types_and_unit_frame(self, quantity_list: list) -> QFrame:
+    def _create_quantity_types_and_unit_frame(self, quantity_list: list) -> QScrollArea:
         self.quantity_unit_frame = QFrame(self)
-        self.quantity_unit_frame_layout = QGridLayout()
-        self.quantity_unit_frame.setLayout(self.quantity_unit_frame_layout)
+        self.quantity_unit_frame_layout = QGridLayout(self.quantity_unit_frame)
 
         self._update_quantity_types_and_unit_frame(quantity_list)
 
-        return self.quantity_unit_frame
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setWidget(self.quantity_unit_frame)
+        scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        scroll.setMinimumHeight(200)
+        scroll.setMaximumHeight(800)
+        return scroll
 
     def _delete_existing_custom_units_system(self) -> None:
         system_to_delete = self.user_units_combo.currentData()
@@ -178,12 +189,15 @@ class CustomUnitsDialog(QDialog):
                 self.delete_btn.setVisible(True)
 
     def _new_or_edit_units_system_frame(self) -> QFrame:
+        
         frame = QFrame(self)
-        self.frame_layout = QGridLayout()
-        self.frame_layout.setContentsMargins(0, 0, 0, 0)
-        frame.setLayout(self.frame_layout)
+        self.editor_frame_layout = QVBoxLayout()
+        self.editor_frame_layout.setContentsMargins(0, 0, 0, 0)
+        frame.setLayout(self.editor_frame_layout)
 
         # Name input
+        name_input_layout = QHBoxLayout()
+        name_label = QLabel("Unit System Name")
         self.new_name_line_edit = QLineEdit(frame)
 
         if self.editor_mode == "Create New":
@@ -191,9 +205,14 @@ class CustomUnitsDialog(QDialog):
         elif self.editor_mode == "Edit Existing":
             current_name = self.user_units_combo.currentText()
             self.new_name_line_edit.setText(current_name)
-        self.frame_layout.addWidget(self.new_name_line_edit)
+
+        name_input_layout.addWidget(name_label)
+        name_input_layout.addWidget(self.new_name_line_edit)
+        name_input_layout.addStretch()
+        self.editor_frame_layout.addLayout(name_input_layout)
 
         #Pre-populate New Unit System
+        pre_populate_layout = QHBoxLayout()
         pre_populate_label = QLabel("Pre-populate from: ")
         self.all_systems_combo = QComboBox(self)
         for system in self.project.available_unit_systems:
@@ -206,8 +225,33 @@ class CustomUnitsDialog(QDialog):
             self.all_systems_combo.setCurrentText(self.user_units_combo.currentText())
         self.all_systems_combo.currentTextChanged.connect(self._update_default_units_in_combos)
 
-        self.frame_layout.addWidget(pre_populate_label, 1, 0)
-        self.frame_layout.addWidget(self.all_systems_combo, 1, 1)
+        # Add to the layout
+        pre_populate_layout.addWidget(pre_populate_label)
+        pre_populate_layout.addWidget(self.all_systems_combo)
+        pre_populate_layout.addStretch()
+        self.editor_frame_layout.addLayout(pre_populate_layout)
+
+        #Quantity filter
+        filter_layout = QHBoxLayout()
+        self.search_line_edit = QLineEdit(self)
+        self.search_line_edit.setPlaceholderText("Quantity Type: ")
+        self.search_line_edit.textChanged.connect(self._filter_quantity_types)
+        filter_layout.addWidget(self.search_line_edit)
+        filter_layout.addStretch()
+        self.editor_frame_layout.addLayout(filter_layout)
+
+        # Keep top labels/fields aligned to shared widths on wide windows
+        label_w = max(name_label.sizeHint().width(), pre_populate_label.sizeHint().width())
+        name_label.setFixedWidth(label_w)
+        pre_populate_label.setFixedWidth(label_w)
+
+        field_w = 280
+        self.new_name_line_edit.setMinimumWidth(field_w)
+        self.new_name_line_edit.setMaximumWidth(field_w)
+        self.all_systems_combo.setMinimumWidth(field_w)
+        self.all_systems_combo.setMaximumWidth(field_w)
+        self.search_line_edit.setMinimumWidth(field_w)
+        self.search_line_edit.setMaximumWidth(field_w)
 
         #List all available quantity types with default unit selection
         all_quantities = [(key, value)
@@ -215,16 +259,11 @@ class CustomUnitsDialog(QDialog):
                             if value.is_numeric]
 
         #Extract default quantity-unit pairs for all quantities
-        self.options_frame = self._create_quantity_types_and_unit_frame(all_quantities)
+        self.options_scroll = self._create_quantity_types_and_unit_frame(all_quantities)
         self._update_default_units_in_combos()
         self.quantity_unit_pair_dictionary = self._update_units_by_quantity_dictionary()
-        self.frame_layout.addWidget(self.options_frame, 3, 0, 1, 2)
+        self.editor_frame_layout.addWidget(self.options_scroll)
 
-        #Quantity filter
-        self.search_line_edit = QLineEdit(self)
-        self.search_line_edit.setPlaceholderText("Quantity Type: ")
-        self.search_line_edit.textChanged.connect(self._filter_quantity_types)
-        self.frame_layout.addWidget(self.search_line_edit, 2, 0)
 
         return frame
 
@@ -292,9 +331,14 @@ class CustomUnitsDialog(QDialog):
 
             self.quantity_unit_frame_layout.addWidget(new_label, i, 0)
             self.quantity_unit_frame_layout.addWidget(units_combo, i, 1)
+        
+        #Ensure the lable-combo pairs are clustered to the top
+        last_row = len(quantity_list)
+        self.quantity_unit_frame_layout.setRowStretch(last_row, 1)
 
     def _update_units_by_quantity_dictionary(self) -> dict[str, str] | None:
-        layout = self.options_frame.layout()
+        
+        layout = self.quantity_unit_frame_layout
         if layout.count() == 0:
             return self.quantity_unit_pair_dictionary
 
@@ -314,7 +358,11 @@ class CustomUnitsDialog(QDialog):
             quantity_key = next(
                                 (key for key, value in STANDARD_QUANTITIES.items()
                                 if value.label == quantity_label), None)
+            if quantity_key is None:
+                continue
             combo = layout.itemAtPosition(row, 1).widget()
+            if combo is None:
+                continue
             unit = combo.currentText()
             dictionary[quantity_key] = unit
 

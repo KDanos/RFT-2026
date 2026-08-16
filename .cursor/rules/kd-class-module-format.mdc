@@ -1,0 +1,76 @@
+---
+description: KD class module format — Private UI / Public API, alpha sort, typed returns, __init__ blocks
+globs: src/rft_app/**/*.py
+alwaysApply: false
+---
+
+# KD class module format
+
+When creating or reformatting a class in this project, follow this layout.
+
+## Order
+
+1. Optional class attributes / `pyqtSignal`s
+2. `__init__` first among methods
+3. `#--------Private UI--------` — private `_` methods, alphabetical by name
+4. `#--------Public API--------` — public methods, alphabetical by name
+
+Do not alphabetize across the whole class; section first, then alpha within each section.
+
+## `__init__` body (always this order)
+
+1. `super().__init__(...)`
+2. `# Set project variables` — project/parent/app dependencies
+3. `# Set module variables` — this class's own state
+4. `# Initialisation methods` — typically `_build_ui()`, `_connect_signals()`, then optional refresh/`exec()`
+
+No heavy logic in `__init__` beyond assignment and those init calls.
+
+## Return type hints
+
+- Annotate every method, including `__init__` → `-> None`
+- Use concrete types (`dict[str, str]`, `QFrame`, `X | None`) when known
+- Handlers/builders that return nothing use `-> None`
+
+## Cleanup when applying this format
+
+- Remove temporary debug output, including:
+  - built-in `print(...)`
+  - debug helpers from `utilities.development_functions` (e.g. `print_current_location_function`) and any unused imports of those helpers
+  - other ad-hoc debug logging used while developing
+- Do not remove intentional user-facing messages (e.g. `QMessageBox`)
+- Do not remove non-print utilities from that module (e.g. `DevReloadMixin` / `reload_app`) unless the user asks
+
+## Skeleton
+
+```python
+class SomeWidget(...):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+
+        # Set project variables
+        self.project = ...
+
+        # Set module variables
+        self._state = ...
+
+        # Initialisation methods
+        self._build_ui()
+        self._connect_signals()
+
+    #--------Private UI--------
+    def _build_ui(self) -> None:
+        ...
+
+    def _connect_signals(self) -> None:
+        ...
+
+    #--------Public API--------
+    def refresh(self) -> None:
+        ...
+```
+
+## How to invoke
+
+User may say: "apply KD class module format" or "reformat to my class module format".
+Reorder methods, add missing return annotations, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.
