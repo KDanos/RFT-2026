@@ -5,24 +5,11 @@ from project import ColumnSpec, DataSetLogEntry
 from units import STANDARD_QUANTITIES, normalise_from_user_units
 from utilities import force_numeric, unique_name
 
-
-def define_column_names(
-    selected_mapping_columns:list[int],
-    mapping_table:QTableWidget
-    )->list[str]:
-
-    #Define temporary variables to help with the function
-    col_names = []
-    
-    for mapping_col in selected_mapping_columns:
-        #Extract the name of the column
-        item = mapping_table.item(2,mapping_col)
-        name = item.text().strip() if item and item.text().strip() else f"col_{mapping_col}"
-        canonical_vetted_name = check_against_canonical_names(name)
-        uniq_name = unique_name(canonical_vetted_name, col_names)
-        
-        col_names.append(uniq_name)
-    return col_names
+def check_against_canonical_names(name:str)->str:
+    stripped = name.strip()
+    if stripped in RESERVED_CANONICAL_NAMES:
+        return (f"{stripped} ({USER_IMPORT_SUFFIX})")
+    return stripped
 
 def create_column_specs(
     selected_mapping_columns:list[int],
@@ -47,6 +34,24 @@ def create_column_specs(
         column_specs.append(current_spec)
     
     return column_specs
+
+def define_column_names(
+    selected_mapping_columns:list[int],
+    mapping_table:QTableWidget
+    )->list[str]:
+
+    #Define temporary variables to help with the function
+    col_names = []
+    
+    for mapping_col in selected_mapping_columns:
+        #Extract the name of the column
+        item = mapping_table.item(2,mapping_col)
+        name = item.text().strip() if item and item.text().strip() else f"col_{mapping_col}"
+        canonical_vetted_name = check_against_canonical_names(name)
+        uniq_name = unique_name(canonical_vetted_name, col_names)
+        
+        col_names.append(uniq_name)
+    return col_names
 
 def populate_data_rows(
     data_rows:list[list[str]],
@@ -87,7 +92,7 @@ def populate_data_rows(
                     new_log_entry = DataSetLogEntry(
                                     message=f"Non-numeric {quantity_key} value removed; set to None",
                                     level="warning",
-                                    row=r-1, # +1 so that the row number reflects the source data row (index starting at 1 instead of 0). Unclear what happens with eliminated rows
+                                    row=r+1, # +1 so that the row number reflects the source data row (index starting at 1 instead of 0). Unclear what happens with eliminated rows
                                     column=spec.name,
                                     column_idx= idx,
                                     old_value = raw_value,
@@ -113,10 +118,3 @@ def populate_data_rows(
         rows.append(row_vals_for_df)
 
     return rows, info_log
-
-def check_against_canonical_names(name:str)->str:
-    stripped = name.strip()
-    if stripped in RESERVED_CANONICAL_NAMES:
-        return (f"{stripped} ({USER_IMPORT_SUFFIX})")
-    return stripped
-

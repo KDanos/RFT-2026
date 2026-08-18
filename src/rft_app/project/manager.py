@@ -31,7 +31,8 @@ class ProjectDataManager:
         df: pd.DataFrame,
         column_specs: list[ColumnSpec],
         name:str,
-        info_log:list[DataSetLogEntry]
+        info_log:list[DataSetLogEntry],
+        user_comment: str
                         ) -> str:
         """Store a DataFrame and its column specs under a unique key.
 
@@ -51,19 +52,11 @@ class ProjectDataManager:
             name = chosen,
             dataframe = df, 
             column_specs= list(column_specs),
-            info_log = list(info_log) if info_log else[]
+            info_log = list(info_log) if info_log else[],
+            user_comments= [user_comment] if user_comment else []
         )
         self.datasets.append (loaded_dataset)
         return chosen
-
-    def get_dataframe(self, name: str) -> pd.DataFrame:
-        return self.get_dataset_by_name(name).dataframe
-
-    def get_column_specs(self, name: str) -> list[ColumnSpec]:
-        return self.get_dataset_by_name(name).column_specs
-
-    def list_datasets(self) -> list[str]:
-        return list(dataset.name for dataset in self.datasets)
 
     def get_dataset_by_name(self, name:str) -> DataSet:
         for dataset in self.datasets:

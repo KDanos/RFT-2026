@@ -1,5 +1,5 @@
 from pathlib import Path
-
+  
 from PyQt6.QtCore import QSize, Qt, QSignalBlocker
 from PyQt6.QtGui import QAction, QCloseEvent, QIcon
 from PyQt6.QtWidgets import (
@@ -22,7 +22,7 @@ from project import AnalysisObject, AnalysisView, ProjectDataManager, load_proje
 from units.custom_units_dialog import CustomUnitsDialog
 from ui.analysis_view import insert_excess_pressure_column
 from ui.widgets import DataLoaderDialogAnalysis, NewViewDialog
-from ui.project_data_loader.ui.dialog_data_loader_project import DataLoaderDialogProject
+from ui.project_data_loader import DataLoaderDialogProject
 from ui.main_window.analysis_workspace import AnalysisWorkspace
 from ui.main_window.project_sidebar import ProjectSidebar
 from ui import app_icon, load_qss, save_project_as, open_project_dialog
@@ -329,6 +329,7 @@ class MainWindowKD(QMainWindow):
                 column_specs,
                 dlg.imported_name,
                 info_log=dlg.info_log,
+                user_comment= dlg.user_comment
             )
             new_data_set = self.project.get_dataset_by_name(new_data_set_name)
 
