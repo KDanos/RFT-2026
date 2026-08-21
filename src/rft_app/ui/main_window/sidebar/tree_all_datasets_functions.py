@@ -5,7 +5,7 @@ from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMessageBox,QMenu, QTreeWidgetItem
 
-from utilities import show_dataframe_table_dialog, show_log_table
+from utilities import show_dataframe_table_dialog, show_import_log_or_user_comments_table
 
 
 if TYPE_CHECKING:
@@ -45,13 +45,18 @@ def create_actions(tree,item)->list[QAction]:
 
     #Show import log
     show_import_log_action = QAction("Show Import log", tree)
-    show_import_log_action.triggered.connect(lambda: show_import_log(item,tree))
+    show_import_log_action.triggered.connect(lambda _checked = False: show_import_log_or_user_comment(item,tree,"import_log"))
     list_of_actions.append(show_import_log_action)
 
     #Show Data
     show_dataframe_action = QAction("Show Data", tree)
-    show_dataframe_action.triggered.connect(lambda: show_data_table(item, tree))
+    show_dataframe_action.triggered.connect(lambda _checked= False: show_data_table(item, tree))
     list_of_actions.append(show_dataframe_action)
+
+    #Show comments
+    show_comments_action = QAction("Show Comments", tree)
+    show_comments_action.triggered.connect(lambda _checked = False:show_import_log_or_user_comment(item,tree, "user_comments"))
+    list_of_actions.append(show_comments_action)
     
     return list_of_actions
 
@@ -75,10 +80,12 @@ def delete_item(item:QTreeWidgetItem, tree:AllDataSetsTree)->None:
         return
     tree._delete_dataset(item)
 
-def show_import_log(item:QTreeWidgetItem, tree:AllDataSetsTree)->None:
+def show_import_log_or_user_comment(item:QTreeWidgetItem, tree:AllDataSetsTree, table_type:str)->None:
     dataset = item.data(0, Qt.ItemDataRole.UserRole)
     name = dataset.name
-    show_log_table(dataset, name, tree)
+
+
+    show_import_log_or_user_comments_table(dataset,table_type, name, tree)
 
 def show_data_table(item:QTreeWidgetItem, tree:AllDataSetsTree)-> None:
     dataset = item.data(0,Qt.ItemDataRole.UserRole)

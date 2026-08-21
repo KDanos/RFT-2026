@@ -1,4 +1,6 @@
 
+from datetime import datetime
+
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
 from .models import AnalysisObject, ColumnSpec, DataSet, DataSetLogEntry
@@ -32,7 +34,7 @@ class ProjectDataManager:
         column_specs: list[ColumnSpec],
         name:str,
         info_log:list[DataSetLogEntry],
-        user_comment: str
+        user_comment: tuple[datetime, str] | None
                         ) -> str:
         """Store a DataFrame and its column specs under a unique key.
 

@@ -58,7 +58,7 @@ class DataSet:
     info_log: list[DataSetLogEntry] = field(default_factory=list)
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str = "Undefined"
-    user_comments: list[str] = field(default_factory=list)
+    user_comments: list[tuple[datetime, str]] = field(default_factory=list)
 
 
 @dataclass

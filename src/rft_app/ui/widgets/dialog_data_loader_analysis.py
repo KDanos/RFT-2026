@@ -35,7 +35,7 @@ from utilities import (
     update_tree_descendants,
 )
 from .table_widgets import UnitsComboBox
-from .tree_all_datasets import AllDataSetsTree
+from ui.main_window.sidebar import AllDataSetsTree
 
 
 class DataLoaderDialogAnalysis(QDialog):

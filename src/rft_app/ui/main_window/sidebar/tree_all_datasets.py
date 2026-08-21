@@ -13,7 +13,7 @@ class AllDataSetsTree(QTreeWidget):
         self,
         parent: QWidget | None = None,
         project: ProjectDataManager | None = None,
-    ) -> None:
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables

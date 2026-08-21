@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
   
 from PyQt6.QtCore import QSize, Qt, QSignalBlocker
@@ -24,7 +25,7 @@ from ui.analysis_view import insert_excess_pressure_column
 from ui.widgets import DataLoaderDialogAnalysis, NewViewDialog
 from ui.project_data_loader import DataLoaderDialogProject
 from ui.main_window.analysis_workspace import AnalysisWorkspace
-from ui.main_window.project_sidebar import ProjectSidebar
+from ui.main_window.sidebar import ProjectSidebar
 from ui import app_icon, load_qss, save_project_as, open_project_dialog
 
 
@@ -281,7 +282,7 @@ class MainWindowKD(QMainWindow):
         self,
         analysis: AnalysisObject,
         tab: QTabWidget | None = None,
-    ) -> None:
+        ) -> None:
         #Create a new analysis view
         dataset = analysis.analysis_dataset
         df = dataset.dataframe.copy() if dataset is not None and dataset.dataframe is not None else None
@@ -329,7 +330,7 @@ class MainWindowKD(QMainWindow):
                 column_specs,
                 dlg.imported_name,
                 info_log=dlg.info_log,
-                user_comment= dlg.user_comment
+                user_comment=(datetime.now(), dlg.user_comment)
             )
             new_data_set = self.project.get_dataset_by_name(new_data_set_name)
 

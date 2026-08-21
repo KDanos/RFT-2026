@@ -2,7 +2,8 @@ from PyQt6.QtCore import QSignalBlocker
 from PyQt6.QtWidgets import QFrame, QTreeWidget, QVBoxLayout, QWidget
 
 from project import ProjectDataManager
-from ui.widgets import AllDataSetsTree, AnalysesTree
+from ui.widgets import AnalysesTree
+from .tree_all_datasets import AllDataSetsTree
 
 
 class ProjectSidebar(QFrame):
@@ -12,7 +13,7 @@ class ProjectSidebar(QFrame):
         self,
         project: ProjectDataManager,
         parent: QWidget | None = None,
-    ) -> None:
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables

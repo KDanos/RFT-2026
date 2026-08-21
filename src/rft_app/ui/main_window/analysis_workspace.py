@@ -10,7 +10,7 @@ class AnalysisWorkspace(QFrame):
         self,
         project: ProjectDataManager | None,
         parent=None,
-    ) -> None:
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -75,7 +75,7 @@ class AnalysisWorkspace(QFrame):
         self,
         analysis: AnalysisObject,
         inner_tabs: QTabWidget,
-    ) -> None:
+        ) -> None:
         self._current_analysis = analysis
         widget = inner_tabs.currentWidget()
         self._current_view = widget.property("view_object") if widget else None
@@ -106,7 +106,7 @@ class AnalysisWorkspace(QFrame):
         tabs: QTabWidget,
         analysis: AnalysisObject,
         idx: int,
-    ) -> None:
+        ) -> None:
         view_tab = tabs.widget(idx)
         if view_tab is None:
             return
@@ -134,7 +134,7 @@ class AnalysisWorkspace(QFrame):
         self,
         analysis: AnalysisObject | None,
         view: AnalysisView | None,
-    ) -> None:
+        ) -> None:
         """Restore the outer/inner tab selection after rebuild."""
         if analysis is None or not analysis.is_visible:
             if self.analyses_tabs.count() > 0:
@@ -185,7 +185,7 @@ class AnalysisWorkspace(QFrame):
         analysis: AnalysisObject,
         *,
         select: bool = True,
-    ) -> QTabWidget:
+        ) -> QTabWidget:
         """Add a new outer (analysis) tab, representing a single AnalysisObject.
         Return a single inner(view) tab container (QTabWidget)"""
         page = QWidget(self.analyses_tabs)
@@ -225,7 +225,7 @@ class AnalysisWorkspace(QFrame):
         view: AnalysisView,
         *,
         select: bool = True,
-    ) -> None:
+        ) -> None:
         """Add an AnalysisViewWidget tab"""
         view.is_visible = True
         view.analysis_object = analysis

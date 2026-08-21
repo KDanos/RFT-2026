@@ -1,3 +1,4 @@
+from datetime import datetime
 from email import message
 from typing import Optional
 import csv
@@ -24,7 +25,7 @@ class DataLoaderDialogProject(QDialog):
         self,
         parent=None,
         project: ProjectDataManager | None = None,
-    ) -> None:
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -40,7 +41,7 @@ class DataLoaderDialogProject(QDialog):
         self.columns_to_ignore: list = []
         self._is_syncing_columns:bool = False
         self._is_syncing_scroll:bool = False
-        self.user_comment:str = ""
+        self.user_comment:dict[datetime,str] ={None,""} 
 
         # Initialisation methods
         self._build_ui()

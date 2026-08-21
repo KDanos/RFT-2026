@@ -36,7 +36,6 @@ class DataframeTree(QTreeWidget):
             header_item = QTreeWidgetItem([(header)])
             self.columns_level.addChild(header_item)
 
-
 def make_tree_item_tristate(self)->None:
     pass
 

@@ -1,13 +1,11 @@
 from datetime import datetime
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Literal
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QLayout, QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator,QCheckBox, QDialog, QSpinBox, 
                             QTableWidget, QVBoxLayout,QFrame, QHBoxLayout, QPushButton, QSplitter, QTableWidgetItem)
 import pandas as pd
 from dataclasses import fields
-
-from qtpy.QtWidgets import QTableView
 
 from project.models import ColumnSpec, DataSet, DataSetLogEntry
 
@@ -106,12 +104,54 @@ def create_log_table(dataset:DataSet, parent = None)->QTableWidget:
             table.setItem(r,c,item)
     return table
 
+def create_user_comments_table(dataset:DataSet, parent:None)->QTableWidget:
+    # Define Column Count and Name
+    columns = 2
+    column_names = ["Date", "Comment"]
+    
+    # Define Row Count
+    rows = len(dataset.user_comments)
+    
+    # Define the table structure
+    table=QTableWidget(rows, columns, parent)
+    table.setHorizontalHeaderLabels(column_names)
+
+    #Format the table for readability
+    table.setWordWrap(True)
+    table.horizontalHeader().setStretchLastSection(True)
+    table.horizontalHeader().sectionResized.connect(lambda _idx, _old, _new:table.resizeRowsToContents())
+    
+    for r, entry in enumerate(dataset.user_comments):
+        if isinstance(entry, tuple) and len(entry) == 2:
+            comment_datetime, comment_text = entry
+            if isinstance(comment_datetime, datetime):
+                date_text = comment_datetime.strftime("%Y-%m-%d %H:%M")
+            else:
+                date_text = str(comment_datetime)
+            comment_text = str(comment_text)
+        else:
+            date_text = ""
+            comment_text = str(entry)
+
+        date_item = QTableWidgetItem(date_text)
+        date_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        comment_item = QTableWidgetItem(comment_text)
+        comment_item.setTextAlignment(Qt.AlignmentFlag.AlignTop)
+        table.setItem(r,0,date_item)
+        table.setItem(r, 1, comment_item)
+    
+    table.resizeRowsToContents()
+   
+   
+    
+    return table
+    
 def create_table_view_frame(
     df:pd.DataFrame,
         column_specs:list[ColumnSpec]|None=None,
     parent=None,
     project = None
-    )->(QFrame, QTableWidget, Callable[[int],None] ):
+    )->tuple[QFrame, QTableWidget, Callable[[int], None]]:
     
     frame = QFrame(parent)
     # Create the main layout
@@ -271,13 +311,25 @@ def show_dataframe_table_dialog(
     window_layout.addWidget(table_window)
     window.show()
    
-def show_log_table(dataset:DataSet,title:str = None,parent=None)->QDialog:
-    if title is None or "":
-        title = "Data Table"
+def show_import_log_or_user_comments_table(
+    dataset:DataSet,
+    table_type:Literal["import_log", "user_comments"],
+    title:str = None,
+    parent=None
+    )->QDialog:
+    
+    if table_type not in ["import_log", "user_comments"]:
+        raise ValueError(f"Invalid table_type: {table_type!r}")
+    
+    if title is None or title == "":
+        if table_type=="import_log":
+            title = "Import Log Table"
+        else:
+            title = "User Comment Table"
     
     #Define the dialog window
     window = QDialog(parent)
-    window.setWindowTitle(f"Log Table: {title}")
+    window.setWindowTitle(f"{title}")
     window.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
     window.setWindowFlags(window.windowFlags()
         |Qt.WindowType.WindowMaximizeButtonHint 
@@ -294,7 +346,10 @@ def show_log_table(dataset:DataSet,title:str = None,parent=None)->QDialog:
     main_layout.addWidget(splitter)
     
     #Create and add the table
-    table = create_log_table(dataset,table_frame)
+    if table_type =="import_log":
+        table = create_log_table(dataset,table_frame)
+    else:
+        table = create_user_comments_table(dataset, table_frame)
     table_layout= QVBoxLayout(table_frame)
     table_layout.setContentsMargins(0,0,0,0)
     table_layout.addWidget(table)
