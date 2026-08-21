@@ -2,8 +2,8 @@ from PyQt6.QtCore import QSignalBlocker
 from PyQt6.QtWidgets import QFrame, QTreeWidget, QVBoxLayout, QWidget
 
 from project import ProjectDataManager
-from ui.widgets import AnalysesTree
-from .tree_all_datasets import AllDataSetsTree
+from .all_datasets_tree import AllDataSetsTree
+from .analyses_tree import AnalysesTree
 
 
 class ProjectSidebar(QFrame):

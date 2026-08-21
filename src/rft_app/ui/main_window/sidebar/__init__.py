@@ -1,7 +1,9 @@
+from .all_datasets_tree import AllDataSetsTree
+from .analyses_tree import AnalysesTree
 from .project_sidebar import ProjectSidebar
-from .tree_all_datasets import AllDataSetsTree
 
 __all__ = [
     "AllDataSetsTree",
+    "AnalysesTree",
     "ProjectSidebar",
 ]

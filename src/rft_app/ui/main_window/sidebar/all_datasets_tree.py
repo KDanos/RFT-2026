@@ -2,7 +2,7 @@ from PyQt6.QtCore import QSignalBlocker, Qt, pyqtSignal
 from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import ProjectDataManager
-from .tree_all_datasets_functions import on_all_dataset_tree_context_menu
+from .all_datasets_tree_functions import on_all_dataset_tree_context_menu
 
 
 class AllDataSetsTree(QTreeWidget):

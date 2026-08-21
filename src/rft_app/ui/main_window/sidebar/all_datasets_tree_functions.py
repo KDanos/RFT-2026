@@ -9,7 +9,7 @@ from utilities import show_dataframe_table_dialog, show_import_log_or_user_comme
 
 
 if TYPE_CHECKING:
-    from .tree_all_datasets import AllDataSetsTree
+    from .all_datasets_tree import AllDataSetsTree
 
 
 def on_all_dataset_tree_context_menu(tree:AllDataSetsTree,position:QPoint):

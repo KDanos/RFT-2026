@@ -2,7 +2,7 @@ from PyQt6.QtCore import QSignalBlocker, Qt, pyqtSignal
 from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from ui.widgets.tree_analyses_functions import on_all_analyses_tree_context_menu
+from .analyses_tree_functions import on_all_analyses_tree_context_menu
 
 
 class AnalysesTree(QTreeWidget):

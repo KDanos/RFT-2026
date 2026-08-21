@@ -7,8 +7,6 @@ from qtpy.QtWidgets import QMenu, QMessageBox, QTreeWidget
 from project import AnalysisObject, AnalysisView
 from utilities.global_functions import show_dataframe_table_dialog
 
-# from ui.widgets import AnalysesTree 
-
 
 def on_all_analyses_tree_context_menu(tree:QTreeWidget, position:QPoint)->None:
     item = tree.itemAt(position)
