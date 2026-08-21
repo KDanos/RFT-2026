@@ -1,8 +1,9 @@
-from PyQt6.QtCore import QSignalBlocker, Qt, pyqtSignal
-from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem, QWidget
+from PyQt6.QtCore import QPoint, QSignalBlocker, Qt, pyqtSignal
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QMessageBox, QMenu, QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import ProjectDataManager
-from .all_datasets_tree_functions import on_all_dataset_tree_context_menu
+from utilities import show_dataframe_table_dialog, show_import_log_or_user_comments_table
 
 
 class AllDataSetsTree(QTreeWidget):
@@ -30,9 +31,6 @@ class AllDataSetsTree(QTreeWidget):
     #--------Private UI--------
 
     def _build_tree(self) -> None:
-        #Create the drop down menu options on right click a tree item
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
         for dataset in self.project.datasets:
             df = dataset.dataframe
             # Add a top level item
@@ -55,10 +53,48 @@ class AllDataSetsTree(QTreeWidget):
                 column_level.addChild(QTreeWidgetItem([text]))
 
     def _connect_signals(self) -> None:
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.itemChanged.connect(self._on_item_changed)
-        self.customContextMenuRequested.connect(
-            lambda position: on_all_dataset_tree_context_menu(self, position)
+        self.customContextMenuRequested.connect(self._on_context_menu)
+
+    def _create_menu_actions(self, item: QTreeWidgetItem) -> list[QAction]:
+        list_of_actions: list[QAction] = []
+
+        rename_action = QAction("Rename", self)
+        rename_action.triggered.connect(
+            lambda _checked=False, item=item: self._rename_item(item)
         )
+        list_of_actions.append(rename_action)
+
+        delete_action = QAction("Delete", self)
+        delete_action.triggered.connect(
+            lambda _checked=False, item=item: self._delete_item(item)
+        )
+        list_of_actions.append(delete_action)
+
+        show_import_log_action = QAction("Show Import log", self)
+        show_import_log_action.triggered.connect(
+            lambda _checked=False, item=item: self._show_import_log_or_user_comment(
+                item, "import_log"
+            )
+        )
+        list_of_actions.append(show_import_log_action)
+
+        show_dataframe_action = QAction("Show Data", self)
+        show_dataframe_action.triggered.connect(
+            lambda _checked=False, item=item: self._show_data_table(item)
+        )
+        list_of_actions.append(show_dataframe_action)
+
+        show_comments_action = QAction("Show Comments", self)
+        show_comments_action.triggered.connect(
+            lambda _checked=False, item=item: self._show_import_log_or_user_comment(
+                item, "user_comments"
+            )
+        )
+        list_of_actions.append(show_comments_action)
+
+        return list_of_actions
 
     def _delete_dataset(self, item: QTreeWidgetItem) -> None:
         dataset = item.data(0, Qt.ItemDataRole.UserRole)
@@ -79,6 +115,37 @@ class AllDataSetsTree(QTreeWidget):
         #Mark Modified and refresh analyses tree
         self.project.mark_modified()
         self.dataset_deleted.emit(dataset.name)
+
+    def _delete_item(self, item: QTreeWidgetItem) -> None:
+        if item.parent() is not None:  # only remove top level items for now
+            return
+
+        confirmation = QMessageBox.question(
+            self,
+            "Delete Function",
+            f"""Please confirmt deletion of {item.text(0)}. 
+                    \n This action is not reversible""",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )  # default to No
+        if confirmation != QMessageBox.StandardButton.Yes:
+            return
+        self._delete_dataset(item)
+
+    def _on_context_menu(self, position: QPoint) -> None:
+        item = self.itemAt(position)
+        if item is None:  # to ensure that menu is only build on non-white space
+            return
+
+        if item.parent() is not None:  # apply drop down menu only to top level items
+            return
+
+        menu_actions = self._create_menu_actions(item)
+        menu = QMenu(self)
+        for action in menu_actions:
+            menu.addAction(action)
+
+        menu.exec(self.viewport().mapToGlobal(position))
 
     def _on_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
         if item.parent() is not None:  # only execute on top level items
@@ -108,6 +175,28 @@ class AllDataSetsTree(QTreeWidget):
             for idx, name in enumerate(analysis.source_datasets):
                 if name == deleted_name:
                     analysis.source_datasets[idx] = deleted_name + " [deleted]"
+
+    def _rename_item(self, item: QTreeWidgetItem) -> None:
+        if item.parent() is not None:
+            return
+        self.setCurrentItem(item, 0)  # focus on the row
+        self.editItem(item, 0)  # open inline editor (like F2)
+
+    def _show_data_table(self, item: QTreeWidgetItem) -> None:
+        dataset = item.data(0, Qt.ItemDataRole.UserRole)
+        df = dataset.dataframe
+        column_specs = dataset.column_specs
+        title = dataset.name
+        show_dataframe_table_dialog(df, column_specs, title, self, self.project)
+
+    def _show_import_log_or_user_comment(
+        self,
+        item: QTreeWidgetItem,
+        table_type: str,
+        ) -> None:
+        dataset = item.data(0, Qt.ItemDataRole.UserRole)
+        name = dataset.name
+        show_import_log_or_user_comments_table(dataset, table_type, name, self)
 
     #--------Public API--------
 

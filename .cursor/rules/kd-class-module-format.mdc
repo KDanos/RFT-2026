@@ -32,6 +32,30 @@ No heavy logic in `__init__` beyond assignment and those init calls.
 - Use concrete types (`dict[str, str]`, `QFrame`, `X | None`) when known
 - Handlers/builders that return nothing use `-> None`
 
+## Multi-line function signatures
+
+When a method signature is too long for one line, place each parameter on its own line. The closing `) -> ReturnType:` must be indented **one level deeper** than the `def` keyword (i.e. aligned with the parameters, not with `def`):
+
+```python
+    def _on_inner_tab_changed(
+        self,
+        analysis: AnalysisObject,
+        inner_tabs: QTabWidget,
+        ) -> None:
+```
+
+Do **not** align the closing `)` with `def`:
+
+```python
+    # Avoid
+    def _on_view_tab_close_requested(
+        self,
+        tabs: QTabWidget,
+        analysis: AnalysisObject,
+        idx: int,
+    ) -> None:
+```
+
 ## Cleanup when applying this format
 
 - Remove temporary debug output, including:
