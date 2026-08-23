@@ -3,6 +3,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMessageBox, QMenu, QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import ProjectDataManager
+from ui.main_window.sidebar.merge_datasets_dialog import MergeDatasetsDialog
 from utilities import show_dataframe_table_dialog, show_import_log_or_user_comments_table
 
 
@@ -60,40 +61,44 @@ class AllDataSetsTree(QTreeWidget):
     def _create_menu_actions(self, item: QTreeWidgetItem) -> list[QAction]:
         list_of_actions: list[QAction] = []
 
+        # Rename
         rename_action = QAction("Rename", self)
         rename_action.triggered.connect(
-            lambda _checked=False, item=item: self._rename_item(item)
-        )
+            lambda _checked=False, item=item: self._rename_item(item))
         list_of_actions.append(rename_action)
 
+        # Delete
         delete_action = QAction("Delete", self)
         delete_action.triggered.connect(
-            lambda _checked=False, item=item: self._delete_item(item)
-        )
+            lambda _checked=False, item=item: self._delete_item(item))
         list_of_actions.append(delete_action)
 
+        # Show Import Log
         show_import_log_action = QAction("Show Import log", self)
         show_import_log_action.triggered.connect(
-            lambda _checked=False, item=item: self._show_import_log_or_user_comment(
-                item, "import_log"
-            )
-        )
+            lambda _checked=False, item=item: 
+            self._show_import_log_or_user_comment(item, "import_log"))
         list_of_actions.append(show_import_log_action)
 
+        # Show Dataframe
         show_dataframe_action = QAction("Show Data", self)
         show_dataframe_action.triggered.connect(
-            lambda _checked=False, item=item: self._show_data_table(item)
-        )
+            lambda _checked=False, item=item: self._show_data_table(item))
         list_of_actions.append(show_dataframe_action)
 
+        # Show User Comments
         show_comments_action = QAction("Show Comments", self)
         show_comments_action.triggered.connect(
-            lambda _checked=False, item=item: self._show_import_log_or_user_comment(
-                item, "user_comments"
-            )
-        )
+            lambda _checked=False, item=item: 
+            self._show_import_log_or_user_comment(item, "user_comments"))
         list_of_actions.append(show_comments_action)
 
+        # Merge Datasets
+        merge_datasets_action = QAction("Merge Datasets", self)
+        merge_datasets_action.triggered.connect(
+            lambda _checked=False:
+            self._merge_datasets())
+        list_of_actions.append(merge_datasets_action)
         return list_of_actions
 
     def _delete_dataset(self, item: QTreeWidgetItem) -> None:
@@ -132,6 +137,10 @@ class AllDataSetsTree(QTreeWidget):
             return
         self._delete_dataset(item)
 
+    def _merge_datasets(self)->None:
+        dialog = MergeDatasetsDialog(self, self.project)
+        dialog.exec()
+    
     def _on_context_menu(self, position: QPoint) -> None:
         item = self.itemAt(position)
         if item is None:  # to ensure that menu is only build on non-white space

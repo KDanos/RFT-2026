@@ -343,7 +343,7 @@ class CustomUnitsDialog(QDialog):
             return self.quantity_unit_pair_dictionary
 
         if not self.quantity_unit_pair_dictionary:
-            dictionary = {'ignore': "", 'text': "", 'well': ""}
+            dictionary = {'text': "", 'well': ""}
         else:
             dictionary = self.quantity_unit_pair_dictionary
 

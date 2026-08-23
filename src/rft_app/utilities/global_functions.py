@@ -45,7 +45,9 @@ def create_dataframe_table( df:pd.DataFrame,
         
         quantity_key = column_specs[c].quantity_key
         output_unit = units_combo.currentText()
-        qty = STANDARD_QUANTITIES.get(quantity_key,STANDARD_QUANTITIES["undefined"])
+        qty = STANDARD_QUANTITIES.get(quantity_key)
+        if qty is None:
+            return
 
         for r in range(rows):
             normalised_value = df.iat[r,c]

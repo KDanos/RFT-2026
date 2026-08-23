@@ -17,8 +17,6 @@ SI_STORAGE_BY_QUANTITY = {
     "energy": "J",
     "force": "N",
     # Non-Pint / no storage unit
-    "undefined": "",
-    "ignore": "",
     "text": "",
     "well": "",
 }

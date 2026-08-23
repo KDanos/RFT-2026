@@ -22,11 +22,12 @@ def create_column_specs(
     for idx, mapping_col in enumerate(selected_mapping_columns):
         #Create the column specs, to hold the units
         quantity_combo = mapping_table.cellWidget(0,mapping_col)
-        quantity_key = (
-            quantity_combo.currentData()
-            if quantity_combo is not None and quantity_combo.currentData()
-            else "undefined"
-        )
+        quantity_key = quantity_combo.currentData() if quantity_combo is not None else None
+        if quantity_key not in STANDARD_QUANTITIES:
+            raise ValueError(
+                f"Mapping column {mapping_col} has invalid or missing quantity "
+                f"{quantity_key!r}; choose a quantity or set Ignore"
+            )
         units_combo = mapping_table.cellWidget(1,mapping_col)
         units = units_combo.currentText() if units_combo is not None else ""
         name = column_names[idx]
@@ -82,8 +83,8 @@ def populate_data_rows(
             user_unit = spec.unit
             
             # Is the quantity expected to be numeric?
-            qty = STANDARD_QUANTITIES.get(quantity_key, STANDARD_QUANTITIES["undefined"])
-            if  qty.is_numeric:
+            qty = STANDARD_QUANTITIES.get(quantity_key)
+            if qty is not None and qty.is_numeric:
                 coerced = force_numeric(raw_value)
             
                 if coerced is None and not (
@@ -108,7 +109,7 @@ def populate_data_rows(
                     value = normalise_from_user_units(user_unit,quantity_key,coerced)
                 else: value = coerced
 
-            else: # Non-numeric quantities (undefined, text, etc.)
+            else: # Non-numeric quantities (text, well, etc.)
                 if isinstance (raw_value, str) and raw_value.strip()=="":
                     value = None
                 else:

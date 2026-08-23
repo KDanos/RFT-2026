@@ -416,6 +416,9 @@ class DataLoaderDialogProject(QDialog):
         qkey = quantity_combo.currentData()
 
         with QSignalBlocker(units_combo):
+            if qkey == "ignore" or qkey not in STANDARD_QUANTITIES:
+                units_combo.clear()
+                return
             units_combo.update_units_list(qkey)
             default_unit = self._get_project_default_units(qkey)
             idx = units_combo.findText(default_unit)
@@ -544,26 +547,23 @@ class DataLoaderDialogProject(QDialog):
             #Select a quantity type
             quantity_combo = QComboBox()
 
-            priority_keys = ("undefined", "ignore")
-            priority_quantities = [
-                STANDARD_QUANTITIES[key] for key in priority_keys if key in STANDARD_QUANTITIES
-            ]
+            # UI-only: skip column on import (not in STANDARD_QUANTITIES)
+            quantity_combo.addItem("Ignore", "ignore")
 
             other_quantities = sorted(
-                (q for key, q in STANDARD_QUANTITIES.items() if key not in priority_keys),
+                STANDARD_QUANTITIES.values(),
                 key=lambda q: q.label.casefold(),
             )
-
-            for q in priority_quantities + other_quantities:
+            for q in other_quantities:
                 quantity_combo.addItem(q.label, q.key)
 
             quantity_combo.currentIndexChanged.connect(
                 lambda _, col=mapping_col: self._refresh_units_for_column(col)
             )
 
-            #Set the initial quantity to undefined
+            # Default quantity to Ignore
             quantity_combo.blockSignals(True)
-            i = quantity_combo.findData("undefined")
+            i = quantity_combo.findData("ignore")
             if i >= 0:
                 quantity_combo.setCurrentIndex(i)
             quantity_combo.blockSignals(False)

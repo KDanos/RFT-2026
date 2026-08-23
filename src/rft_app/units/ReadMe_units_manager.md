@@ -8,7 +8,8 @@ The units package has two modules. Keep **catalogue / UI strings** in `units_man
 - **`UnitSystem`** / **`SI_UNITS`**, **`METRIC_UNITS`**, **`FIELD_UNITS`**, **`IMPERIAL_UNITS`**: default **display** unit per quantity when the user picks a unit system for the project (not every combo option).
 - **`BUILT_IN_UNIT_SYSTEMS`**: tuple of those presets for the UI.
 
-Non-numeric quantities (`undefined`, `ignore`, `text`, `well`) have empty `units` and are not converted with Pint.
+Non-numeric quantities (`text`, `well`) have empty `units` and are not converted with Pint.
+Column skip on import uses a UI-only `"Ignore"` option in the project data loader (not a `STANDARD_QUANTITIES` entry).
 
 ## 2. `units_normalisation.py`
 

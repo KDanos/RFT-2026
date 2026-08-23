@@ -16,8 +16,10 @@ class UnitsComboBox(QtWidgets.QComboBox):
 
     def update_units_list(self, quantity_key:str)->None:
         self.quantity_key = quantity_key
-        self.quantity_object = STANDARD_QUANTITIES[quantity_key]
+        self.quantity_object = STANDARD_QUANTITIES.get(quantity_key)
         self.clear()
+        if self.quantity_object is None:
+            return
         self.addItems(self.quantity_object.units)
         
     def set_default_unit(self,project:ProjectDataManager=None)->None:

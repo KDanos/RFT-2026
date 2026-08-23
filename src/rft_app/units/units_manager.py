@@ -20,20 +20,6 @@ class QuantityType:
     is_numeric:bool = False
  
 STANDARD_QUANTITIES: Dict[str, QuantityType]={
-    "undefined": QuantityType(
-        key = "undefined",
-        label = "Undefined",
-        units = (),
-        symbols = (), 
-        is_numeric = False,
-    ),
-    "ignore": QuantityType(
-        key = "ignore",
-        label = "Ignore",
-        units = (),
-        symbols = (),
-        is_numeric = False,
-    ),
    "density": QuantityType(
         key="density",
         label="Density",
@@ -155,8 +141,6 @@ SI_UNITS = UnitSystem(
         "volume_gas": "m³",
         "permeability": "m²",
         "viscosity": "Pa·s",
-        "undefined": "",
-        "ignore": "",
         "mobility": "m²/(Pa.s)",
         "text": "",
         "well": "",
@@ -178,8 +162,6 @@ METRIC_UNITS = UnitSystem(
         "volume_gas": "cm³",
         "permeability": "D",
         "viscosity": "P",
-        "undefined": "",
-        "ignore": "",
         "mobility": "D/P",
         "text": "",
         "well":"",
@@ -201,8 +183,6 @@ FIELD_UNITS = UnitSystem(
         "volume_gas": "scf",
         "permeability": "mD",
         "viscosity": "cP",
-        "undefined": "",
-        "ignore": "",
         "mobility": "mD/cP",
         "text": "",
         "well":"",
@@ -224,8 +204,6 @@ IMPERIAL_UNITS = UnitSystem(
         "volume_gas": "scf",
         "permeability": "mD",
         "viscosity": "cP",
-        "undefined": "",
-        "ignore": "",
         "mobility": "mD/cP",
         "text": "",
         "well":"",
