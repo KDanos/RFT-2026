@@ -17,11 +17,13 @@ class ProjectDataManager:
     """
 
     def __init__(self) -> None:
-        self.datasets :list[DataSet]=[]
+        self.loaded_datasets :list[DataSet]=[]
+        self.merged_datasets:list[DataSet]=[]
         self.user_unit_systems:list[UnitSystem] = []
         self.current_unit_system: UnitSystem = BUILT_IN_UNIT_SYSTEMS[2] #default to Field
         self.analyses: list[AnalysisObject]= []
         self._is_modified: bool =False
+        
 
     @property
     def available_unit_systems(self)-> tuple[UnitSystem,...]:
@@ -48,7 +50,7 @@ class ProjectDataManager:
         name =  (name.strip() or "") or "Dataset"
 
         # Verify if the name is unique or requires changing
-        existing_names = {dataset.name for dataset in self.datasets}
+        existing_names = {dataset.name for dataset in self.loaded_datasets}
         chosen = unique_name(name, existing_names)
         loaded_dataset = DataSet(
             name = chosen,
@@ -57,11 +59,11 @@ class ProjectDataManager:
             info_log = list(info_log) if info_log else[],
             user_comments= [user_comment] if user_comment else []
         )
-        self.datasets.append (loaded_dataset)
+        self.loaded_datasets.append (loaded_dataset)
         return chosen
 
     def get_dataset_by_name(self, name:str) -> DataSet:
-        for dataset in self.datasets:
+        for dataset in self.loaded_datasets:
             if dataset.name == name:
                 return dataset
         raise KeyError (name)
@@ -75,3 +77,7 @@ class ProjectDataManager:
     @property
     def is_modified(self)->bool:
         return self._is_modified
+
+    @property
+    def all_datasets(self)->list[DataSet]:
+        return self.loaded_datasets+self.merged_datasets

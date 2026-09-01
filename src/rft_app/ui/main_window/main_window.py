@@ -43,7 +43,7 @@ class MainWindowKD(QMainWindow):
         # Initialisation methods
         self._build_ui()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("260823 Unit ManagetrTesting")
+        self._load_default_project_on_startup("260827 Mergind Data")
 
     #--------Private UI--------
 
@@ -394,7 +394,7 @@ class MainWindowKD(QMainWindow):
 
     def _start_new_analysis(self) -> None:
         #Exit the function if not data is available in the project
-        if not self.project.datasets or len(self.project.datasets) == 0:
+        if not self.project.loaded_datasets or len(self.project.loaded_datasets) == 0:
             QMessageBox.critical(
                 self,
                 "New Analysis",

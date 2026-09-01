@@ -23,7 +23,7 @@ class AllDataSetsTree(QTreeWidget):
         self.project = project
 
         # Set module variables
-        self.datasets = self.project.datasets
+        self.loaded_datasets = self.project.loaded_datasets
 
         # Initialisation methods
         self.setHeaderLabel("Loaded Data Sets")
@@ -32,7 +32,7 @@ class AllDataSetsTree(QTreeWidget):
     #--------Private UI--------
 
     def _build_tree(self) -> None:
-        for dataset in self.project.datasets:
+        for dataset in self.project.loaded_datasets:
             df = dataset.dataframe
             # Add a top level item
             top_level = QTreeWidgetItem([dataset.name])
@@ -110,7 +110,7 @@ class AllDataSetsTree(QTreeWidget):
         self._rename_deleted_dataset_on_analyses_tree(item)
 
         #Remove from the project model
-        self.project.datasets = [ds for ds in self.project.datasets if ds is not dataset]
+        self.project.loaded_datasets = [ds for ds in self.project.loaded_datasets if ds is not dataset]
 
         #Remove from UI
         index = self.indexOfTopLevelItem(item)
@@ -138,8 +138,17 @@ class AllDataSetsTree(QTreeWidget):
         self._delete_dataset(item)
 
     def _merge_datasets(self)->None:
+        # Exit if a second dataset does not exist
+        if len(self.project.all_datasets)<2:
+            QMessageBox.critical(
+                self, 
+                "Merge Datasets", 
+                "There must be at least 2 loaded or merged datasets available\n"
+                "Please load more data via the 'Load Data' module first.")
+            return
+        
         dialog = MergeDatasetsDialog(self, self.project)
-        dialog.exec()
+        dialog.show()
     
     def _on_context_menu(self, position: QPoint) -> None:
         item = self.itemAt(position)
