@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
-from ui.analysis_view.services.analysis_view_data_manager import insert_excess_pressure_column
+from ..analysis_view.analysis_view_data_manager import insert_excess_pressure_column
 from utilities import unique_name
 
 

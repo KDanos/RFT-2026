@@ -10,12 +10,12 @@ class ViewSidebar(QFrame):
     view_df_changed = pyqtSignal()
 
     def __init__(
-        self,
-        parent: QWidget | None = None,
-        project: ProjectDataManager | None = None,
-        analysis: AnalysisObject | None = None,
-        view: AnalysisView | None = None,
-    ) -> None:
+            self,
+            parent: QWidget | None = None,
+            project: ProjectDataManager | None = None,
+            analysis: AnalysisObject | None = None,
+            view: AnalysisView | None = None,
+            ) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -49,8 +49,11 @@ class ViewSidebar(QFrame):
         self.data_tree.itemChanged.connect(self._on_column_selection_change)
 
     def _make_items_not_selectable(
-        self, tree: QTreeWidget, node: QTreeWidgetItem, count: int
-    ) -> None:
+            self,
+            tree: QTreeWidget,
+            node: QTreeWidgetItem,
+            count: int,
+            ) -> None:
         for i in range(count):
             item = node.child(i)
             item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)

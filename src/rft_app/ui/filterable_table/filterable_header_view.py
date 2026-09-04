@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QRect, QSize, Qt
-from PyQt6.QtGui import QIcon, QPainter
+from PyQt6.QtGui import QIcon, QMouseEvent, QPainter
 from PyQt6.QtWidgets import QHeaderView
 
 from ui import app_icon
@@ -15,10 +15,19 @@ class FilterableHeaderView(QHeaderView):
 
     def __init__(self, orientation: Qt.Orientation, parent=None) -> None:
         super().__init__(orientation, parent)
+
+        # Set project variables
+        # (none)
+
+        # Set module variables
         self.filter_icon_active: QIcon = app_icon("mdi.filter-menu")
         self.filter_icon_idle: QIcon = app_icon("fa5s.sort-down")
 
+        # Initialisation methods
+        # (none)
+
     #--------Private UI--------
+
     def _icon_rect(self, section_rect: QRect) -> QRect:
         """Return the filter-icon rectangle inside a header section.
 
@@ -31,7 +40,8 @@ class FilterableHeaderView(QHeaderView):
         return QRect(x, y, size, size)
 
     #--------Public API--------
-    def mousePressEvent(self, event) -> None:
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         pos = event.position().toPoint()
         logical_index = self.logicalIndexAt(pos.x())
 

@@ -1,10 +1,11 @@
 from PyQt6.QtCore import QObject, Qt
 from PyQt6.QtWidgets import QCheckBox, QSpinBox, QTableView
 
-from project import AnalysisObject, AnalysisView, ProjectDataManager
+from project import ColumnSpec, ProjectDataManager
 from ui.filterable_table.filterable_header_view import FilterableHeaderView
 from ui.filterable_table.pandas_table_model import PandasTableModel
 from ui.filterable_table.proxy_model import ProxyFilterModel
+import pandas as pd
 
 
 class CustomTableView(QTableView):
@@ -12,18 +13,28 @@ class CustomTableView(QTableView):
             self,
             parent: QObject,
             project: ProjectDataManager,
-            analysis: AnalysisObject,
-            view: AnalysisView,
+            df: pd.DataFrame,
+            column_specs: list[ColumnSpec],
             decimals_check_box: QCheckBox,
             decimal_limit_spin: QSpinBox,
             ) -> None:
         super().__init__(parent)
+
+        # Set project variables
         self.project = project
-        self.analysis = analysis
-        self.view = view
+
+        # Set module variables
+        self.df = df
+        self.column_specs = column_specs
         self.decimals_check_box = decimals_check_box
         self.decimal_limit_spin = decimal_limit_spin
 
+        # Initialisation methods
+        self._build_ui()
+
+    #--------Private UI--------
+
+    def _build_ui(self) -> None:
         self.setHorizontalHeader(FilterableHeaderView(Qt.Orientation.Horizontal, self))
 
         self.table_model = PandasTableModel(self, self.decimals_check_box, self.decimal_limit_spin)
@@ -33,15 +44,20 @@ class CustomTableView(QTableView):
         self.setSortingEnabled(True)
         self.setModel(self.proxy_model)
 
-    #--------Private UI--------
-    # No private methods: construction and wiring happen in __init__.
-
     #--------Public API--------
-    def load_from_view(self) -> None:
-        """Show current view.df + view.column_specs"""
+
+    def load_data(
+            self,
+            df: pd.DataFrame,
+            column_specs: list[ColumnSpec],
+            column_filters: dict | None = None,
+            ) -> None:
+        self.df = df
+        self.column_specs = column_specs
+        self.proxy_model.column_filters = column_filters
         self.table_model.set_dataframe(
-            self.view.df,
-            self.view.column_specs,
+            self.df,
+            self.column_specs,
             self.project,
         )
         self.proxy_model.restore_filters_from_view()

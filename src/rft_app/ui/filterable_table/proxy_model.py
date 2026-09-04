@@ -1,6 +1,5 @@
 from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, pyqtSignal
 
-from project.models import AnalysisView
 from ui.filterable_table.filter_specs import (
     FilterSpec,
     FilterSpecNumber,
@@ -18,16 +17,21 @@ class ProxyFilterModel(QSortFilterProxyModel):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+
+        # Set project variables
+        # (none)
+
+        # Set module variables
         self.active_filters: dict[int, FilterSpec] = {}
+        self.column_filters: dict | None = None  # None = preview (no persist); dict = mutate in place
         self.use_filtered_rows_for_stats = True
         self.decimals_check_box = parent.decimals_check_box
         self.decimal_limit_spin = parent.decimal_limit_spin
 
+        # Initialisation methods
+        # (none)
+
     #--------Private UI--------
-    def _analysis_view(self)->AnalysisView | None:
-        """Return the AnalysisView for filter persistence (active_filters on the proxy vs column_filters on the view)."""
-        parent = self.parent()
-        return getattr(parent, "view", None) if parent is not None else None
 
     def _needs_display_rounded_si(self, filter_spec: FilterSpec) -> bool:
         if not isinstance(filter_spec, FilterSpecNumber):
@@ -37,7 +41,12 @@ class ProxyFilterModel(QSortFilterProxyModel):
             operators.add(filter_spec.clause2.operator)
         return bool(operators & {"==", "!="})
 
-    def _to_display_rounded_si(self, source_model, col: int, raw_cell_value):
+    def _to_display_rounded_si(
+            self,
+            source_model,
+            col: int,
+            raw_cell_value,
+            ):
         if raw_cell_value is None or pd.isna(raw_cell_value):
             return raw_cell_value
         col_spec = source_model.column_specs[col]
@@ -58,6 +67,7 @@ class ProxyFilterModel(QSortFilterProxyModel):
         return normalise_from_user_units(unit, quantity_key, rounded_float)
 
     #--------Public API--------
+
     def clear_all_filters(self) -> None:
         if not self.active_filters:
             return
@@ -70,8 +80,7 @@ class ProxyFilterModel(QSortFilterProxyModel):
         self.sync_filters_to_view()
         self.notify_filters_changed()
 
-    def filterAcceptsRow(self, source_row, source_parent: QModelIndex) -> bool:
-
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         source_model = self.sourceModel()
 
         if len(self.active_filters) == 0:
@@ -109,13 +118,12 @@ class ProxyFilterModel(QSortFilterProxyModel):
 
     def restore_filters_from_view(self) -> None:
         self.active_filters.clear()
-        analysis_view = self._analysis_view()
-        if analysis_view is None or not analysis_view.column_filters:
+        if not self.column_filters:
             return
 
         source_model = self.sourceModel()
         col_count = source_model.df.shape[1] if source_model is not None else 0
-        for col, spec_dict in analysis_view.column_filters.items():
+        for col, spec_dict in self.column_filters.items():
             column_index = int(col)
             if column_index < 0 or column_index >= col_count:
                 continue
@@ -127,10 +135,12 @@ class ProxyFilterModel(QSortFilterProxyModel):
         self.notify_filters_changed()
 
     def sync_filters_to_view(self) -> None:
-        analysis_view = self._analysis_view()
-        if analysis_view is None:
-            return
-        analysis_view.column_filters = {
+        if self.column_filters is None:
+            return  # preview: session-only filters
+
+        self.column_filters.clear()
+
+        self.column_filters.update({
             col: filter_spec_to_dict(spec)
             for col, spec in self.active_filters.items()
-        }
+        })

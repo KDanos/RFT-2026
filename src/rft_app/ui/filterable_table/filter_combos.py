@@ -37,11 +37,20 @@ class TextFilters(Enum):
 
 class NumberFilterCombo(QComboBox):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
+
+        # Set project variables
+        # (none)
+
+        # Set module variables
+        # (none)
+
+        # Initialisation methods
         self._create_list_of_filters()
 
     #--------Private UI--------
+
     def _create_list_of_filters(self) -> None:
         for entry in NumberFilters:
             self.addItem(entry.label, entry)
@@ -52,11 +61,20 @@ class NumberFilterCombo(QComboBox):
 
 class TextFilterCombo(QComboBox):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
+
+        # Set project variables
+        # (none)
+
+        # Set module variables
+        # (none)
+
+        # Initialisation methods
         self._create_list_of_filters()
 
     #--------Private UI--------
+
     def _create_list_of_filters(self) -> None:
         for entry in TextFilters:
             self.addItem(entry.label, entry)

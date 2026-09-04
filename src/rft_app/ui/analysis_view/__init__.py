@@ -1,7 +1,7 @@
-from .ui.analysis_view import AnalysisViewWidget
-from .ui.graphical_frame import GraphicalFrame
-from .ui.view_sidebar import ViewSidebar
-from .services.analysis_view_data_manager import insert_excess_pressure_column
+from .analysis_view import AnalysisViewWidget
+from .graphical_frame import GraphicalFrame
+from .view_sidebar import ViewSidebar
+from .analysis_view_data_manager import insert_excess_pressure_column
 
 
 __all__ = [

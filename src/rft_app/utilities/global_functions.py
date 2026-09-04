@@ -8,7 +8,6 @@ import pandas as pd
 from dataclasses import fields
 
 from project.models import ColumnSpec, DataSet, DataSetLogEntry
-
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 
 
@@ -297,8 +296,11 @@ def show_dataframe_table_dialog(
     parent=None,
     project = None
     )->QDialog:
+    from ui.filterable_table.filterable_table import FilterableTable
+    
     if not title:
         title = "Data Table"
+
     # Define the dialog window
     window = QDialog(parent)
     window.setWindowTitle(f"Data Table: {title}")
@@ -307,7 +309,10 @@ def show_dataframe_table_dialog(
         |Qt.WindowType.WindowMaximizeButtonHint 
         |Qt.WindowType.WindowMinimizeButtonHint
     )
-    _,table_window,_ = create_table_view_frame(df, column_specs,parent, project)
+    # _,table_window,_ = create_table_view_frame(df, column_specs,parent, project)
+    table_window = FilterableTable(parent, project, df, column_specs)
+    table_window.load_data(df, column_specs)
+    
     window_layout = QVBoxLayout(window)
     window_layout.setContentsMargins(0,0,0,0)
     window_layout.addWidget(table_window)

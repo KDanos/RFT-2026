@@ -3,10 +3,9 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,  QPushButton, QVBoxLayout, QWidget
 import pandas as pd
 import numpy as np
-from pandas.core.apply import reconstruct_and_relabel_result
 from project import  ColumnSpec, DataSet, ProjectDataManager
-from units import STANDARD_QUANTITIES
-from utilities import print_current_location_function, show_dataframe_table_dialog, unique_name
+from units import STANDARD_QUANTITIES, get_project_default_units
+from utilities import show_dataframe_table_dialog, unique_name
 
 
 class MergeDatasetsDialog(QDialog):
@@ -40,6 +39,37 @@ class MergeDatasetsDialog(QDialog):
         self._connect_signals()
     
     #--------Private UI--------
+
+    def _build_mapping_dict(self) -> dict[str, dict[str, str]]:
+        base_ds = self.base_set_combo.currentData()
+        all_ds = [base_ds] + self.merging_sets
+        mapping_dict: dict[str, dict[str, str]] = {}
+
+        for row_idx, header in enumerate(self.row_headers):
+            row = row_idx + self.FIRST_DATA_ROW
+            ds_dicts: dict[str, str] = {}
+            mapping_dict[header] = ds_dicts
+
+            for col_idx, ds in enumerate(all_ds):
+                mapped_header = ""
+                if col_idx == 0:
+                    col = self.COL_BASE
+                else:
+                    col = col_idx + self.COL_FIRST_MERGE - 1
+
+                item = self.main_layout.itemAtPosition(row, col)
+                if item:
+                    widget = item.widget()
+                    if widget:
+                        if isinstance(widget, QLabel):
+                            mapped_header = widget.text()
+                        elif isinstance(widget, QComboBox):
+                            if widget.currentData() is not None:
+                                mapped_header = widget.currentText()
+
+                ds_dicts[ds.name] = mapped_header
+
+        return mapping_dict
 
     def _build_ui(self) -> None:
 
@@ -117,7 +147,9 @@ class MergeDatasetsDialog(QDialog):
         new_df = self._create_combined_dataframe()
         new_specs = []
         for i,header in enumerate(new_df.columns):
-            new_spec = ColumnSpec(header,self.row_quantity_keys[i])
+            quantity_key = self.row_quantity_keys[i]
+            unit = get_project_default_units(self.project, quantity_key)
+            new_spec = ColumnSpec(header,self.row_quantity_keys[i],unit)
             new_specs.append(new_spec)
         
         # Extract name
@@ -126,37 +158,6 @@ class MergeDatasetsDialog(QDialog):
         name = unique_name(name, list_of_names)
 
         return DataSet(name, new_df, new_specs)
-
-    def _build_mapping_dict(self) -> dict[str, dict[str, str]]:
-        base_ds = self.base_set_combo.currentData()
-        all_ds = [base_ds] + self.merging_sets
-        mapping_dict: dict[str, dict[str, str]] = {}
-
-        for row_idx, header in enumerate(self.row_headers):
-            row = row_idx + self.FIRST_DATA_ROW
-            ds_dicts: dict[str, str] = {}
-            mapping_dict[header] = ds_dicts
-
-            for col_idx, ds in enumerate(all_ds):
-                mapped_header = ""
-                if col_idx == 0:
-                    col = self.COL_BASE
-                else:
-                    col = col_idx + self.COL_FIRST_MERGE - 1
-
-                item = self.main_layout.itemAtPosition(row, col)
-                if item:
-                    widget = item.widget()
-                    if widget:
-                        if isinstance(widget, QLabel):
-                            mapped_header = widget.text()
-                        elif isinstance(widget, QComboBox):
-                            if widget.currentData() is not None:
-                                mapped_header = widget.currentText()
-
-                ds_dicts[ds.name] = mapped_header
-
-        return mapping_dict
 
     def _create_combined_dataframe(self) -> pd.DataFrame:
         mapping_dict = self._build_mapping_dict()
@@ -296,7 +297,7 @@ class MergeDatasetsDialog(QDialog):
         new_df= new_ds.dataframe
         new_specs = new_ds.column_specs
         show_dataframe_table_dialog(new_df,new_specs, "Merged Preview", self, self.project)
-    
+               
     def _populate_base_dataset_column_options(self)->None:
 
         #Clear any existing labels

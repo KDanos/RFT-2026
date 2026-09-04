@@ -29,6 +29,7 @@ class FilterSpecNumber:
     clause2: NumberClause | None = None
 
     #--------Private UI--------
+
     def _check_filter_operator(
             self,
             symbol: str,
@@ -67,6 +68,7 @@ class FilterSpecNumber:
         return True
 
     #--------Public API--------
+
     def pass_filter(self, cell_value: str) -> bool:
         try:
             number = float(cell_value)
@@ -93,6 +95,7 @@ class FilterSpecNumberSpecial:
     # No private methods.
 
     #--------Public API--------
+
     def pass_filter(self, cell_value: str) -> bool:
         try:
             number = float(cell_value)
@@ -118,6 +121,7 @@ class FilterSpecValues:
     # No private methods.
 
     #--------Public API--------
+
     def pass_filter(self, cell_value: str) -> bool:
         if cell_value in self.values:
             return True
@@ -148,6 +152,7 @@ class FilterSpecText:
     clause2: TextClause | None = None
 
     #--------Private UI--------
+
     def _test_a_clause(self, clause: TextClause, cell_string: str) -> bool:
         needle = str(clause.text).strip().casefold()
         check = clause.label
@@ -177,6 +182,7 @@ class FilterSpecText:
         return False
 
     #--------Public API--------
+
     def pass_filter(self, cell_string: str) -> bool:
         clause1_result = self._test_a_clause(self.clause1, cell_string)
 
@@ -190,6 +196,7 @@ class FilterSpecText:
 
 
 #--------Private helpers--------
+
 def _deserialize_scalar(value: float | int | str | None) -> float | int | str:
     if value is None:
         return float("nan")
@@ -227,6 +234,7 @@ def _text_clause_to_dict(clause: TextClause) -> dict:
 
 
 #--------Public API--------
+
 def filter_spec_from_dict(data: dict) -> FilterSpec:
     spec_type = data["type"]
     if spec_type == "number":

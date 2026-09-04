@@ -5,17 +5,17 @@ from project import AnalysisObject, AnalysisView, ProjectDataManager
 from ui.filterable_table.filterable_table import FilterableTable
 from .view_sidebar import ViewSidebar
 from .graphical_frame import GraphicalFrame
-from ..services.analysis_view_data_manager import refresh_view_object_from_column_tree_selection
+from .analysis_view_data_manager import refresh_view_object_from_column_tree_selection
 
 
 class AnalysisViewWidget(QWidget):
     def __init__(
-        self,
-        parent: QWidget | None = None,
-        project: ProjectDataManager | None = None,
-        analysis: AnalysisObject | None = None,
-        analysis_view_object: AnalysisView | None = None,
-    ) -> None:
+            self,
+            parent: QWidget | None = None,
+            project: ProjectDataManager | None = None,
+            analysis: AnalysisObject | None = None,
+            analysis_view_object: AnalysisView | None = None,
+            ) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -43,7 +43,7 @@ class AnalysisViewWidget(QWidget):
         main_frame_splitter = QSplitter(Qt.Orientation.Vertical)
         main_frame_layout.addWidget(main_frame_splitter)
 
-        #Create the Filterable Table
+        # Create the Filterable Table
         self._load_filterable_table()
 
         graphical_frame = GraphicalFrame(main_frame_splitter)
@@ -65,11 +65,11 @@ class AnalysisViewWidget(QWidget):
         refresh_view_object_from_column_tree_selection(
             self.view, self.analysis, self.project, selected_columns
         )
-        self.tabular_frame = FilterableTable(self, self.project, self.analysis, self.view)
-        self.tabular_frame.load_from_view()
+        self.tabular_frame = FilterableTable(self, self.project, self.view.df, self.view.column_specs)
+        self.tabular_frame.load_data(self.view.df, self.view.column_specs, self.view.column_filters)
 
     def _on_column_unit_change(self, col: int, header: str, unit: str) -> None:
-        #FilterableTable already updates view.column_specs itself; just track the edit
+        # FilterableTable already updates view.column_specs itself; just track the edit
         self.project.mark_modified()
 
     def _on_view_df_change(self) -> None:
@@ -77,7 +77,8 @@ class AnalysisViewWidget(QWidget):
         refresh_view_object_from_column_tree_selection(
             self.view, self.analysis, self.project, selected_columns
         )
-        self.tabular_frame.load_from_view()
+        self.tabular_frame.load_data(self.view.df, self.view.column_specs, self.view.column_filters)
         self.project.mark_modified()
 
     #--------Public API--------
+    # No public methods yet.

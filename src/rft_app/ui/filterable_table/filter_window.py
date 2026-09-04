@@ -22,22 +22,25 @@ class FilteringWindow(QDialog):
             self,
             parent=None,
             column_name: str = "",
-            filter_name="",
+            filter_name: str = "",
             ) -> None:
         super().__init__(parent)
 
+        # Set project variables
+        # (none)
+
+        # Set module variables
         self.column_name = parent.column_name
         self.filter_name = filter_name
         self.column_units = parent.column_units
         self.column_quantity_key = parent.column_quantity_key
         self.column_is_numeric = STANDARD_QUANTITIES[self.column_quantity_key].is_numeric
 
-        window_title = "Number Filter" if self.column_is_numeric else "Text Filter"
-        self.setWindowTitle(window_title)
-        self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
+        # Initialisation methods
         self._build_ui()
 
     #--------Private UI--------
+
     def _build_first_number_filter_row(self) -> None:
         self.first_combo = NumberFilterCombo(self)
 
@@ -102,6 +105,10 @@ class FilteringWindow(QDialog):
         self.main_layout.addLayout(self.value2_layout)
 
     def _build_ui(self) -> None:
+        window_title = "Number Filter" if self.column_is_numeric else "Text Filter"
+        self.setWindowTitle(window_title)
+        self.setWindowIcon(QIcon("resources/images/CY_LOGO_RGB.jpg"))
+
         self.main_layout = QVBoxLayout(self)
 
         button_box = QDialogButtonBox(
@@ -149,7 +156,6 @@ class FilteringWindow(QDialog):
             value_line_edit: QLineEdit,
             b_value_line_edit: QLineEdit,
             ) -> NumberClause | None:
-
         symbol = combo_box.currentData().symbol
 
         try:
@@ -197,7 +203,6 @@ class FilteringWindow(QDialog):
             combo: TextFilterCombo,
             line_edit: QLineEdit,
             ) -> TextClause | None:
-
         if not line_edit.text().strip():
             QMessageBox.warning(
                 self,
@@ -212,7 +217,6 @@ class FilteringWindow(QDialog):
         return TextClause(label, text)
 
     def _on_accept(self) -> None:
-
         if self.column_is_numeric:
             clause_1 = self._create_number_clause(
                 self.first_combo, self.value1_line_edit, self.value_1b_line_edit
@@ -241,8 +245,7 @@ class FilteringWindow(QDialog):
             self.result_spec = FilterSpecText(clause_1, self.connector, clause_2)
         self.accept()
 
-    def _on_between_toggled(self, combo=None) -> None:
-
+    def _on_between_toggled(self, combo: NumberFilterCombo | None = None) -> None:
         sender = combo if combo is not None else self.sender()
 
         if not isinstance(sender, NumberFilterCombo):
@@ -263,6 +266,7 @@ class FilteringWindow(QDialog):
                 self.value_2b_line_edit.clear()
 
     #--------Public API--------
+
     def showEvent(self, event: QShowEvent) -> None:
         """Make a specific line edit the focus when the window (self) is shown"""
         super().showEvent(event)

@@ -35,9 +35,12 @@ class FilterByRowMenu(QMenu):
             ) -> None:
         super().__init__()
 
+        # Set project variables
+        self.proxy_model = proxy_model
+
+        # Set module variables
         self.column_index = column_index
         self.column_name = column_name
-        self.proxy_model = proxy_model
 
         pandas_model = self.proxy_model.sourceModel()
         self.df_si = pandas_model.df
@@ -51,10 +54,12 @@ class FilterByRowMenu(QMenu):
         self.tree = None
         self.tree_model = None
 
+        # Initialisation methods
         self._build_ui()
         self._connect_actions_to_slots()
 
     #--------Private UI--------
+
     def _build_main_menu_options(self) -> None:
 
         if self.column_is_numeric:
@@ -527,3 +532,4 @@ class FilterByRowMenu(QMenu):
 
     #--------Public API--------
     # No public methods: this menu is constructed and shown by FilterableHeaderView.
+

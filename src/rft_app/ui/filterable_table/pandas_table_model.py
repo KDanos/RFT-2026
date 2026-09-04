@@ -17,19 +17,26 @@ class PandasTableModel(QAbstractTableModel):
             decimals_check_box: QCheckBox,
             decimal_limit_spin: QSpinBox,
             ) -> None:
-
         super().__init__(parent)
+
+        # Set project variables
+        # (none)
+
+        # Set module variables
         self.df: pd.DataFrame = pd.DataFrame()
         self.column_specs: list[ColumnSpec] = []
         self.project: ProjectDataManager | None = None
-
         self.decimals_check_box = decimals_check_box
         self.decimal_limit_spin = decimal_limit_spin
+
+        # Initialisation methods
+        # (none)
 
     #--------Private UI--------
     # No private methods: Qt overrides and public helpers cover all behaviour.
 
     #--------Public API--------
+
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         if parent.isValid():
             return 0
@@ -42,7 +49,6 @@ class PandasTableModel(QAbstractTableModel):
             index: QModelIndex,
             role: int = Qt.ItemDataRole.DisplayRole,
             ) -> str | float | Qt.AlignmentFlag | None:
-
         if not index.isValid() or self.df.empty:
             return None
         row, col = index.row(), index.column()
@@ -59,7 +65,7 @@ class PandasTableModel(QAbstractTableModel):
                 return None
             if role == Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignCenter
-            return
+            return None
 
         if role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignCenter
@@ -90,8 +96,7 @@ class PandasTableModel(QAbstractTableModel):
             section: int,
             orientation: Qt.Orientation,
             role: int = Qt.ItemDataRole.DisplayRole,
-            ) -> str:
-
+            ) -> str | None:
         if role != Qt.ItemDataRole.DisplayRole:
             return None
 
@@ -102,7 +107,7 @@ class PandasTableModel(QAbstractTableModel):
                 return str(self.df.columns[section])
         if orientation == Qt.Orientation.Vertical:
             return str(section + 1)
-        return
+        return None
 
     def refresh_display(self) -> None:
         if self.df.empty:
@@ -125,7 +130,6 @@ class PandasTableModel(QAbstractTableModel):
             column_specs: list[ColumnSpec],
             project: ProjectDataManager,
             ) -> None:
-
         self.beginResetModel()
         self.df = df.copy() if df is not None else pd.DataFrame()
         self.column_specs = column_specs

@@ -9,37 +9,43 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QVBoxLayout,
 )
-from qtpy.QtWidgets import QLabel, QPushButton
+from PyQt6.QtWidgets import QLabel, QPushButton
 
-from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
+from project import ColumnSpec, ProjectDataManager
 from ui import app_icon
 from ui.filterable_table.custom_table_view import CustomTableView
 from ui.widgets.table_widgets import UnitsComboBox
 
+import pandas as pd
+
 
 class FilterableTable(QFrame):
-    # Custom Signals
     column_unit_change = pyqtSignal(int, str, str)  # column index, column header and new unit
 
     def __init__(
             self,
             parent: QObject,
             project: ProjectDataManager,
-            analysis: AnalysisObject,
-            view: AnalysisView,
+            df: pd.DataFrame,
+            column_specs: list[ColumnSpec],
             ) -> None:
         super().__init__(parent)
 
+        # Set project variables
         self.project = project
-        self.analysis = analysis
-        self.view = view
+
+        # Set module variables
+        self.df = df
+        self.column_specs = column_specs
         self.arithmetic_ops_src_model: str = "full"
+
+        # Initialisation methods
         self._build_ui()
         self._connect_signals()
 
     #--------Private UI--------
-    def _build_ui(self) -> None:
 
+    def _build_ui(self) -> None:
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
@@ -95,8 +101,8 @@ class FilterableTable(QFrame):
         self.table = CustomTableView(
             self,
             self.project,
-            self.analysis,
-            self.view,
+            self.df,
+            self.column_specs,
             self.decimals_check_box,
             self.decimal_limit_spin,
         )
@@ -119,25 +125,24 @@ class FilterableTable(QFrame):
         self.table.proxy_model.filters_changed.connect(self._update_clear_filters_button)
 
     def _create_or_update_units_combos(self) -> None:
-
         if hasattr(self, "units_table"):
             self.table_layout.removeWidget(self.units_table)
             self.units_table.deleteLater()
 
         self.units_table = QTableWidget(self.table_frame)
-        column_count = self.view.df.shape[1]
+        column_count = self.df.shape[1]
         self.units_table.setColumnCount(column_count)
         self.units_table.setRowCount(1)
         self.units_table.setVerticalHeaderLabels([""])
         self.units_table.horizontalHeader().hide()
 
         for i in range(column_count):
-            quantity_key = self.view.column_specs[i].quantity_key
+            quantity_key = self.column_specs[i].quantity_key
             units_combo = UnitsComboBox(quantity_key, self.project)
             units_combo.currentIndexChanged.connect(lambda _, idx=i: self._on_units_change(idx))
             self.units_table.setCellWidget(0, i, units_combo)
-            spec = self.view.column_specs[i]
-            self.view.column_specs[i] = ColumnSpec(
+            spec = self.column_specs[i]
+            self.column_specs[i] = ColumnSpec(
                 spec.name, spec.quantity_key, units_combo.currentText()
             )
         self.table_layout.insertWidget(0, self.units_table)
@@ -163,9 +168,9 @@ class FilterableTable(QFrame):
         if not isinstance(combo, UnitsComboBox):
             return
 
-        spec = self.view.column_specs[idx]
+        spec = self.column_specs[idx]
         new_unit = combo.currentText()
-        self.view.column_specs[idx] = ColumnSpec(spec.name, spec.quantity_key, new_unit)
+        self.column_specs[idx] = ColumnSpec(spec.name, spec.quantity_key, new_unit)
         self.refresh_display()
         self.column_unit_change.emit(idx, spec.name, new_unit)
 
@@ -194,8 +199,17 @@ class FilterableTable(QFrame):
         self.clear_filters_btn.setEnabled(has_filters)
 
     #--------Public API--------
-    def load_from_view(self) -> None:
-        self.table.load_from_view()
+
+    def load_data(
+            self,
+            df: pd.DataFrame,
+            column_specs: list[ColumnSpec],
+            column_filters: dict | None = None,
+            ) -> None:
+        self.df = df
+        self.column_specs = column_specs
+
+        self.table.load_data(df, column_specs, column_filters)
         self._create_or_update_units_combos()
         self._sync_units_table_column_widths()
         self._update_clear_filters_button()
