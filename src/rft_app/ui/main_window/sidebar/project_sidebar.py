@@ -1,5 +1,5 @@
-from PyQt6.QtCore import QSignalBlocker
-from PyQt6.QtWidgets import QFrame, QTreeWidget, QVBoxLayout, QWidget
+from PyQt6.QtCore import QSignalBlocker, Qt
+from PyQt6.QtWidgets import QFrame, QScrollArea, QTreeWidget, QVBoxLayout, QWidget
 
 from project import ProjectDataManager
 from .all_datasets_tree import AllDataSetsTree
@@ -52,9 +52,15 @@ class ProjectSidebar(QFrame):
         self.data_trees_layout = QVBoxLayout(self.project_data_frame)
 
         #Create the loaded datasets tree
-        self.all_loaded_datasets_tree = AllDataSetsTree(self.project_data_frame, self.project)
+        self.all_loaded_datasets_tree = AllDataSetsTree(self.project.loaded_datasets,self.project_data_frame, self.project, label = "Loaded DataSets")
+        self.all_loaded_datasets_tree.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.data_trees_layout.addWidget(self.all_loaded_datasets_tree)
-
+        
+        # Create the merged dataset tree
+        self.all_merged_datasets_tree = AllDataSetsTree(self.project.merged_datasets,self.project_data_frame, self.project,label = "Merged DataSets" )
+        self.all_merged_datasets_tree.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.data_trees_layout.addWidget(self.all_merged_datasets_tree)
+        
         #Create a frame to hold analyses tree
         self.project_analyses_frame = QFrame(self)
         self.analyses_tree_layout = QVBoxLayout(self.project_analyses_frame)
@@ -73,7 +79,9 @@ class ProjectSidebar(QFrame):
         # Loaded Datasets Tree
         self.all_loaded_datasets_tree.dataset_renamed.connect(self.refresh_all_analyses_tree)
         self.all_loaded_datasets_tree.dataset_deleted.connect(self.refresh_all_analyses_tree)
-
+        self.all_loaded_datasets_tree.merged_dataset_created.connect(
+            self.refresh_all_merged_datasets_tree
+        )
         # Analyses Tree
         self.all_analyses_tree.analysis_renamed.connect(self.refresh_all_analyses_tree)
         self.all_analyses_tree.analysis_deleted.connect(self.refresh_all_analyses_tree)
@@ -83,6 +91,7 @@ class ProjectSidebar(QFrame):
     def refresh(self) -> None:
         """Reload all tree from the current project"""
         self.refresh_all_loaded_datasets_tree()
+        self.refresh_all_merged_datasets_tree()
         self.refresh_all_analyses_tree()
 
     def refresh_all_analyses_tree(self) -> None:
@@ -91,10 +100,15 @@ class ProjectSidebar(QFrame):
 
     def refresh_all_loaded_datasets_tree(self) -> None:
         self.all_loaded_datasets_tree.project = self.project
-        self.all_loaded_datasets_tree.reload_from_project()
+        self.all_loaded_datasets_tree.reload_from_project(self.project.loaded_datasets)
         self._apply_column_units_to_tree(self.all_loaded_datasets_tree)
+
+    def refresh_all_merged_datasets_tree(self)->None:
+        self.all_merged_datasets_tree.project = self.project
+        self.all_merged_datasets_tree.reload_from_project(self.project.merged_datasets)
 
     def set_project(self, project: ProjectDataManager) -> None:
         self.project = project
         self.all_loaded_datasets_tree.project = project
+        self.all_merged_datasets_tree.project = project
         self.all_analyses_tree.project = project

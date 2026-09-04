@@ -145,8 +145,12 @@ class DataLoaderDialogAnalysis(QDialog):
         self.data_frame_layout.addLayout(self.mapping_layout)
 
         # Create the data tree
-        self.loaded_data_tree = AllDataSetsTree(self.data_frame, self.project)
-        self.loaded_data_tree.reload_from_project()
+        self.loaded_data_tree = AllDataSetsTree(
+            self.project.loaded_datasets,
+            self.data_frame,
+            self.project, 
+            label = "Loaded DataSets")
+        self.loaded_data_tree.reload_from_project(self.project.loaded_datasets)
         self.data_frame_layout.addWidget(self.loaded_data_tree)
         self._make_tree_tristate_checkable(self.loaded_data_tree)
 

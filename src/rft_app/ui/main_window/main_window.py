@@ -43,7 +43,7 @@ class MainWindowKD(QMainWindow):
         # Initialisation methods
         self._build_ui()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("260827 Mergind Data")
+        self._load_default_project_on_startup("260903 Merging Data")
 
     #--------Private UI--------
 

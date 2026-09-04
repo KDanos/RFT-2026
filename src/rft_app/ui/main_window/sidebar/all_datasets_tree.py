@@ -1,8 +1,8 @@
 from PyQt6.QtCore import QPoint, QSignalBlocker, Qt, pyqtSignal
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMessageBox, QMenu, QTreeWidget, QTreeWidgetItem, QWidget
+from PyQt6.QtWidgets import QDialog, QMessageBox, QMenu, QTreeWidget, QTreeWidgetItem, QWidget
 
-from project import ProjectDataManager
+from project import DataSet, ProjectDataManager
 from ui.main_window.sidebar.merge_datasets_dialog import MergeDatasetsDialog
 from utilities import show_dataframe_table_dialog, show_import_log_or_user_comments_table
 
@@ -10,29 +10,33 @@ from utilities import show_dataframe_table_dialog, show_import_log_or_user_comme
 class AllDataSetsTree(QTreeWidget):
     dataset_renamed = pyqtSignal(str, str)  # old_name, new_name
     dataset_deleted = pyqtSignal(str)  # deleted name only
+    merged_dataset_created = pyqtSignal()
 
     def __init__(
         self,
+        dataset_list:list[DataSet],
         parent: QWidget | None = None,
         project: ProjectDataManager | None = None,
+        label:str= "Dataset"
+        
         ) -> None:
         super().__init__(parent)
 
         # Set project variables
         self.parent = parent
         self.project = project
-
-        # Set module variables
-        self.loaded_datasets = self.project.loaded_datasets
+        self.dataset_list= dataset_list
+        self.label= label
 
         # Initialisation methods
-        self.setHeaderLabel("Loaded Data Sets")
+        self.setHeaderLabel(self.label)
         self._connect_signals()
 
     #--------Private UI--------
 
     def _build_tree(self) -> None:
-        for dataset in self.project.loaded_datasets:
+                
+        for dataset in self.dataset_list:
             df = dataset.dataframe
             # Add a top level item
             top_level = QTreeWidgetItem([dataset.name])
@@ -103,14 +107,15 @@ class AllDataSetsTree(QTreeWidget):
 
     def _delete_dataset(self, item: QTreeWidgetItem) -> None:
         dataset = item.data(0, Qt.ItemDataRole.UserRole)
+        
         if dataset is None:
             return
-
+        
+        # Mutate the SAME list object that the project holds
+        self.dataset_list[:]=[ds for ds in self.dataset_list if ds is not dataset]
+        
         #Rename the deleted loaded dataset in the analyses_tree
         self._rename_deleted_dataset_on_analyses_tree(item)
-
-        #Remove from the project model
-        self.project.loaded_datasets = [ds for ds in self.project.loaded_datasets if ds is not dataset]
 
         #Remove from UI
         index = self.indexOfTopLevelItem(item)
@@ -148,6 +153,7 @@ class AllDataSetsTree(QTreeWidget):
             return
         
         dialog = MergeDatasetsDialog(self, self.project)
+        dialog.accepted.connect(self.merged_dataset_created.emit)
         dialog.show()
     
     def _on_context_menu(self, position: QPoint) -> None:
@@ -218,7 +224,10 @@ class AllDataSetsTree(QTreeWidget):
 
     #--------Public API--------
 
-    def reload_from_project(self) -> None:
+    def reload_from_project(self, dataset_list:list[DataSet]|None = None) -> None:
+        if dataset_list is not None:
+            self.dataset_list = dataset_list #re-bind after set-project/open
+        
         with QSignalBlocker(self):
             self.clear()
             self._build_tree()

@@ -1,11 +1,12 @@
 from PyQt6.QtCore import QSignalBlocker
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QWidget
-from pytest import Item
-
-from project import  DataSet, ProjectDataManager
+from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,  QPushButton, QVBoxLayout, QWidget
+import pandas as pd
+import numpy as np
+from pandas.core.apply import reconstruct_and_relabel_result
+from project import  ColumnSpec, DataSet, ProjectDataManager
 from units import STANDARD_QUANTITIES
-from utilities import print_current_location_function
+from utilities import print_current_location_function, show_dataframe_table_dialog, unique_name
 
 
 class MergeDatasetsDialog(QDialog):
@@ -37,7 +38,7 @@ class MergeDatasetsDialog(QDialog):
         # Initialisation methods
         self._build_ui()
         self._connect_signals()
-
+    
     #--------Private UI--------
 
     def _build_ui(self) -> None:
@@ -47,10 +48,23 @@ class MergeDatasetsDialog(QDialog):
         self.v_layout = QVBoxLayout()
         self.setLayout(self.v_layout)
         
+        # New Merged Dataset Name
+        new_name_label = QLabel("Name: ")
+        self.name_line_edit = QLineEdit()
+        self.name_line_edit.setPlaceholderText("Merged Dataset")
+        self.new_name_layout = QHBoxLayout()
+        self.new_name_layout.addWidget(new_name_label)
+        self.new_name_layout.addWidget(self.name_line_edit)
+        self.new_name_layout.addStretch()
+        self.new_name_layout.setContentsMargins(0,0,0,12)
+        self.v_layout.addLayout(self.new_name_layout)
+        
+        # Ensure padding to the bottom of the window
         self.h_layout = QHBoxLayout()
         self.v_layout.addLayout(self.h_layout)
         self.v_layout.addStretch()
 
+        # Add the main (grid layout) and ensure padding to the right of the window
         self.main_layout = QGridLayout()
         self.main_layout.setHorizontalSpacing(15)
         self.h_layout.addLayout(self.main_layout)
@@ -65,7 +79,7 @@ class MergeDatasetsDialog(QDialog):
         self.main_layout.addWidget(base_label, 0, self.COL_BASE)
         self.base_set_combo = QComboBox(self)
         self.main_layout.addWidget(self.base_set_combo, 1, self.COL_BASE)
-        for set in self.project.loaded_datasets:
+        for set in self.project.all_datasets:
             self.base_set_combo.addItem(set.name, set)
         
         # Ensure that the top 2 rows do not stretch to accomodate extra space
@@ -99,6 +113,128 @@ class MergeDatasetsDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         self.preview_button.clicked.connect(self._preview_merged_dataset)
     
+    def _create_new_dataset(self)->DataSet:
+        new_df = self._create_combined_dataframe()
+        new_specs = []
+        for i,header in enumerate(new_df.columns):
+            new_spec = ColumnSpec(header,self.row_quantity_keys[i])
+            new_specs.append(new_spec)
+        
+        # Extract name
+        name = self.name_line_edit.text().strip() or "Merged Dataset"
+        list_of_names = [ds.name for ds in self.project.all_datasets]
+        name = unique_name(name, list_of_names)
+
+        return DataSet(name, new_df, new_specs)
+
+    def _build_mapping_dict(self) -> dict[str, dict[str, str]]:
+        base_ds = self.base_set_combo.currentData()
+        all_ds = [base_ds] + self.merging_sets
+        mapping_dict: dict[str, dict[str, str]] = {}
+
+        for row_idx, header in enumerate(self.row_headers):
+            row = row_idx + self.FIRST_DATA_ROW
+            ds_dicts: dict[str, str] = {}
+            mapping_dict[header] = ds_dicts
+
+            for col_idx, ds in enumerate(all_ds):
+                mapped_header = ""
+                if col_idx == 0:
+                    col = self.COL_BASE
+                else:
+                    col = col_idx + self.COL_FIRST_MERGE - 1
+
+                item = self.main_layout.itemAtPosition(row, col)
+                if item:
+                    widget = item.widget()
+                    if widget:
+                        if isinstance(widget, QLabel):
+                            mapped_header = widget.text()
+                        elif isinstance(widget, QComboBox):
+                            if widget.currentData() is not None:
+                                mapped_header = widget.currentText()
+
+                ds_dicts[ds.name] = mapped_header
+
+        return mapping_dict
+
+    def _create_combined_dataframe(self) -> pd.DataFrame:
+        mapping_dict = self._build_mapping_dict()
+        base_ds = self.base_set_combo.currentData()
+        all_ds = [base_ds] + self.merging_sets
+        
+        blocks:list[pd.DataFrame] =[]
+        for ds in all_ds:
+            block_df = pd.DataFrame(index = ds.dataframe.index,columns = self.row_headers)
+
+            for header in self.row_headers:
+                column_name = mapping_dict[header].get(ds.name,"")
+                if column_name !="":
+                    block_df[header] = ds.dataframe[column_name].values
+                else:
+                    block_df[header] = np.nan
+            blocks.append(block_df)
+
+        if not blocks:
+            return pd.DataFrame(columns=self.row_headers)
+        
+        new_df = pd.concat(blocks, ignore_index = True)
+        return new_df
+
+    def _create_headers_list(self)->None:
+
+        rows = self.main_layout.rowCount()
+        last_merging_column = len(self.merging_sets)+self.COL_FIRST_MERGE
+        self.row_headers = []
+
+        #Clear all previous header inputs
+        for row in range(self.FIRST_DATA_ROW-1, self.main_layout.rowCount()):
+            item = self.main_layout.itemAtPosition(row, self.COL_HEADERS)
+            if item:
+                widget = item.widget()
+                if widget:
+                    if isinstance(widget, QLineEdit):
+                        self.main_layout.removeWidget(widget)
+                        widget.deleteLater()
+        
+        for col in range(self.COL_BASE, last_merging_column):
+            for row in range(self.FIRST_DATA_ROW, rows):
+                #Gate for options in the base set
+                if col==self.COL_BASE:
+                    item = self.main_layout.itemAtPosition(row, col)
+                    if item:
+                        widget = item.widget()
+                        if widget:
+                            if isinstance(widget, QLabel):
+                                text = widget.text()
+                                header = unique_name(text,self.row_headers)
+                                self.row_headers.append(header)
+
+                #Gate for merging set columns
+                elif col<=last_merging_column and row>=len(self.row_headers)+self.FIRST_DATA_ROW:
+                    item = self.main_layout.itemAtPosition(row, col)
+                    if item:
+                        widget = item.widget()
+                        if widget:
+                            if isinstance(widget, QComboBox):
+                                if widget.currentData() is not None:
+                                    text = widget.currentText()
+                                    header = unique_name(text,self.row_headers)
+                                    self.row_headers.append(header)
+                # Row-filtering, i.e.skip rows that have been captured previously
+                else:
+                    continue
+
+        # Create the header line edits
+        for i in range (len(self.row_headers)):
+            row = i + self.FIRST_DATA_ROW
+            line_edit = QLineEdit()
+            self.main_layout.addWidget(line_edit, row, 0)
+            line_edit.setPlaceholderText(self.row_headers[i])
+            line_edit.setFrame(False)
+            line_edit.setToolTip(self.row_headers[i])
+            line_edit.editingFinished.connect(lambda idx= i, line_edit= line_edit: self._update_headers_list(idx,line_edit.text()))                  
+         
     def _draw_lines(self):
         
         rows = self.main_layout.rowCount()
@@ -150,10 +286,16 @@ class MergeDatasetsDialog(QDialog):
             line.add_to(self.main_layout)
         
     def _on_accept(self):
+        new_ds = self._create_new_dataset()
+        self.project.merged_datasets.append(new_ds)
+        self.project.mark_modified()
         self.accept()
 
     def _preview_merged_dataset(self) -> None:
-        pass
+        new_ds = self._create_new_dataset()
+        new_df= new_ds.dataframe
+        new_specs = new_ds.column_specs
+        show_dataframe_table_dialog(new_df,new_specs, "Merged Preview", self, self.project)
     
     def _populate_base_dataset_column_options(self)->None:
 
@@ -199,68 +341,7 @@ class MergeDatasetsDialog(QDialog):
         )
         self._update_rows_quantity_list(0)
         self._populate_merging_dataset_column_options(self.COL_FIRST_MERGE)
-
-    def _populate_header_widgets(self)->None:
-        import os
-        os.system("cls")
-        
-        rows = self.main_layout.rowCount()
-        last_merging_column = len(self.merging_sets)+self.COL_FIRST_MERGE
-        # header_position:list[int, int] =[]
-        # header_count = 0 
-        self.row_headers = []
-
-        #Clear all previous header inputs
-        for row in range(self.FIRST_DATA_ROW-1, self.main_layout.rowCount()):
-            item = self.main_layout.itemAtPosition(row, self.COL_HEADERS)
-            if item:
-                widget = item.widget()
-                if widget:
-                    if isinstance(widget, QLineEdit):
-                        self.main_layout.removeWidget(widget)
-                        widget.deleteLater()
-        
-        for col in range(self.COL_BASE, last_merging_column):
-            for row in range(self.FIRST_DATA_ROW, rows):
-                #Gate for options in the base set
-                if col==self.COL_BASE:
-                    print(f"we are at location ({row},{col} and are in the base set)")
-                    item = self.main_layout.itemAtPosition(row, col)
-                    if item:
-                        widget = item.widget()
-                        if widget:
-                            if isinstance(widget, QLabel):
-                                self.row_headers.append(widget.text())
-                    print (f"we have captured {len(self.row_headers)} headers")    
-                #Gate for quantity label or line columns
-                elif col<self.COL_FIRST_MERGE :
-                    print(f"we are at location ({row},{col} and are skipping this one)")
-                    continue
-                #Gate for merging set columns
-                elif col<=last_merging_column and row>=len(self.row_headers)+self.FIRST_DATA_ROW:
-                    print(f"we are at location ({row},{col} and in a merging set)")
-                    item = self.main_layout.itemAtPosition(row, col)
-                    if item:
-                        widget = item.widget()
-                        if widget:
-                            if isinstance(widget, QComboBox):
-                                if widget.currentData() is not None:
-                                    self.row_headers.append(widget.currentText())
-                # Gate for extra un-used columns
-                else:
-                    print(f"we are at location ({row},{col} and have gone too far)")
-                    continue
-
-        # Create the header line edits
-        for i in range (len(self.row_headers)):
-            row = i + self.FIRST_DATA_ROW
-            line_edit = QLineEdit()
-            self.main_layout.addWidget(line_edit, row, 0)
-            line_edit.setPlaceholderText(self.row_headers[i])
-            line_edit.setFrame(False)
-            line_edit.setToolTip(self.row_headers[i])
-            line_edit.textChanged.connect(lambda text, idx= i: self._update_headers_list(idx, text))                  
-            
+      
     def _populate_merging_dataset_column_options(self, col_idx:int)->None:
         merge_count = col_idx - self.COL_SEPARATOR
         base_set = self.base_set_combo.currentData()
@@ -393,7 +474,7 @@ class MergeDatasetsDialog(QDialog):
             self._update_rows_quantity_list(col_idx)
         
         self._draw_lines()
-        self._populate_header_widgets()
+        self._create_headers_list()
         return
     
     def _populate_unused_columns(self, col_idx:int)->None:
@@ -434,19 +515,27 @@ class MergeDatasetsDialog(QDialog):
         self._update_rows_quantity_list(col_idx)
 
     def _update_headers_list(self, idx:int, text:str)-> None:
-        self.row_headers[idx]=text
-        sender = self.sender()
-        if isinstance(sender, QLineEdit):
-            sender.setToolTip(text)
         
+        sender = self.sender()
+        
+        #Check for uniqueness
+        testing_list = [header for index,header in enumerate(self.row_headers) if index !=idx]
+        header = unique_name(text, testing_list)
+        #Update the header list
+        self.row_headers[idx]=header
+        
+        #Update the widget and tooltip
+        if isinstance(sender, QLineEdit):
+            with QSignalBlocker(sender):
+                sender.setText(header)
+                sender.setToolTip(header)     
 
     def _update_list_of_available_datasets(self, exclude_col: int | None = None)->list[DataSet]:
         #Ensure all selected merging datasets have been captured
         self._update_list_of_merging_datasets(exclude_col=exclude_col)
 
-        list_of_sets = self.project.loaded_datasets+self.project.merged_datasets
         base_set = self.base_set_combo.currentData()
-        return  [ds for ds in list_of_sets
+        return  [ds for ds in self.project.all_datasets
                 if ds is not base_set and ds not in self.merging_sets]     
 
     def _update_list_of_merging_datasets(self, exclude_col:int|None = None)->None:
