@@ -24,7 +24,6 @@ class ProjectDataManager:
         self.analyses: list[AnalysisObject]= []
         self._is_modified: bool =False
         
-
     @property
     def available_unit_systems(self)-> tuple[UnitSystem,...]:
         "Built-ins + user defined. Used to populate the project units combo"
@@ -63,7 +62,8 @@ class ProjectDataManager:
         return chosen
 
     def get_dataset_by_name(self, name:str) -> DataSet:
-        for dataset in self.loaded_datasets:
+        for dataset in self.all_datasets:
+        # for dataset in self.loaded_datasets:
             if dataset.name == name:
                 return dataset
         raise KeyError (name)

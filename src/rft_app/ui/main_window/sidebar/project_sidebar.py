@@ -82,6 +82,10 @@ class ProjectSidebar(QFrame):
         self.all_loaded_datasets_tree.merged_dataset_created.connect(
             self.refresh_all_merged_datasets_tree
         )
+        # Merged Datasets Tree
+        self.all_merged_datasets_tree.dataset_renamed.connect(self.refresh_all_analyses_tree)
+        self.all_merged_datasets_tree.dataset_deleted.connect(self.refresh_all_analyses_tree)
+        
         # Analyses Tree
         self.all_analyses_tree.analysis_renamed.connect(self.refresh_all_analyses_tree)
         self.all_analyses_tree.analysis_deleted.connect(self.refresh_all_analyses_tree)
