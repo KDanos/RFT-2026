@@ -22,7 +22,6 @@ def build_view_df_and_col_specs_from_column_selection(
 
     return df, col_specs
 
-
 def insert_excess_pressure_column(
         df: pd.DataFrame,
         col_specs: list[ColumnSpec],
@@ -48,13 +47,13 @@ def insert_excess_pressure_column(
     col_specs.insert(2, new_spec)
     return df, col_specs
 
-
 def on_column_unit_change(
         view: AnalysisView,
         col: int,
         header: str,
         unit: str,
         ) -> None:
+    # Update the object in the model
     updated = []
     for spec in view.column_specs:
         if spec.name == header:
@@ -62,6 +61,9 @@ def on_column_unit_change(
         else:
             updated.append(spec)
     view.column_specs = updated
+
+    # Refresh the graph is necessary
+
 
 
 def refresh_view_object_from_column_tree_selection(

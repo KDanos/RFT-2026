@@ -1,14 +1,6 @@
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import (
-    QButtonGroup,
-    QCheckBox,
-    QFrame,
-    QHBoxLayout,
-    QRadioButton,
-    QSpinBox,
-    QTableWidget,
-    QVBoxLayout,
-)
+from PyQt6.QtWidgets import (QButtonGroup,QCheckBox,QFrame,QHBoxLayout,QRadioButton,QSpinBox,
+    QTableWidget,QVBoxLayout,)
 from PyQt6.QtWidgets import QLabel, QPushButton
 
 from project import ColumnSpec, ProjectDataManager

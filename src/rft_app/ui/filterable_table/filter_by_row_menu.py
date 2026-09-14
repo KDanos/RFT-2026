@@ -1,19 +1,8 @@
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QStandardItem, QStandardItemModel
-from PyQt6.QtWidgets import (
-    QDialog,
-    QFrame,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMenu,
-    QPushButton,
-    QTreeView,
-    QVBoxLayout,
-    QWidgetAction,
-)
+from PyQt6.QtWidgets import (QDialog,QFrame,QGridLayout,QHBoxLayout,QLabel,
+    QLineEdit,QMenu,QPushButton,QTreeView,QVBoxLayout,QWidgetAction,)
 
 import pandas as pd
 
