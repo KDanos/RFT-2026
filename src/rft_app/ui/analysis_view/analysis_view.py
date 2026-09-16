@@ -1,11 +1,12 @@
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QSplitter, QVBoxLayout, QWidget, QHBoxLayout, QFrame
+from PyQt6.QtWidgets import QSplitter, QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from ui.filterable_table.filterable_table import FilterableTable
-from .view_sidebar import ViewSidebar
+from .tabular_sidebar import TabularSidebar
+from .graphical_sidebar import GraphicalSidebar
 from .graphical_frame import GraphicalFrame
 from .analysis_view_data_manager import refresh_view_object_from_column_tree_selection
 import pandas as pd
@@ -35,38 +36,42 @@ class AnalysisViewWidget(QWidget):
     #--------Private UI--------
 
     def _build_ui(self) -> None:
-        main_layout = QHBoxLayout(self)
-        main_vertical_splitter = QSplitter()
+        main_layout = QVBoxLayout(self)
 
-        self.sidebar_frame = ViewSidebar(self, self.project, self.analysis, self.view)
+        self.sidebar_frame = TabularSidebar(self, self.project, self.analysis, self.view)
 
-        main_frame = QFrame(self)
-        main_frame_layout = QVBoxLayout(main_frame)
-        self.main_frame_splitter = QSplitter(Qt.Orientation.Vertical)
-        main_frame_layout.addWidget(self.main_frame_splitter)
-
-        # Create the Filterable Table
         self._load_filterable_table()
-        # Extract the proxy model from created via the function above
         self.proxy = self.tabular_frame.table.proxy_model
 
-        # Create the graphs
         self.graphical_frame = GraphicalFrame(
-            parent = self.main_frame_splitter, 
-            col_specs = self.view.column_specs
-            )
+            parent=self,
+            col_specs=self.view.column_specs,
+        )
 
-        self.main_frame_splitter.addWidget(self.graphical_frame)
-        self.main_frame_splitter.addWidget(self.tabular_frame)
+        self.graphical_widgets_frame = GraphicalSidebar(
+            self,
+            self.project,
+            self.view.column_specs,
+        )
+
+        self.graphical_row_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.graphical_row_splitter.addWidget(self.graphical_widgets_frame)
+        self.graphical_row_splitter.addWidget(self.graphical_frame)
+        self.graphical_row_splitter.setSizes([1000, 5000])
+
+        self.tabular_row_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.tabular_row_splitter.addWidget(self.sidebar_frame)
+        self.tabular_row_splitter.addWidget(self.tabular_frame)
+        self.tabular_row_splitter.setSizes([1000, 5000])
+
+        self.main_frame_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.main_frame_splitter.addWidget(self.graphical_row_splitter)
+        self.main_frame_splitter.addWidget(self.tabular_row_splitter)
         self.main_frame_splitter.setSizes([5000, 5000])
         self.main_frame_splitter.setStretchFactor(0, 1)
         self.main_frame_splitter.setStretchFactor(1, 1)
 
-        main_vertical_splitter.addWidget(self.sidebar_frame)
-        main_vertical_splitter.addWidget(main_frame)
-        main_vertical_splitter.setSizes([1000, 5000])
-        main_layout.addWidget(main_vertical_splitter)
-
+        main_layout.addWidget(self.main_frame_splitter)
         self._refresh_plots()
 
     def _connect_signals(self) -> None:

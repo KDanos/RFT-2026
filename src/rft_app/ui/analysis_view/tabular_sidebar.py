@@ -6,7 +6,7 @@ from utilities import make_tree_item_checkable
 from ui.widgets import DataframeTree
 
 
-class ViewSidebar(QFrame):
+class TabularSidebar(QFrame):
     view_df_changed = pyqtSignal()
 
     def __init__(
@@ -34,8 +34,6 @@ class ViewSidebar(QFrame):
 
     def _build_ui(self) -> None:
         self.main_layout = QVBoxLayout(self)
-        self.btn2 = QPushButton("placeholder 12")
-        self.main_layout.addWidget(self.btn2)
 
         analysis_dataset = self.analysis.analysis_dataset
         self.data_tree = DataframeTree(self, analysis_dataset, "Data")
