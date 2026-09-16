@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QObject, Qt
-from PyQt6.QtWidgets import QCheckBox, QSpinBox, QTableView
+from PyQt6.QtWidgets import QCheckBox, QHeaderView, QSpinBox, QTableView
 
 from project import ColumnSpec, ProjectDataManager
 from ui.filterable_table.filterable_header_view import FilterableHeaderView
@@ -9,6 +9,8 @@ import pandas as pd
 
 
 class CustomTableView(QTableView):
+    MIN_COL_WIDTH_PX = 80
+ 
     def __init__(
             self,
             parent: QObject,
@@ -36,6 +38,7 @@ class CustomTableView(QTableView):
 
     def _build_ui(self) -> None:
         self.setHorizontalHeader(FilterableHeaderView(Qt.Orientation.Horizontal, self))
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
         self.table_model = PandasTableModel(self, self.decimals_check_box, self.decimal_limit_spin)
 
@@ -62,4 +65,7 @@ class CustomTableView(QTableView):
         )
         self.proxy_model.restore_filters_from_view()
         self.proxy_model.notify_filters_changed()
-        self.resizeColumnsToContents()
+        header = self.horizontalHeader()
+        for i in range(self.model().columnCount()):
+            width = max(header.sectionSizeFromContents(i).width(), self.MIN_COL_WIDTH_PX)
+            self.setColumnWidth(i, width)

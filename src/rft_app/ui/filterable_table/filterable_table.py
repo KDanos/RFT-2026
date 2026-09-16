@@ -108,8 +108,8 @@ class FilterableTable(QFrame):
         self.widgets_layout.insertWidget(1, self.clear_filters_btn)
 
     def _connect_signals(self) -> None:
-        self.decimal_limit_spin.valueChanged.connect(self.refresh_display)
-        self.decimals_check_box.toggled.connect(self.refresh_display)
+        self.decimal_limit_spin.valueChanged.connect(self.filterable_table_refresh)
+        self.decimals_check_box.toggled.connect(self.filterable_table_refresh)
         self.table.horizontalHeader().sectionResized.connect(
             lambda *_: self._sync_units_table_column_widths()
         )
@@ -163,7 +163,7 @@ class FilterableTable(QFrame):
         spec = self.column_specs[idx]
         new_unit = combo.currentText()
         self.column_specs[idx] = ColumnSpec(spec.name, spec.quantity_key, new_unit)
-        self.refresh_display()
+        self.filterable_table_refresh()
         self.column_unit_change.emit(idx, spec.name, new_unit)
 
     def _sync_units_horizontal_scroll(self, value: int) -> None:
@@ -206,7 +206,7 @@ class FilterableTable(QFrame):
         self._sync_units_table_column_widths()
         self._update_clear_filters_button()
 
-    def refresh_display(self) -> None:
+    def filterable_table_refresh(self) -> None:
         self.table.table_model.refresh_display()
-        self.table.resizeColumnsToContents()
         self._sync_units_table_column_widths()
+

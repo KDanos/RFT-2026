@@ -77,7 +77,6 @@ class PandasTableModel(QAbstractTableModel):
             value = round_value_to_decimal_points(
                 value, self.decimals_check_box, self.decimal_limit_spin
             )
-
             if role == Qt.ItemDataRole.DisplayRole:
                 return str(value)
             if role == Qt.ItemDataRole.UserRole:
@@ -112,6 +111,7 @@ class PandasTableModel(QAbstractTableModel):
     def refresh_display(self) -> None:
         if self.df.empty:
             return
+
         top_left = self.index(0, 0)
         bottom_right = self.index(
             self.rowCount() - 1,

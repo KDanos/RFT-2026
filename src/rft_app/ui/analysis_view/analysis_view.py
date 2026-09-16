@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSplitter, QVBoxLayout, QWidget, QHBoxLayout, QFrame
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from rft_app.project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from ui.filterable_table.filterable_table import FilterableTable
 from .view_sidebar import ViewSidebar
 from .graphical_frame import GraphicalFrame

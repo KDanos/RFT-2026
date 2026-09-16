@@ -62,10 +62,6 @@ def on_column_unit_change(
             updated.append(spec)
     view.column_specs = updated
 
-    # Refresh the graph is necessary
-
-
-
 def refresh_view_object_from_column_tree_selection(
         view: AnalysisView,
         analysis: AnalysisObject,
