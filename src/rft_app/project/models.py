@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 
 
+
 @dataclass
 class AnalysisObject:
     """Contains all the variables and objects generated, visualised and used in an analysis tab"""
@@ -34,6 +35,17 @@ class AnalysisView:
     df: pd.DataFrame = None
     column_specs: list[ColumnSpec] = field(default_factory=list)
     column_filters: dict[int, dict] = field(default_factory=dict)
+    annotations: list[StraightLineAnnotation] = field(default_factory=list)
+
+
+@dataclass
+class StraightLineAnnotation:
+    """Persisted straight-line annotation for charts in an AnalysisView."""
+    start_si: tuple[float, float]
+    end_si: tuple[float, float]
+    color: str
+    chart_id: str
+    line_id: str
 
 
 @dataclass(frozen=True)
