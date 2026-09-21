@@ -1,4 +1,5 @@
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtWidgets import QMenu
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -65,9 +66,21 @@ class DepthGradientChart(pg.PlotWidget):
                 self.all_lines.append(new_line)
         self._paint_all_lines()
 
+    def _built_plot_menu(self) -> QMenu:
+        menu = DepthMenuChart(self)
+        if self.vb_menu is not None:
+            self.vb_menu.setTitle("Plot view")
+            menu.addMenu(self.vb_menu)
+
+        ctrl = self.getPlotItem().ctrlMenu
+        if ctrl is not None:
+            ctrl.setTitle("Plot Options")
+            menu.addMenu(ctrl)
+        return menu
+
     def _connect_signals(self) -> None:
         self.customContextMenuRequested.connect(self._show_graph_menu)
-        self.scene().sigMouseClicked.connect(self._on_plot_click)
+        self.scene().sigMouseClicked.connect(self._on_plot_left_click)
         self.scene().sigMouseMoved.connect(self._on_plot_mouse_move)
 
     def _convert_array_to_user_units(
@@ -136,7 +149,46 @@ class DepthGradientChart(pg.PlotWidget):
         self.getAxis("left").enableAutoSIPrefix(False)
         self.getAxis("bottom").enableAutoSIPrefix(False)
 
-    def _on_plot_click(self, event) -> None:
+    def _get_line_starting_point(self, pos: QPoint) -> None:
+        mouse_point = self.getViewBox().mapSceneToView(pos)
+        x0, y0 = self.line_start
+        x1, y1 = mouse_point.x(), mouse_point.y()
+        self.line_end = x1, y1
+        self.preview_line.setData([x0, x1], [y0, y1])
+        self.preview_line.show()
+
+    def _is_near_line(
+            self,
+            line: StraightLine,
+            mouse_view: object,
+            px_tol: float = 10,
+            ) -> bool:
+        x_data, y_data = line.curve.getData()
+        if x_data is None or len(x_data) < 2:
+            return False
+
+        x0, y0 = float(x_data[0]), float(y_data[0])
+        x1, y1 = float(x_data[1]), float(y_data[1])
+        mx, my = float(mouse_view.x()), float(mouse_view.y())
+
+        dx, dy = x1 - x0, y1 - y0
+        length_sq = dx * dx + dy * dy
+        if length_sq == 0:
+            t = 0.0
+        else:
+            t = ((mx - x0) * dx + (my - y0) * dy) / length_sq
+            t = max(0.0, min(1.0, t))
+
+        nearest_x = x0 + t * dx
+        nearest_y = y0 + t * dy
+
+        vb = self.getViewBox()
+        p_mouse = vb.mapViewToScene(pg.Point(mx, my))
+        p_near = vb.mapViewToScene(pg.Point(nearest_x, nearest_y))
+        dist_px = ((p_mouse.x() - p_near.x()) ** 2 + (p_mouse.y() - p_near.y()) ** 2) ** 0.5
+        return dist_px <= px_tol
+
+    def _on_plot_left_click(self, event) -> None:
         if not self.draw_mode:
             return
 
@@ -157,15 +209,18 @@ class DepthGradientChart(pg.PlotWidget):
             self._end_draw_straigh_line()
 
     def _on_plot_mouse_move(self, pos: QPoint) -> None:
-        if not self.draw_mode or not self.line_start:
-            return
+        if self.draw_mode and self.line_start:
+            self._get_line_starting_point(pos)
 
-        mouse_point = self.getViewBox().mapSceneToView(pos)
-        x0, y0 = self.line_start
-        x1, y1 = mouse_point.x(), mouse_point.y()
-        self.line_end = x1, y1
-        self.preview_line.setData([x0, x1], [y0, y1])
-        self.preview_line.show()
+        mouse = self.getViewBox().mapSceneToView(pos)
+        for line in self.all_lines:
+            if self._is_near_line(line, mouse, px_tol=10):
+                # Avoid re-entering the hover state on every mouse move
+                if not line.hovering:
+                    line.on_hover(pos)
+            else:
+                if line.hovering:
+                    line.stop_hovering()
 
     def _paint_all_lines(self) -> None:
         for line in self.all_lines:
@@ -181,17 +236,17 @@ class DepthGradientChart(pg.PlotWidget):
         )
 
     def _show_graph_menu(self, pos: QPoint) -> None:
-        menu = DepthMenuChart(self)
+        scene_pos = self.mapToScene(pos)
+        mouse = self.getViewBox().mapSceneToView(scene_pos)
 
-        if self.vb_menu is not None:
-            self.vb_menu.setTitle("Plot view")
-            menu.addMenu(self.vb_menu)
-
-        ctrl = self.getPlotItem().ctrlMenu
-        if ctrl is not None:
-            ctrl.setTitle("Plot Options")
-            menu.addMenu(ctrl)
-
+        menu = None
+        
+        for line in self.all_lines:
+            if self._is_near_line(line, mouse):
+                menu = line.build_menu()
+                break
+        if menu is None:
+                menu = self._built_plot_menu()
         menu.exec(self.mapToGlobal(pos))
 
     #--------Public API--------

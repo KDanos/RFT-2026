@@ -325,14 +325,13 @@ class MainWindowKD(QMainWindow):
             df = dlg.imported_df
             column_specs = dlg.imported_column_specs
 
-            new_data_set_name = self.project.add_loaded_dataset(
+            self.project.add_loaded_dataset(
                 df,
                 column_specs,
                 dlg.imported_name,
                 info_log=dlg.info_log,
                 user_comment=(datetime.now(), dlg.user_comment)
             )
-            new_data_set = self.project.get_dataset_by_name(new_data_set_name)
 
             #Raise a "need to save flag" prior to exiting the project
             self.project.mark_modified()
