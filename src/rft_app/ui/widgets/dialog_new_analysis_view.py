@@ -33,6 +33,7 @@ class NewViewDialog(QDialog):
         self.new_view_name = ""
         self.df: pd.DataFrame | None = None
         self.column_specs: list[ColumnSpec] = []
+        self.result_view: AnalysisView | None = None
         self._has_existing_views = (
             analysis is not None and len(analysis.analysis_views) > 0
         )
@@ -143,6 +144,7 @@ class NewViewDialog(QDialog):
         #Create the new view instance
         new_view = self._create_new_view_instance()
         self.analysis.analysis_views.append(new_view)
+        self.result_view = new_view
         self.accept()
 
     def _on_create_empty(self) -> None:
@@ -156,6 +158,7 @@ class NewViewDialog(QDialog):
         self._make_name_unique()
         new_view = self._create_new_view_instance()
         self.analysis.analysis_views.append(new_view)
+        self.result_view = new_view
         self.accept()
 
     #--------Public API--------

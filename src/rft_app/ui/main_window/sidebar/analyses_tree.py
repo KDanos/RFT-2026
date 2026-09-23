@@ -7,9 +7,9 @@ from utilities import show_dataframe_table_dialog
 
 
 class AnalysesTree(QTreeWidget):
-    analysis_renamed = pyqtSignal()
+    analysis_renamed = pyqtSignal(AnalysisObject)
     analysis_deleted = pyqtSignal()
-    analysis_visibility_changed = pyqtSignal()
+    analysis_visibility_changed = pyqtSignal(object, object)  # (AnalysisObject | None, AnalysisView | None)
     new_view_requested = pyqtSignal(AnalysisObject)
 
     def __init__(
@@ -217,7 +217,7 @@ class AnalysesTree(QTreeWidget):
         analysis = top_level_item.data(0, Qt.ItemDataRole.UserRole)
         analysis.analysis_views.remove(view)
         self.project.mark_modified()
-        self.analysis_visibility_changed.emit()
+        self.analysis_visibility_changed.emit(analysis, None)
 
     def _hide_all_views(self, item: QTreeWidgetItem) -> None:
         # Drill to the top to get the analysis object
@@ -229,7 +229,7 @@ class AnalysesTree(QTreeWidget):
             view.is_visible = False
 
         self.project.mark_modified()
-        self.analysis_visibility_changed.emit()
+        self.analysis_visibility_changed.emit(analysis, None)
 
     def _hide_single_view(self, item: QTreeWidgetItem) -> None:
         view = item.data(0, Qt.ItemDataRole.UserRole)
@@ -237,7 +237,7 @@ class AnalysesTree(QTreeWidget):
             return
         view.is_visible = False
         self.project.mark_modified()
-        self.analysis_visibility_changed.emit()
+        self.analysis_visibility_changed.emit(view.analysis_object, None)
 
     def _on_context_menu(self, position: QPoint) -> None:
         item = self.itemAt(position)
@@ -278,13 +278,13 @@ class AnalysesTree(QTreeWidget):
     def _rename_analysis(self, item: QTreeWidgetItem) -> None:
         analysis = item.data(0, Qt.ItemDataRole.UserRole)
         analysis.name = item.text(0).strip()
-        self.analysis_renamed.emit()
+        self.analysis_renamed.emit(analysis)
         self.project.mark_modified()
 
     def _rename_view(self, item: QTreeWidgetItem) -> None:
         view = item.data(0, Qt.ItemDataRole.UserRole)
         view.name = item.text(0).strip()
-        self.analysis_visibility_changed.emit()
+        self.analysis_visibility_changed.emit(view.analysis_object, view)
         self.project.mark_modified()
 
     def _show_all_views(self, item: QTreeWidgetItem) -> None:
@@ -297,7 +297,7 @@ class AnalysesTree(QTreeWidget):
             view.is_visible = True
 
         self.project.mark_modified()
-        self.analysis_visibility_changed.emit()
+        self.analysis_visibility_changed.emit(analysis, None)
 
     def _show_data(self, item: QTreeWidgetItem) -> None:
         obj = item.data(0, Qt.ItemDataRole.UserRole)
@@ -316,7 +316,7 @@ class AnalysesTree(QTreeWidget):
             return
         view.is_visible = True
         self.project.mark_modified()
-        self.analysis_visibility_changed.emit()
+        self.analysis_visibility_changed.emit(view.analysis_object, view)
 
     def _start_rename_analysis(self, item: QTreeWidgetItem) -> None:
         if item.parent() is not None:

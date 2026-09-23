@@ -255,9 +255,20 @@ class AnalysisWorkspace(QFrame):
             if widget is not None:
                 widget.deleteLater()
 
-    def refresh_tabs_from_project(self) -> None:
-        """Rebuild tabs from project.analyses based on is_visible flag"""
-        current_analysis, current_view = self._capture_selection()
+    def refresh_tabs_from_project(
+        self,
+        target_analysis: AnalysisObject | None = None,
+        target_view: AnalysisView | None = None,
+        ) -> None:
+        """Rebuild tabs from project.analyses based on is_visible flag.
+
+        If target_analysis is given, select it (and target_view within it,
+        if given) after the rebuild. Otherwise the previous selection is
+        restored."""
+        if target_analysis is not None:
+            current_analysis, current_view = target_analysis, target_view
+        else:
+            current_analysis, current_view = self._capture_selection()
 
         self.clear()
         for analysis in self.project.analyses:

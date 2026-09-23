@@ -301,7 +301,7 @@ class MainWindowKD(QMainWindow):
         #Update the project actions
         self.project.mark_modified()
         self.project_sidebar.refresh_all_analyses_tree()
-        self.analysis_workspace.refresh_tabs_from_project()
+        self.analysis_workspace.refresh_tabs_from_project(analysis, new_analysis_view_obj)
 
     def _create_new_analysis_view(self, analysis: AnalysisObject) -> None:
         # Launch the dialog window for the creation of a new view object
@@ -312,7 +312,7 @@ class MainWindowKD(QMainWindow):
         # Update the project actions
         self.project.mark_modified()
         self.project_sidebar.refresh_all_analyses_tree()
-        self.analysis_workspace.refresh_tabs_from_project()
+        self.analysis_workspace.refresh_tabs_from_project(analysis, dlg.result_view)
 
     def _exit_application(self) -> None:
         if not self._confirm_discard_or_save_if_modified():
