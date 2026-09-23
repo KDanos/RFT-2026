@@ -30,7 +30,7 @@ class DepthMenuChart(QMenu):
 
     def _draw_straight_line(self) -> None:
         chart = self.parent()
-        chart.start_draw_straight_line()
+        chart.enter_draw_straight_line()
 
     #--------Public API--------
     # No public methods yet.

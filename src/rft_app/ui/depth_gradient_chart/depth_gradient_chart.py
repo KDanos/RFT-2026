@@ -79,7 +79,7 @@ class DepthGradientChart(pg.PlotWidget):
         return menu
 
     def _connect_signals(self) -> None:
-        self.customContextMenuRequested.connect(self._show_graph_menu)
+        self.customContextMenuRequested.connect(self._show_menu)
         self.scene().sigMouseClicked.connect(self._on_plot_left_click)
         self.scene().sigMouseMoved.connect(self._on_plot_mouse_move)
 
@@ -163,12 +163,15 @@ class DepthGradientChart(pg.PlotWidget):
             mouse_view: object,
             px_tol: float = 10,
             ) -> bool:
-        x_data, y_data = line.curve.getData()
-        if x_data is None or len(x_data) < 2:
-            return False
 
-        x0, y0 = float(x_data[0]), float(y_data[0])
-        x1, y1 = float(x_data[1]), float(y_data[1])
+        # Get the line end points and convert to view cordinates
+        p0, p1 = line.listPoints()
+        line.mapToView(p0)
+        line.mapToView(p1)
+
+        x0, y0 = p0.x(),p0.y()
+        x1, y1 = p1.x(), p1.y()
+        
         mx, my = float(mouse_view.x()), float(mouse_view.y())
 
         dx, dy = x1 - x0, y1 - y0
@@ -212,15 +215,15 @@ class DepthGradientChart(pg.PlotWidget):
         if self.draw_mode and self.line_start:
             self._get_line_starting_point(pos)
 
-        mouse = self.getViewBox().mapSceneToView(pos)
-        for line in self.all_lines:
-            if self._is_near_line(line, mouse, px_tol=10):
-                # Avoid re-entering the hover state on every mouse move
-                if not line.hovering:
-                    line.on_hover(pos)
-            else:
-                if line.hovering:
-                    line.stop_hovering()
+        # mouse = self.getViewBox().mapSceneToView(pos)
+        # for line in self.all_lines:
+        #     if self._is_near_line(line, mouse, px_tol=10):
+        #         near = self._is_near_line(line, mouse)
+        #         #Avoid entering the hovering state on every mouse move
+        #         if near and not line.hovering:
+        #             line.on_hover(pos)
+        #         elif not near and line.hovering:
+        #                 line.stop_hovering()
 
     def _paint_all_lines(self) -> None:
         for line in self.all_lines:
@@ -235,7 +238,7 @@ class DepthGradientChart(pg.PlotWidget):
             f"{self.x_axis}:{x:.3g} ({self.x_unit})"
         )
 
-    def _show_graph_menu(self, pos: QPoint) -> None:
+    def _show_menu(self, pos: QPoint) -> None:
         scene_pos = self.mapToScene(pos)
         mouse = self.getViewBox().mapSceneToView(scene_pos)
 
@@ -287,7 +290,7 @@ class DepthGradientChart(pg.PlotWidget):
         )
         self.addItem(scatter)
 
-    def start_draw_straight_line(self) -> None:
+    def enter_draw_straight_line(self) -> None:
         self.draw_mode = True
         self.line_start = None
         if self.preview_line:
