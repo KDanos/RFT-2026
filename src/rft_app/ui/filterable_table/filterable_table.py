@@ -129,14 +129,18 @@ class FilterableTable(QFrame):
         self.units_table.horizontalHeader().hide()
 
         for i in range(column_count):
-            quantity_key = self.column_specs[i].quantity_key
-            units_combo = UnitsComboBox(quantity_key, self.project)
+            spec = self.column_specs[i]
+            units_combo = UnitsComboBox(spec.quantity_key, self.project)
+            if spec.unit:
+                unit_idx = units_combo.findText(spec.unit)
+                if unit_idx >=0:
+                    units_combo.setCurrentIndex(unit_idx)
             units_combo.currentIndexChanged.connect(lambda _, idx=i: self._on_units_change(idx))
             self.units_table.setCellWidget(0, i, units_combo)
-            spec = self.column_specs[i]
-            self.column_specs[i] = ColumnSpec(
-                spec.name, spec.quantity_key, units_combo.currentText()
-            )
+            
+            # self.column_specs[i] = ColumnSpec(
+            #     spec.name, spec.quantity_key, units_combo.currentText()
+            # )
         self.table_layout.insertWidget(0, self.units_table)
 
         self.units_table.resizeRowsToContents()
