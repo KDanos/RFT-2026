@@ -1,7 +1,7 @@
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QWidget
 
-from ui.widgets.annotations_bar import AnnotationsBar
+from ui.annotations.annotations_bar import AnnotationsBar
 
 
 class DepthChartMenu(QMenu):

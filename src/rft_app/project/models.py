@@ -35,7 +35,10 @@ class AnalysisView:
     df: pd.DataFrame = None
     column_specs: list[ColumnSpec] = field(default_factory=list)
     column_filters: dict[int, dict] = field(default_factory=dict)
-    annotations: list[StraightLineAnnotation] = field(default_factory=list)
+    annotations: list[
+        StraightLineAnnotation
+        | RectAnnotation
+        ] = field(default_factory=list)
 
 
 @dataclass
@@ -46,6 +49,16 @@ class StraightLineAnnotation:
     color: str
     chart_id: str
     line_id: str
+
+
+@dataclass
+class RectAnnotation:
+    """Persisted rectangle annotation for charts in an AnalysisView."""
+    pos_si: tuple[float, float]
+    size_si: tuple[float, float]
+    color: str
+    chart_id: str
+    rect_id: str
 
 
 @dataclass(frozen=True)

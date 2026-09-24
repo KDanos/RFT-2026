@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QEvent, QPoint, QSize, Qt
-from PyQt6.QtWidgets import QButtonGroup, QDialog, QFrame, QHBoxLayout, QToolButton, QWidget
+from PyQt6.QtWidgets import QDialog, QFrame, QHBoxLayout, QToolButton, QWidget
 
 from ui import app_icon
 
@@ -47,8 +47,6 @@ class AnnotationsBar(QDialog):
     def _build_ui(self) -> None:
         self.main_layout = QHBoxLayout(self)
         self.main_layout.setContentsMargins(6, 6, 6, 6)
-        self.button_group = QButtonGroup(self)
-        self.button_group.setExclusive(True)
 
         self._define_buttons()
         self._position_self()
@@ -97,7 +95,6 @@ class AnnotationsBar(QDialog):
             btn.setFixedSize(self.BTN_SIZE)
             btn.setAutoRaise(True)
             btn.setCheckable(True)
-            self.button_group.addButton(btn)
             btn.setStyleSheet(self._FLAT_STYLE)
             self.main_layout.addWidget(btn)
 
@@ -112,10 +109,12 @@ class AnnotationsBar(QDialog):
 
     def _on_arrow_btn_toggled(self, checked: bool) -> None:
         if checked:
+            self._uncheck_other_tools(self.arrow_btn)
             self.parent().enter_draw_arrow()
 
     def _on_circle_btn_toggled(self, checked: bool) -> None:
         if checked:
+            self._uncheck_other_tools(self.circle_btn)
             self.parent().enter_draw_circle()
 
     def _on_close(self) -> None:
@@ -126,17 +125,17 @@ class AnnotationsBar(QDialog):
 
     def _on_line_btn_toggled(self, checked: bool) -> None:
         if checked:
+            self._uncheck_other_tools(self.line_btn)
             self.parent().enter_draw_straight_line()
-        # HOLD: if unchecked mid-draw (checked=False while chart.draw_mode), optionally cancel
-        # draw_mode / clear line_start and preview_line. Not needed while the tool stays on
-        # until _end_draw_straigh_line unchecks the button.
 
     def _on_square_btn_toggled(self, checked: bool) -> None:
         if checked:
+            self._uncheck_other_tools(self.square_btn)
             self.parent().enter_draw_square()
 
     def _on_text_btn_toggled(self, checked: bool) -> None:
         if checked:
+            self._uncheck_other_tools(self.text_btn)
             self.parent().enter_add_text()
 
     def _position_self(self) -> None:
@@ -149,11 +148,24 @@ class AnnotationsBar(QDialog):
         y = top_left.y() - self.height() - gap
         self.move(x, y)
 
+    def _uncheck_other_tools(self, active: QToolButton) -> None:
+        for btn in self.all_buttons:
+            if btn is not active and btn.isChecked():
+                btn.blockSignals(True)
+                btn.setChecked(False)
+                btn.blockSignals(False)
+
     def _v_sep(self) -> QFrame:
         sep = QFrame(self)
         sep.setFrameShape(QFrame.Shape.VLine)
         sep.setFrameShadow(QFrame.Shadow.Sunken)
         return sep
+
+    #--------Public API--------
+
+    def clear_tool_selection(self) -> None:
+        for btn in self.all_buttons:
+            btn.setChecked(False)
 
     def eventFilter(self, obj, event) -> bool:
         if obj is self.grip_box:
@@ -179,6 +191,3 @@ class AnnotationsBar(QDialog):
                 return True
 
         return super().eventFilter(obj, event)
-
-    #--------Public API--------
-    # No public methods yet.
