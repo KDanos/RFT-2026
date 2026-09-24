@@ -47,7 +47,7 @@ class StraightLine(pg.LineSegmentROI):
     #--------Private UI--------
 
     def _build_ui(self) -> None:
-        self.hoverPen = pg.mkPen(color=self.color, width=4, style=self.style)
+        self.hoverPen = pg.mkPen(color=self.color, width=3, style=self.style)
 
         handle_pen = pg.mkPen(color=self.color, width=2)
         self.handlePen = handle_pen

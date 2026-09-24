@@ -7,7 +7,7 @@ import pyqtgraph as pg
 from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from project.models import StraightLineAnnotation
-from ui.depth_gradient_chart.depth_chart_menu import DepthMenuChart
+from ui.depth_gradient_chart.depth_chart_menu import DepthChartMenu
 from ui.depth_gradient_chart.straight_line import StraightLine
 from units.units_normalisation import UREG, app_unit_to_pint, identify_si_storage_unit
 
@@ -34,6 +34,7 @@ class DepthGradientChart(pg.PlotWidget):
         self.vb_menu = None
         self.df: pd.DataFrame | None = None
         self.all_lines: list[StraightLine] = []
+        self.annotations_bar = None
 
         # Initialisation methods
         self._extract_quantity_and_units()
@@ -67,7 +68,7 @@ class DepthGradientChart(pg.PlotWidget):
         self._paint_all_lines()
 
     def _built_plot_menu(self) -> QMenu:
-        menu = DepthMenuChart(self)
+        menu = DepthChartMenu(self)
         if self.vb_menu is not None:
             self.vb_menu.setTitle("Plot view")
             menu.addMenu(self.vb_menu)
@@ -121,8 +122,13 @@ class DepthGradientChart(pg.PlotWidget):
             chart_id=self.chart_id,
             line_id=new_line.id,
         )
+        #Update the persistence variable
         self.view.annotations.append(to_save)
         self.project.mark_modified()
+
+        #Reset the button on the annotations bar
+        if self.annotations_bar is not None:
+            self.annotations_bar.line_btn.setChecked(False)
 
     def _extract_quantity_and_units(self) -> None:
         specs_by_name = {s.name: s for s in self.col_specs}
@@ -161,13 +167,13 @@ class DepthGradientChart(pg.PlotWidget):
             self,
             line: StraightLine,
             mouse_view: object,
-            px_tol: float = 10,
+            px_tol: float = 30,
             ) -> bool:
 
         # Get the line end points and convert to view cordinates
         p0, p1 = line.listPoints()
-        line.mapToView(p0)
-        line.mapToView(p1)
+        p0 =line.mapToView(p0)
+        p1 =line.mapToView(p1)
 
         x0, y0 = p0.x(),p0.y()
         x1, y1 = p1.x(), p1.y()
@@ -243,7 +249,6 @@ class DepthGradientChart(pg.PlotWidget):
         mouse = self.getViewBox().mapSceneToView(scene_pos)
 
         menu = None
-        
         for line in self.all_lines:
             if self._is_near_line(line, mouse):
                 menu = line.build_menu()
@@ -290,8 +295,23 @@ class DepthGradientChart(pg.PlotWidget):
         )
         self.addItem(scatter)
 
+    def enter_add_text(self)->None:
+        print (" I want to addd some text")
+    
     def enter_draw_straight_line(self) -> None:
         self.draw_mode = True
         self.line_start = None
         if self.preview_line:
             self.preview_line.hide()
+
+    def enter_draw_square(self)-> None: 
+        print ("I want to draw a square")
+
+    def enter_draw_circle(self)->None:
+        print (" I want to draw a circle")
+
+    def enter_draw_arrow(self)->None: 
+        print ("I want to draw an arrow")
+
+
+    
