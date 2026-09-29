@@ -6,13 +6,15 @@ from PyQt6.QtWidgets import QMenu
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
 
+from ui.analysis_view.new_fluid_dialog import NewFluidDialog
+from project import AnalysisObject, AnalysisView, ProjectDataManager
 from units import convert_from_normalised_to_user_units, normalise_from_user_units
 
 
 class StraightLine(pg.LineSegmentROI):
     def __init__(
             self,
-            parent: pg.PlotWidget | None = None,
+            parent: pg.PlotWidget,
             color: QColor | str = "black",
             style: Qt.PenStyle = Qt.PenStyle.DashLine,
             starting_point: tuple[float, float] | None = None,
@@ -20,16 +22,19 @@ class StraightLine(pg.LineSegmentROI):
             points_are_si: bool = False,
             ) -> None:
         # Set project variables
-        self.parent_chart = parent
+        self.parent_chart: pg.PlotWidget = parent
+        self.project: ProjectDataManager = self.parent_chart.project
+        self.view: AnalysisView = self.parent_chart.view
+        self.analysis: AnalysisObject = self.view.analysis_object
 
         # Set module variables
-        self.color = color
-        self.style = style
-        self.starting_point = starting_point
-        self.end_point = end_point
+        self.color: QColor | str = color
+        self.style: Qt.PenStyle = style
+        self.starting_point: tuple[float, float] | None = starting_point
+        self.end_point: tuple[float, float] | None = end_point
         self.is_visible: bool = True
         self.pen = pg.mkPen(color=self.color, width=2, style=self.style)
-        self.id = str(uuid.uuid4())
+        self.id: str = str(uuid.uuid4())
 
         super().__init__(
             positions=((0.0, 0.0), (0.0, 0.0)),
@@ -73,7 +78,23 @@ class StraightLine(pg.LineSegmentROI):
         self.actionDeleteLine.triggered.connect(self._delete_self)
 
     def _convert_line_to_fluid(self) -> None:
-        pass
+        dx = self.starting_point[0] - self.end_point[0]
+        dy = self.starting_point[1] - self.end_point[1]
+        if dy == 0:
+            raise ValueError(
+                "Cannot compute fluid gradient: line has zero depth span"
+            )
+        gradient = dx / dy
+
+        dlg = NewFluidDialog(
+            self.parent_chart,
+            self.project,
+            self.view,
+            gradient=gradient,
+            gradient_in_SI=True,
+        )
+        dlg.exec()
+
 
     def _convert_viewbox_cordinates_to_SI(self) -> None:
         x_SI = normalise_from_user_units(

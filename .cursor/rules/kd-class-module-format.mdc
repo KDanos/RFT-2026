@@ -26,6 +26,26 @@ Do not alphabetize across the whole class; section first, then alpha within each
 
 No heavy logic in `__init__` beyond assignment and those init calls.
 
+## Instance attribute type hints in `__init__`
+
+Annotate **every** `self.*` assignment under `# Set project variables` and `# Set module variables` with an explicit type on the attribute (not only on the `__init__` parameter).
+
+Use the concrete domain/UI type when known (e.g. `ProjectDataManager`, `AnalysisObject`, `AnalysisView`, `list[ColumnSpec]`):
+
+```python
+        # Set project variables
+        self.project: ProjectDataManager = project
+        self.col_specs: list[ColumnSpec] = col_specs
+        self.analysis: AnalysisObject = self.parent().analysis
+        self.view: AnalysisView = self.parent().analysis_view_object
+
+        # Set module variables
+        self.foo: int = 0
+        self.items: list[str] = []
+```
+
+Do **not** leave bare assignments such as `self.project = project` when the type is known. Prefer `Type | None` when the value may be `None`.
+
 ## Return type hints
 
 - Annotate every method, including `__init__` → `-> None`
@@ -73,10 +93,10 @@ class SomeWidget(...):
         super().__init__(parent)
 
         # Set project variables
-        self.project = ...
+        self.project: ProjectDataManager = ...
 
         # Set module variables
-        self._state = ...
+        self._state: dict[str, str] = ...
 
         # Initialisation methods
         self._build_ui()
@@ -97,4 +117,4 @@ class SomeWidget(...):
 ## How to invoke
 
 User may say: "apply KD class module format" or "reformat to my class module format".
-Reorder methods, add missing return annotations, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.
+Reorder methods, add missing return annotations, annotate `__init__` instance attributes, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.

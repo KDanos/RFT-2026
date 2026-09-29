@@ -9,17 +9,17 @@ from ui.depth_gradient_chart.depth_gradient_chart import DepthGradientChart
 class GraphicalFrame(QFrame):
     def __init__(
             self,
-            parent: QWidget | None = None,
-            project: ProjectDataManager | None = None,
-            col_specs: list[ColumnSpec] | None = None,
-            view: AnalysisView | None = None,
+            parent: QWidget,
+            project: ProjectDataManager,
+            col_specs: list[ColumnSpec],
+            view: AnalysisView,
             ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.project = project
-        self.view = view
-        self.col_specs = col_specs
+        self.project: ProjectDataManager = project
+        self.view: AnalysisView = view
+        self.col_specs: list[ColumnSpec] = col_specs
 
         # Set module variables
         # (none)
@@ -38,13 +38,13 @@ class GraphicalFrame(QFrame):
         self.pressure_layout = QVBoxLayout(self.pressure_frame)
         self.pressure_layout.setContentsMargins(0, 0, 0, 0)
         self.pressure_chart = DepthGradientChart(
-            self.pressure_frame,
-            CANONICAL_FORMATION_PRESSURE,
-            self.col_specs,
-            "pressure_plot",
-            self.view,
+            parent=self.pressure_frame,
+            view=self.view,
+            project=self.project,
+            x_axis=CANONICAL_FORMATION_PRESSURE,
+            col_specs=self.col_specs,
+            chart_id="pressure_plot",
         )
-        self.pressure_chart.project = self.project
         self.pressure_layout.addWidget(self.pressure_chart)
 
         # CPI pane (stretch 1) — placeholder until CPI chart is designed
@@ -61,13 +61,13 @@ class GraphicalFrame(QFrame):
         self.xs_pressure_layout = QVBoxLayout(self.xs_pressure_frame)
         self.xs_pressure_layout.setContentsMargins(0, 0, 0, 0)
         self.xs_pressure_chart = DepthGradientChart(
-            self.xs_pressure_frame,
-            CANONICAL_EXCESS_PRESSURE,
-            self.col_specs,
-            "xs_pressure_plot",
-            self.view,
+            parent=self.xs_pressure_frame,
+            view=self.view,
+            project=self.project,
+            x_axis=CANONICAL_EXCESS_PRESSURE,
+            col_specs=self.col_specs,
+            chart_id="xs_pressure_plot",
         )
-        self.xs_pressure_chart.project = self.project
         self.xs_pressure_layout.addWidget(self.xs_pressure_chart)
         self.xs_pressure_chart.setVisible(False)
 
@@ -77,11 +77,11 @@ class GraphicalFrame(QFrame):
 
         for frame in (self.pressure_frame, self.cpi_frame, self.xs_pressure_frame):
             frame.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding,
             )
         for chart in (self.pressure_chart, self.cpi_chart, self.xs_pressure_chart):
             chart.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding,
             )
 
     #--------Public API--------

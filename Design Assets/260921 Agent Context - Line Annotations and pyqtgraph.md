@@ -46,11 +46,12 @@ class MyClass(BaseClass):
         super().__init__(...)
 
         # Set project variables
-        self.project = ...
-        self.view = ...
+        self.project: ProjectDataManager = ...
+        self.view: AnalysisView = ...
+        self.analysis: AnalysisObject = ...
 
         # Set module variables
-        self.foo = ...
+        self.foo: int = ...
 
         # Initialisation methods
         self._build_ui()
@@ -70,6 +71,7 @@ class MyClass(BaseClass):
 
 **Rules:**
 - All methods have full type hints including `-> None`.
+- Every `self.*` assignment under `# Set project variables` and `# Set module variables` in `__init__` must include an explicit attribute type annotation (e.g. `self.project: ProjectDataManager = project`). Use `Type | None` when the value may be `None`.
 - No `print()`, `breakpoint()`, or debug comments anywhere.
 - No query comments (e.g. `# what does this do?`).
 - Method signatures that exceed one line use the multi-line format with the closing `)` on its own line.

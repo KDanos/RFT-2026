@@ -7,13 +7,15 @@
 
 ## 1. Response Format Rules (MANDATORY — follow exactly)
 
-These are **two different modes**. Do not conflate them. The user will say which to use. When in doubt, default to **Focused** mode.
+These are **three different modes**. Do not conflate them. The user will say which to use. When in doubt, default to **Focused** mode.
+
+Canonical copy for the agent also lives in `.cursor/rules/kd-response-formats.mdc` (`alwaysApply: true`).
 
 ### Learning context (always apply)
 - This is a **learning project**. The user is learning programming, Python, PyQt, and how to build a real application.
 - They have been programming for only a few months; this is their first real project.
 - They need space to think through and resolve problems themselves so they can develop skill.
-- Support that process: do not take over implementation unless the active mode requires it (especially **"I Am Tired"**).
+- Support that process: do not take over implementation unless the active mode requires it (especially **"I Am Tired"** or stepped builds under **Modular Build**).
 
 ### "I Am Tired" mode
 Use when the user cannot think through the problem and needs a clear, correct answer handed to them.
@@ -28,6 +30,13 @@ Use when the user is thinking through the problem and wants room to resolve it t
 - Ignore peripheral elements, extra clarifications, and additional steps.
 - **Do not provide code** — answer queries and clarifications in prose so the user can reason and implement.
 - No preamble that restates the problem; no unsolicited suggestions.
+
+### Modular Build Format
+Use when the user wants to build a feature **one operation at a time** along the UX or data path.
+- Deliver **one step only**: the next real operation (not alphabetical helpers, not a full class dump).
+- Each step is a **complete paste-ready snippet** plus **exact file/class/location**.
+- Stop after each step until the user continues.
+- Order by operation sequence (e.g. grab handle → angle → corners → persist), not by file layout.
 
 ### Normal Mode
 - Full explanations and suggestions permitted.
@@ -70,8 +79,9 @@ class MyClass(BaseClass):
         super().__init__(...)
 
         # Set project variables
-        self.project = project
-        self.view = view
+        self.project: ProjectDataManager = project
+        self.view: AnalysisView = view
+        self.analysis: AnalysisObject = self.parent().analysis
 
         # Set module variables
         self.foo: int = 0
@@ -94,6 +104,7 @@ class MyClass(BaseClass):
 
 **Hygiene rules (enforced before every commit):**
 - All methods have full type hints including `-> None` (or the correct return type).
+- Every `self.*` assignment under `# Set project variables` and `# Set module variables` in `__init__` must include an explicit attribute type annotation (e.g. `self.project: ProjectDataManager = project`, `self.analysis: AnalysisObject = ...`). Do not leave bare `self.project = project` when the type is known; use `Type | None` when the value may be `None`.
 - No `print()`, `breakpoint()`, or debug-timer lines in committed code.
 - No query comments (e.g., `# what does this do?`, `# is this correct?`).
 - Signals are connected with `connect(self._method)` — **never** `connect(self._method())` (the latter calls the method immediately and passes its return value, usually `None`, to `connect`, which crashes).

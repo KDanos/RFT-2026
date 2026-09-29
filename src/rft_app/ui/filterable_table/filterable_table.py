@@ -7,6 +7,7 @@ from project import ColumnSpec, ProjectDataManager
 from ui import app_icon
 from ui.filterable_table.custom_table_view import CustomTableView
 from ui.widgets.table_widgets import UnitsComboBox
+from units import STANDARD_QUANTITIES
 
 import pandas as pd
 
@@ -130,17 +131,18 @@ class FilterableTable(QFrame):
 
         for i in range(column_count):
             spec = self.column_specs[i]
+            quantity = STANDARD_QUANTITIES.get(spec.quantity_key)
+            if quantity is None or not quantity.is_numeric:
+                continue
             units_combo = UnitsComboBox(spec.quantity_key, self.project)
             if spec.unit:
                 unit_idx = units_combo.findText(spec.unit)
-                if unit_idx >=0:
+                if unit_idx >= 0:
                     units_combo.setCurrentIndex(unit_idx)
-            units_combo.currentIndexChanged.connect(lambda _, idx=i: self._on_units_change(idx))
+            units_combo.currentIndexChanged.connect(
+                lambda _, idx=i: self._on_units_change(idx)
+            )
             self.units_table.setCellWidget(0, i, units_combo)
-            
-            # self.column_specs[i] = ColumnSpec(
-            #     spec.name, spec.quantity_key, units_combo.currentText()
-            # )
         self.table_layout.insertWidget(0, self.units_table)
 
         self.units_table.resizeRowsToContents()

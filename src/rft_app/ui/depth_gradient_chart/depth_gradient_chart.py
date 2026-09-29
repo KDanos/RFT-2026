@@ -5,7 +5,7 @@ import pandas as pd
 import pyqtgraph as pg
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
-from project.canonical_names import CANONICAL_SURFACE_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from project.models import RectAnnotation, StraightLineAnnotation
 from ui.depth_gradient_chart.depth_chart_menu import DepthChartMenu
 from ui.depth_gradient_chart.rectangle_annotation import RectangleAnnotation
@@ -22,22 +22,23 @@ class DepthGradientChart(pg.PlotWidget):
 
     def __init__(
             self,
-            parent: QWidget | None = None,
+            parent: QWidget,
+            view: AnalysisView,
+            project: ProjectDataManager,
             x_axis: str = "",
             col_specs: list[ColumnSpec] | None = None,
             chart_id: str = "",
-            view: AnalysisView | None = None,
             ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.view = view
-        self.project: ProjectDataManager | None = None
+        self.view: AnalysisView = view
+        self.project: ProjectDataManager = project
 
         # Set module variables
-        self.x_axis = x_axis
-        self.col_specs = col_specs
-        self.chart_id = chart_id
+        self.x_axis: str = x_axis
+        self.col_specs: list[ColumnSpec] | None = col_specs
+        self.chart_id: str = chart_id
         self.vb_menu = None
         self.df: pd.DataFrame | None = None
         self.all_lines: list[StraightLine] = []
@@ -222,7 +223,7 @@ class DepthGradientChart(pg.PlotWidget):
 
         y_label = f"{CANONICAL_VERTICAL_DEPTH} ({self.y_unit})"
         self.setLabel("left", y_label)
-        x_label = f"{CANONICAL_SURFACE_PRESSURE} ({self.x_unit})"
+        x_label = f"{CANONICAL_FORMATION_PRESSURE} ({self.x_unit})"
         self.setLabel("bottom", x_label)
 
         self.getAxis("left").enableAutoSIPrefix(False)

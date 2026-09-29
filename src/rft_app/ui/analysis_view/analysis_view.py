@@ -18,17 +18,17 @@ import pandas as pd
 class AnalysisViewWidget(QWidget):
     def __init__(
             self,
-            parent: QWidget | None = None,
-            project: ProjectDataManager | None = None,
-            analysis: AnalysisObject | None = None,
-            analysis_view_object: AnalysisView | None = None,
+            parent: QWidget,
+            project: ProjectDataManager,
+            analysis: AnalysisObject,
+            analysis_view_object: AnalysisView,
             ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.project = project
-        self.analysis = analysis
-        self.view = analysis_view_object
+        self.project: ProjectDataManager = project
+        self.analysis: AnalysisObject = analysis
+        self.view: AnalysisView = analysis_view_object
 
         # Set module variables
         # (none)
