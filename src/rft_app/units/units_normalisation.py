@@ -16,6 +16,8 @@ SI_STORAGE_BY_QUANTITY = {
     "mobility": "m²/(Pa.s)",
     "energy": "J",
     "force": "N",
+    "pressure_gradient": "Pa/m",
+    "temperature_gradient": "K/m",
     # Non-Pint / no storage unit
     "text": "",
     "well": "",
@@ -82,6 +84,19 @@ APP_UNIT_TO_PINT: dict[str, str] = {
     "N": "newton",
     "lbf": "pound_force",
     "dyne": "dyne",
+    # fluid / pressure gradient (pressure per length)
+    "Pa/m": "pascal / meter",
+    "psi/m": "psi / meter",
+    "psi/ft": "psi / foot",
+    "bar/m": "bar / meter",
+    "bar/ft": "bar / foot",
+    # temperature gradient (use delta scales, not absolute °C/°F)
+    "K/m": "kelvin / meter",
+    "K/ft": "kelvin / foot",
+    "°C/m": "delta_degC / meter",
+    "°C/ft": "delta_degC / foot",
+    "°F/m": "delta_degF / meter",
+    "°F/ft": "delta_degF / foot",
 }
 
 #Function to convert the app units to pint units, using APP_UNIT_TO_PINT dictionary above

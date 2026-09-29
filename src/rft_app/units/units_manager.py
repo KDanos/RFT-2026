@@ -55,6 +55,13 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
         symbols=("m",),
         is_numeric = True,
     ),
+    "mobility": QuantityType(
+        key="mobility",
+        label="Mobility",
+        units=("m²/(Pa.s)", "D/P", "mD/cP"),
+        symbols=("λ",),
+        is_numeric=True,
+    ),
     "permeability": QuantityType(
         key="permeability",
         label="Permeability",
@@ -69,12 +76,33 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
         symbols=("P",),
         is_numeric = True,
     ),
+    "pressure_gradient": QuantityType(
+        key="pressure_gradient",
+        label="Pressure Gradient",
+        units=("Pa/m", "psi/m", "psi/ft", "bar/m", "bar/ft"),
+        symbols=("∇P",),
+        is_numeric=True,
+    ),
     "temperature": QuantityType(
         key="temperature",
         label="Temperature",
         units=("K", "°C", "°F", "°R"),
         symbols=("T",),
         is_numeric = True,
+    ),
+    "temperature_gradient": QuantityType(
+        key="temperature_gradient",
+        label="Temperature Gradient",
+        units=("K/m", "K/ft", "°C/m", "°C/ft", "°F/m", "°F/ft"),
+        symbols=("∇T",),
+        is_numeric=True,
+    ),
+    "text": QuantityType(
+        key="text",
+        label="Text",
+        units=(),
+        symbols=(),
+        is_numeric=False,
     ),
     "viscosity": QuantityType(
         key="viscosity",
@@ -97,26 +125,12 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
         symbols=("V",),
         is_numeric = True,
     ),
-    "mobility": QuantityType(
-        key = "mobility",
-        label = "Mobility",
-        units = ("m²/(Pa.s)","D/P","mD/cP"),
-        symbols = ("λ",),
-        is_numeric = True,
-    ),
-    "text": QuantityType(
-        key = "text",
-        label = "Text",
-        units = (),
-        symbols = (),
-        is_numeric = False,
-    ),
     "well": QuantityType(
         key="well",
         label="Well",
         units=(),
         symbols=(),
-        is_numeric = False,
+        is_numeric=False,
     ),
 }
 
@@ -142,6 +156,8 @@ SI_UNITS = UnitSystem(
         "permeability": "m²",
         "viscosity": "Pa·s",
         "mobility": "m²/(Pa.s)",
+        "pressure_gradient": "Pa/m",
+        "temperature_gradient": "K/m",
         "text": "",
         "well": "",
     },
@@ -163,8 +179,10 @@ METRIC_UNITS = UnitSystem(
         "permeability": "D",
         "viscosity": "P",
         "mobility": "D/P",
+        "pressure_gradient": "bar/m",
+        "temperature_gradient": "°C/m",
         "text": "",
-        "well":"",
+        "well": "",
     },
 )
 
@@ -184,8 +202,10 @@ FIELD_UNITS = UnitSystem(
         "permeability": "mD",
         "viscosity": "cP",
         "mobility": "mD/cP",
+        "pressure_gradient": "psi/ft",
+        "temperature_gradient": "°F/ft",
         "text": "",
-        "well":"",
+        "well": "",
     },
 )
 
@@ -205,8 +225,10 @@ IMPERIAL_UNITS = UnitSystem(
         "permeability": "mD",
         "viscosity": "cP",
         "mobility": "mD/cP",
+        "pressure_gradient": "psi/ft",
+        "temperature_gradient": "°F/ft",
         "text": "",
-        "well":"",
+        "well": "",
     },
 )
 
