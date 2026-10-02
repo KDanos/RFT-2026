@@ -24,7 +24,11 @@ class AnalysesTree(QTreeWidget):
         self.project = project
 
         # Set module variables
-        # (none)
+        self.project_depth_unit: str = self.project.current_unit_system.units_by_quantity["length"]
+        self.project_pressure_unit: str = self.project.current_unit_system.units_by_quantity["pressure"]
+        self.project_pressure_gradient_unit: str = (
+            self.project.current_unit_system.units_by_quantity["pressure_gradient"]
+        )
 
         # Initialisation methods
         self.setHeaderLabel("Analyses")
@@ -85,6 +89,40 @@ class AnalysesTree(QTreeWidget):
             #Displayed dataframe
             #hold, not sure what this represents yet
 
+            # Fluids
+            fluids_node = QTreeWidgetItem(["Fluids:"])
+            top_level.addChild(fluids_node)
+            for fluid in analysis.fluids:
+                fluid_item = QTreeWidgetItem([fluid.name])
+                fluids_node.addChild(fluid_item)
+                            
+                fluid_type =QTreeWidgetItem([fluid.type])
+                fluid_item.addChild(fluid_type)
+                
+                if fluid.gradient_si is not None:
+                    gradient = fluid.values_in_project_units(
+                        self.project,
+                        "pressure_gradient", 
+                        fluid.gradient_si)
+                    gradient_text = f"{gradient:.3} [{self.project_pressure_gradient_unit}]"
+                    gradient_item = QTreeWidgetItem([gradient_text])
+                    fluid_item.addChild(gradient_item)
+
+                if fluid.zero_pressure_depth_si is not None:
+                    zero_depth = fluid.values_in_project_units(
+                        self.project, 
+                        "depth",
+                        fluid.zero_pressure_depth_si
+                    )
+                    zero_depth_text = f"0 pressure at {zero_depth:.3} [{self.project_depth_unit}"
+                    fluid_item.addChild(QTreeWidgetItem([zero_depth_text]))
+                    
+                contact_item = QTreeWidgetItem(["Underlying Contact"])
+                fluid_item.addChild (contact_item)
+            
+                
+
+            
             #Analysis frame
             view_node = QTreeWidgetItem(["Analysis Views:"])
             top_level.addChild(view_node)

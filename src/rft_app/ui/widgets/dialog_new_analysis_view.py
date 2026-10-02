@@ -37,6 +37,7 @@ class NewViewDialog(QDialog):
         self._has_existing_views = (
             analysis is not None and len(analysis.analysis_views) > 0
         )
+        
 
         # Initialisation methods
         self._build_ui()

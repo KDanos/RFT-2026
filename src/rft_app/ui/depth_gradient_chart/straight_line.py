@@ -1,12 +1,19 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ui.analysis_view import AnalysisViewWidget
+
 import uuid
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction, QColor, QCursor
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtWidgets import QMenu, QMessageBox
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
-
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
+
+
+
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from units import convert_from_normalised_to_user_units, normalise_from_user_units
 
@@ -35,11 +42,15 @@ class StraightLine(pg.LineSegmentROI):
         self.is_visible: bool = True
         self.pen = pg.mkPen(color=self.color, width=2, style=self.style)
         self.id: str = str(uuid.uuid4())
-
         super().__init__(
             positions=((0.0, 0.0), (0.0, 0.0)),
             pen=self.pen,
         )
+        from ui.analysis_view import AnalysisViewWidget
+        w = self.parent_chart
+        while w is not None and not isinstance(w, AnalysisViewWidget):
+            w = w.parent()
+        self.view_widget: AnalysisViewWidget | None = w
 
         # Initialisation methods
         self._build_ui()
@@ -69,7 +80,7 @@ class StraightLine(pg.LineSegmentROI):
             self._install_handle_hover_guard(handle)
 
         self._set_handles_visibility(False)
-
+    
     def _connect_signals(self) -> None:
         self.sigRegionChangeStarted.connect(self._on_region_change_started)
         self.sigRegionChangeFinished.connect(self._on_region_change_finished)
@@ -78,23 +89,34 @@ class StraightLine(pg.LineSegmentROI):
         self.actionDeleteLine.triggered.connect(self._delete_self)
 
     def _convert_line_to_fluid(self) -> None:
-        dx = self.starting_point[0] - self.end_point[0]
-        dy = self.starting_point[1] - self.end_point[1]
-        if dy == 0:
-            raise ValueError(
-                "Cannot compute fluid gradient: line has zero depth span"
+        # Check if a New Fluid Dialog is already open
+        if self.view_widget is not None and self.view_widget.new_fluid_dialog:
+            QMessageBox.critical(
+                self.parent_chart,
+                "New Fluid Dialog Already Open",
+                """An instacne of a New Fluid Dialog Window is already open for this view. 
+                \nPLease close that one to proceed.""",
             )
-        gradient = dx / dy
+            return
+
+        gradient = self.calculate_line_gradient()
 
         dlg = NewFluidDialog(
             self.parent_chart,
             self.project,
             self.view,
-            gradient=gradient,
+            pressure_gradient=gradient,
             gradient_in_SI=True,
+            base_line=self,
         )
-        dlg.exec()
-
+        # Assign the dialog window to the view widget to avoid having dublicate windows open at the same time
+        if self.view_widget is not None:
+            self.view_widget.new_fluid_dialog = dlg
+            # dlg.fluid_created.connect(self.view_widget.refresh_fluid_ui)
+            dlg.finished.connect(
+                lambda: setattr(self.view_widget, "new_fluid_dialog", None)
+            )
+        dlg.show()
 
     def _convert_viewbox_cordinates_to_SI(self) -> None:
         x_SI = normalise_from_user_units(
@@ -208,6 +230,24 @@ class StraightLine(pg.LineSegmentROI):
         menu.addAction(self.actionDuplicateLine)
         menu.addAction(self.actionDeleteLine)
         return menu
+
+    def calculate_line_gradient(self) -> float:
+        p0, p1 = self.listPoints()
+        p0 = self.mapToView(p0)
+        p1 = self.mapToView(p1)
+
+        dx = p0.x() - p1.x()
+        dy = p0.y() - p1.y()
+        if dy == 0:
+            raise ValueError(
+                "Cannot compute fluid gradient: line has zero depth span"
+            )
+
+        # Convert to SI
+        dx = normalise_from_user_units(self.x_unit, self.x_quantity_key, dx)
+        dy = normalise_from_user_units(self.y_unit, self.y_quantity_key, dy)
+
+        return dx / dy
 
     def extract_units_and_quantities(self) -> None:
         parent = self.parent_chart

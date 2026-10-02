@@ -10,12 +10,26 @@ When creating or reformatting a class in this project, follow this layout.
 
 ## Order
 
-1. Optional class attributes / `pyqtSignal`s
+1. **Class signals / class attributes** — `pyqtSignal`s and other class-level attrs (before any methods)
 2. `__init__` first among methods
 3. `#--------Private UI--------` — private `_` methods, alphabetical by name
 4. `#--------Public API--------` — public methods, alphabetical by name
 
 Do not alphabetize across the whole class; section first, then alpha within each section.
+
+## Class signals
+
+Declare Qt signals as **class attributes** (not assigned in `__init__`), immediately under the class line and before `__init__`. Name them for what happened (`fluid_created`, `analysis_renamed`), not for the slot that will listen.
+
+```python
+class NewFluidDialog(QDialog):
+    fluid_created = pyqtSignal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        ...
+```
+
+Multiple signals stay in this block; keep them readable (one per line). Do not put `pyqtSignal(...)` calls inside `__init__`.
 
 ## `__init__` body (always this order)
 
@@ -89,6 +103,9 @@ Do **not** align the closing `)` with `def`:
 
 ```python
 class SomeWidget(...):
+    # Class signals / class attributes
+    something_changed = pyqtSignal()
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-
 from typing import Any
 
 import pandas as pd
 
+from project.fluids_model import Fluid
 
 
 @dataclass
@@ -100,16 +101,4 @@ class DataSetLogEntry:
     reason: str | None = None
 
 
-@dataclass
-class Fluid:
-    """An interpreted fluid in the reservoir"""
-    name: str
-    type: FluidType
 
-
-@dataclass
-class FluidType:
-    """Standard fluid types available for selection in the project"""
-    name: str
-    density: float
-    color: str

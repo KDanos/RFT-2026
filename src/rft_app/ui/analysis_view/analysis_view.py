@@ -7,6 +7,7 @@ from project.canonical_names import (
     CANONICAL_FORMATION_PRESSURE,
     CANONICAL_VERTICAL_DEPTH,
 )
+from ui.analysis_view.new_fluid_dialog import NewFluidDialog
 from ui.filterable_table.filterable_table import FilterableTable
 from .analysis_view_data_manager import refresh_view_object_from_column_tree_selection
 from .graphical_frame import GraphicalFrame
@@ -31,7 +32,7 @@ class AnalysisViewWidget(QWidget):
         self.view: AnalysisView = analysis_view_object
 
         # Set module variables
-        # (none)
+        self.new_fluid_dialog: NewFluidDialog | None = None
 
         # Initialisation methods
         self._build_ui()
