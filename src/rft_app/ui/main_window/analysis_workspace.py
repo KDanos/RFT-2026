@@ -1,20 +1,25 @@
-from PyQt6.QtCore import QSignalBlocker
+from PyQt6.QtCore import QObject, QSignalBlocker
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget, QTabWidget
 
+
 from project import AnalysisObject, AnalysisView, ProjectDataManager
+from ui.main_window.signal_collection_protocol import SignalCoordinator
 from ui.analysis_view import AnalysisViewWidget
 
 
 class AnalysisWorkspace(QFrame):
     def __init__(
         self,
-        project: ProjectDataManager | None,
-        parent=None,
+        parent:QObject,
+        project: ProjectDataManager,
+        signal_coordinator:SignalCoordinator,
         ) -> None:
         super().__init__(parent)
 
         # Set project variables
+        
         self.project = project
+        self.signal_coordinator = signal_coordinator
 
         # Set module variables
         self._current_analysis: AnalysisObject | None = None
@@ -235,6 +240,7 @@ class AnalysisWorkspace(QFrame):
             project=self.project,
             analysis=analysis,
             analysis_view_object=view,
+            signal_coordinator= self.signal_coordinator,
         )
 
         idx = analysis_tab.addTab(widget, view.name)

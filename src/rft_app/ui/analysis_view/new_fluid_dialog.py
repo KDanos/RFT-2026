@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from project.fluids_model import STANDARD_FLUIDS, Fluid, guess_fluid_type_from_psi_ft
+from ui.main_window.signal_collection_protocol import SignalCoordinator
 from units import convert_from_normalised_to_user_units
 from ui.widgets import UnitsComboBox
 from utilities import unique_name
@@ -27,16 +28,18 @@ if TYPE_CHECKING:
 
 class NewFluidDialog(QDialog):
     # Class Signals
-    fluid_created = pyqtSignal()
+    new_fluid_created = pyqtSignal()
 
     def __init__(
             self,
             parent: QWidget,
             project: ProjectDataManager,
             view: AnalysisView,
+            signal_coordinator:SignalCoordinator,
             pressure_gradient: float | None = None,
             gradient_in_SI: bool = False,
             base_line: StraightLine | None = None,
+            
             ) -> None:
         super().__init__(parent)
 
@@ -44,6 +47,9 @@ class NewFluidDialog(QDialog):
         self.project: ProjectDataManager = project
         self.view: AnalysisView = view
         self.analysis: AnalysisObject = self.view.analysis_object
+
+        # Signal Coordinator
+        self.signal_coordinator:SignalCoordinator =signal_coordinator
 
         # Set module variables
         self.pressure_gradient: float | None = pressure_gradient
@@ -145,6 +151,8 @@ class NewFluidDialog(QDialog):
         if self.base_line:
             self.base_line.sigRegionChanged.connect(self._update_fluid_info_from_base_line)
 
+        self.new_fluid_created.connect(self.signal_coordinator.on_fluids_changed)
+    
     def _on_accept(self) -> None:
         self._check_name_uniqueness()
         name = self.name_line_edit.text().strip()
@@ -157,7 +165,7 @@ class NewFluidDialog(QDialog):
         )
         self.analysis.fluids.append(new_fluid)
         self.project.mark_modified()
-        self.fluid_created.emit()
+        self.new_fluid_created.emit()
         self.accept()
 
     def _on_finished(self) -> None:

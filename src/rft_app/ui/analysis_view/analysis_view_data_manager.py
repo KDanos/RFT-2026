@@ -68,6 +68,7 @@ def refresh_view_object_from_column_tree_selection(
         project: ProjectDataManager,
         selected_columns: list[str],
         ) -> None:
+    
     units_by_name = {s.name: s.unit for s in view.column_specs}
     new_df, new_col_specs = build_view_df_and_col_specs_from_column_selection(
         analysis.analysis_dataset.dataframe,

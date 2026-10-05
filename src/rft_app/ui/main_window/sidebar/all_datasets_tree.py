@@ -224,7 +224,7 @@ class AllDataSetsTree(QTreeWidget):
 
     #--------Public API--------
 
-    def reload_from_project(self, dataset_list:list[DataSet]|None = None) -> None:
+    def refresh_self(self, dataset_list:list[DataSet]|None = None) -> None:
         if dataset_list is not None:
             self.dataset_list = dataset_list #re-bind after set-project/open
         

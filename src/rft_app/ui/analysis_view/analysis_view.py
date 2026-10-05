@@ -7,6 +7,7 @@ from project.canonical_names import (
     CANONICAL_FORMATION_PRESSURE,
     CANONICAL_VERTICAL_DEPTH,
 )
+from ui.main_window.signal_collection_protocol import SignalCoordinator
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
 from ui.filterable_table.filterable_table import FilterableTable
 from .analysis_view_data_manager import refresh_view_object_from_column_tree_selection
@@ -23,6 +24,7 @@ class AnalysisViewWidget(QWidget):
             project: ProjectDataManager,
             analysis: AnalysisObject,
             analysis_view_object: AnalysisView,
+            signal_coordinator:SignalCoordinator,           
             ) -> None:
         super().__init__(parent)
 
@@ -30,6 +32,7 @@ class AnalysisViewWidget(QWidget):
         self.project: ProjectDataManager = project
         self.analysis: AnalysisObject = analysis
         self.view: AnalysisView = analysis_view_object
+        self.signal_coordinator:SignalCoordinator = signal_coordinator
 
         # Set module variables
         self.new_fluid_dialog: NewFluidDialog | None = None
@@ -53,6 +56,7 @@ class AnalysisViewWidget(QWidget):
             project=self.project,
             col_specs=self.view.column_specs,
             view=self.view,
+            signal_coordinator=self.signal_coordinator
         )
 
         self.graphical_widgets_frame = GraphicalSidebar(

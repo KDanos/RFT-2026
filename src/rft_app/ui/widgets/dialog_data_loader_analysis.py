@@ -135,7 +135,7 @@ class DataLoaderDialogAnalysis(QDialog):
             self.data_frame,
             self.project, 
             label = "Available DataSets")
-        self.loaded_data_tree.reload_from_project(self.project.all_datasets)
+        self.loaded_data_tree.refresh_self(self.project.all_datasets)
         self.data_frame_layout.addWidget(self.loaded_data_tree)
         self._make_tree_tristate_checkable(self.loaded_data_tree)
 

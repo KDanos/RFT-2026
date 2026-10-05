@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
-
 import pandas as pd
 
 from project.fluids_model import Fluid
@@ -25,6 +24,12 @@ class AnalysisObject:
     def is_visible(self) -> bool:
         return any(view.is_visible for view in self.analysis_views)
 
+    def delete_fluid(self, fluid: Fluid) -> None:
+        for other in self.fluids:
+            if other.contact_fluid is fluid:
+                other.contact_fluid = None
+        self.fluids.remove(fluid)
+
 
 @dataclass
 class AnalysisView:
@@ -37,8 +42,7 @@ class AnalysisView:
     column_specs: list[ColumnSpec] = field(default_factory=list)
     column_filters: dict[int, dict] = field(default_factory=dict)
     annotations: list[
-        StraightLineAnnotation
-        | RectAnnotation
+        StraightLineAnnotation | RectAnnotation
         ] = field(default_factory=list)
 
 
@@ -99,6 +103,4 @@ class DataSetLogEntry:
     new_value: Any = None
     quantity_key: str | None = None
     reason: str | None = None
-
-
 

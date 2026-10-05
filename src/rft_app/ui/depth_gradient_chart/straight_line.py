@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from ui.analysis_view import AnalysisViewWidget
 
@@ -11,6 +12,7 @@ from PyQt6.QtWidgets import QMenu, QMessageBox
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
+from ui.main_window.signal_collection_protocol import SignalCoordinator
 
 
 
@@ -22,17 +24,20 @@ class StraightLine(pg.LineSegmentROI):
     def __init__(
             self,
             parent: pg.PlotWidget,
+            signal_coordinator:SignalCoordinator,
             color: QColor | str = "black",
             style: Qt.PenStyle = Qt.PenStyle.DashLine,
             starting_point: tuple[float, float] | None = None,
             end_point: tuple[float, float] | None = None,
             points_are_si: bool = False,
             ) -> None:
+        
         # Set project variables
         self.parent_chart: pg.PlotWidget = parent
         self.project: ProjectDataManager = self.parent_chart.project
         self.view: AnalysisView = self.parent_chart.view
         self.analysis: AnalysisObject = self.view.analysis_object
+        self.signal_coordinator:SignalCoordinator = signal_coordinator
 
         # Set module variables
         self.color: QColor | str = color
@@ -105,6 +110,7 @@ class StraightLine(pg.LineSegmentROI):
             self.parent_chart,
             self.project,
             self.view,
+            signal_coordinator= self.signal_coordinator,
             pressure_gradient=gradient,
             gradient_in_SI=True,
             base_line=self,
@@ -112,7 +118,7 @@ class StraightLine(pg.LineSegmentROI):
         # Assign the dialog window to the view widget to avoid having dublicate windows open at the same time
         if self.view_widget is not None:
             self.view_widget.new_fluid_dialog = dlg
-            # dlg.fluid_created.connect(self.view_widget.refresh_fluid_ui)
+            # dlg.new_fluid_created.connect(self.view_widget.refresh_fluid_ui)
             dlg.finished.connect(
                 lambda: setattr(self.view_widget, "new_fluid_dialog", None)
             )

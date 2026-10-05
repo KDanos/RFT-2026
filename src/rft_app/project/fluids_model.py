@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class Fluid:
-    """An interpreted fluid in the reservoir"""
+    """An interpreted fluid in the reservoir."""
+
     name: str
     type: str
     gradient_si: float | None = None

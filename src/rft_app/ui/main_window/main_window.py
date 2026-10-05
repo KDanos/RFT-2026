@@ -34,7 +34,7 @@ class MainWindowKD(QMainWindow):
         super().__init__(parent)
 
         # Set project variables
-        self.project = ProjectDataManager()
+        self.project: ProjectDataManager = ProjectDataManager()
         self.project_path: Path | None = None
 
         # Set module variables
@@ -42,6 +42,7 @@ class MainWindowKD(QMainWindow):
 
         # Initialisation methods
         self._build_ui()
+        self._connect_signals()
         self._check_if_project_has_path()
         self._load_default_project_on_startup("261002 First Fluid Test KD")
 
@@ -71,7 +72,11 @@ class MainWindowKD(QMainWindow):
         self._build_toolbar()
 
         #Create the Analysis WorkSpace
-        self.analysis_workspace = AnalysisWorkspace(self.project)
+        self.analysis_workspace = AnalysisWorkspace(
+            self,
+            self.project,
+            signal_coordinator=self,
+        )
 
         # Create the Sidebar
         self.project_sidebar = ProjectSidebar(self.project)
@@ -197,7 +202,7 @@ class MainWindowKD(QMainWindow):
         self._build_central_widget()
         self._build_menubar()
         # self._build_statusbar()
-        self._connect_signals()
+        
         self.setWindowState(self.windowState() | Qt.WindowState.WindowMaximized)
 
     def _check_if_project_has_path(self) -> None:
@@ -272,10 +277,13 @@ class MainWindowKD(QMainWindow):
             self.analysis_workspace.refresh_tabs_from_project
         )
         self.project_sidebar.all_analyses_tree.analysis_visibility_changed.connect(
-            self.project_sidebar.refresh_all_analyses_tree
+            self.project_sidebar.all_analyses_tree.refresh_self
         )
         self.project_sidebar.all_analyses_tree.new_view_requested.connect(
             lambda analysis: self._create_new_analysis_view(analysis)
+        )
+        self.project_sidebar.all_analyses_tree.fluids_changed.connect(
+            self.on_fluids_changed
         )
 
     def _create_default_analysis_view(
@@ -300,7 +308,7 @@ class MainWindowKD(QMainWindow):
 
         #Update the project actions
         self.project.mark_modified()
-        self.project_sidebar.refresh_all_analyses_tree()
+        self.project_sidebar.all_analyses_tree.refresh_self()
         self.analysis_workspace.refresh_tabs_from_project(analysis, new_analysis_view_obj)
 
     def _create_new_analysis_view(self, analysis: AnalysisObject) -> None:
@@ -311,7 +319,7 @@ class MainWindowKD(QMainWindow):
 
         # Update the project actions
         self.project.mark_modified()
-        self.project_sidebar.refresh_all_analyses_tree()
+        self.project_sidebar.all_analyses_tree.refresh_self()
         self.analysis_workspace.refresh_tabs_from_project(analysis, dlg.result_view)
 
     def _exit_application(self) -> None:
@@ -356,7 +364,10 @@ class MainWindowKD(QMainWindow):
             if selected_system is not None:
                 self.project.current_unit_system = selected_system
 
-                #Raise a "need to save flag" prior to exiting the project
+                # Update the all_analyses_tree
+                self.on_units_changed()
+
+                # Raise a "need to save flag" prior to exiting the project
                 self.project.mark_modified()
 
     def _open_custom_unit_manager(self) -> None:
@@ -438,3 +449,16 @@ class MainWindowKD(QMainWindow):
             idx = self.units_combo.findText(self.project.current_unit_system.label)
             if idx >= 0:
                 self.units_combo.setCurrentIndex(idx)
+
+    #--------Protocol Methods--------
+
+    def on_fluids_changed(self) -> None:
+        self.project_sidebar.all_analyses_tree.refresh_self()
+        # Placeholder: refresh open analysis views after fluid create/delete
+        # - reference / active fluid combos (GraphicalSidebar)
+        # - clear combo selection if a deleted fluid was selected
+        # - redraw chart lines / annotations tied to fluids
+
+    def on_units_changed(self) -> None:
+        self.project_sidebar.all_analyses_tree.refresh_self()
+

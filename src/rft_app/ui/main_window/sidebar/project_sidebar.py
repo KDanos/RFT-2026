@@ -77,18 +77,18 @@ class ProjectSidebar(QFrame):
 
     def _connect_signals(self) -> None:
         # Loaded Datasets Tree
-        self.all_loaded_datasets_tree.dataset_renamed.connect(self.refresh_all_analyses_tree)
-        self.all_loaded_datasets_tree.dataset_deleted.connect(self.refresh_all_analyses_tree)
+        self.all_loaded_datasets_tree.dataset_renamed.connect(self.all_analyses_tree.refresh_self)
+        self.all_loaded_datasets_tree.dataset_deleted.connect(self.all_analyses_tree.refresh_self)
         self.all_loaded_datasets_tree.merged_dataset_created.connect(
             self.refresh_all_merged_datasets_tree
         )
         # Merged Datasets Tree
-        self.all_merged_datasets_tree.dataset_renamed.connect(self.refresh_all_analyses_tree)
-        self.all_merged_datasets_tree.dataset_deleted.connect(self.refresh_all_analyses_tree)
+        self.all_merged_datasets_tree.dataset_renamed.connect(self.all_analyses_tree.refresh_self)
+        self.all_merged_datasets_tree.dataset_deleted.connect(self.all_analyses_tree.refresh_self)
         
         # Analyses Tree
-        self.all_analyses_tree.analysis_renamed.connect(self.refresh_all_analyses_tree)
-        self.all_analyses_tree.analysis_deleted.connect(self.refresh_all_analyses_tree)
+        self.all_analyses_tree.analysis_renamed.connect(self.all_analyses_tree.refresh_self)
+        self.all_analyses_tree.analysis_deleted.connect(self.all_analyses_tree.refresh_self)
 
     #--------Public API--------
 
@@ -96,20 +96,16 @@ class ProjectSidebar(QFrame):
         """Reload all tree from the current project"""
         self.refresh_all_loaded_datasets_tree()
         self.refresh_all_merged_datasets_tree()
-        self.refresh_all_analyses_tree()
-
-    def refresh_all_analyses_tree(self) -> None:
-        self.all_analyses_tree.project = self.project
-        self.all_analyses_tree.reload_from_project()
+        self.all_analyses_tree.refresh_self()
 
     def refresh_all_loaded_datasets_tree(self) -> None:
         self.all_loaded_datasets_tree.project = self.project
-        self.all_loaded_datasets_tree.reload_from_project(self.project.loaded_datasets)
+        self.all_loaded_datasets_tree.refresh_self(self.project.loaded_datasets)
         self._apply_column_units_to_tree(self.all_loaded_datasets_tree)
 
     def refresh_all_merged_datasets_tree(self)->None:
         self.all_merged_datasets_tree.project = self.project
-        self.all_merged_datasets_tree.reload_from_project(self.project.merged_datasets)
+        self.all_merged_datasets_tree.refresh_self(self.project.merged_datasets)
 
     def set_project(self, project: ProjectDataManager) -> None:
         self.project = project
