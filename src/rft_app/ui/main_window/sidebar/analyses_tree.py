@@ -289,8 +289,10 @@ class AnalysesTree(QTreeWidget):
         fluid = item.data(0, Qt.ItemDataRole.UserRole)
 
         list_of_contacts: list[str] = []
+        
         for other in analysis.fluids:
-            if other.contact_fluid is fluid:
+            bottom_fluid = other.bottom_contact.bottom_fluid
+            if bottom_fluid is not None and bottom_fluid is fluid:
                 list_of_contacts.append(other.name)
 
         if not list_of_contacts:

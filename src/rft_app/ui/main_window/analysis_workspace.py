@@ -261,6 +261,19 @@ class AnalysisWorkspace(QFrame):
             if widget is not None:
                 widget.deleteLater()
 
+    def on_project_units_changed(self)-> None: 
+        for i in range(self.analyses_tabs.count()):
+            page = self.analyses_tabs.widget(i)
+            if page is None:
+                continue
+            inner_tabs= page.findChild(QTabWidget)
+            if inner_tabs is None: 
+                continue
+            for j in range(inner_tabs.count()):
+                widget = inner_tabs.widget(j)
+                if isinstance(widget, AnalysisViewWidget):
+                    widget.on_project_units_changed()
+    
     def refresh_tabs_from_project(
         self,
         target_analysis: AnalysisObject | None = None,

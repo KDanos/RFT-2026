@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 import pandas as pd
 
-from project.fluids_model import Fluid
+from project.fluid_model import Fluid
 
 
 @dataclass
@@ -26,7 +26,8 @@ class AnalysisObject:
 
     def delete_fluid(self, fluid: Fluid) -> None:
         for other in self.fluids:
-            if other.contact_fluid is fluid:
+            bottom_fluid = other.bottom_contact.bottom_fluid
+            if bottom_fluid is not None and bottom_fluid is fluid:
                 other.contact_fluid = None
         self.fluids.remove(fluid)
 

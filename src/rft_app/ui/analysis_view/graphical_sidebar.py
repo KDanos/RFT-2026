@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QComboBox, QFrame, QGridLayout, QLabel, QVBoxLayout, QWidget
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
-from project.fluids_model import Fluid
+from project.fluid_model import Fluid
 from project.models import AnalysisObject
 
 

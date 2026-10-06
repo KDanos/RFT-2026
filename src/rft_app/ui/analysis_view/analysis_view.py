@@ -131,6 +131,10 @@ class AnalysisViewWidget(QWidget):
 
     #--------Public API--------
 
+    def on_project_units_changed(self)->None:
+        if self.new_fluid_dialog is not None:
+            self.new_fluid_dialog.on_project_units_changed()
+    
     def visible_df_from_proxy(self, proxy) -> pd.DataFrame:
         source = proxy.sourceModel()
         rows = [

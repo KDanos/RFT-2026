@@ -44,7 +44,7 @@ class MainWindowKD(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("261002 First Fluid Test KD")
+        self._load_default_project_on_startup("261006 Pickle Resolve KD")
 
     #--------Private UI--------
 
@@ -264,7 +264,7 @@ class MainWindowKD(QMainWindow):
         self.actionNewAnalysis.triggered.connect(self._start_new_analysis)
 
         #Widgets
-        self.units_combo.currentIndexChanged.connect(self._on_project_units_changed)
+        self.units_combo.currentIndexChanged.connect(self._on_project_units_changed_main_window)
 
         # Analyses tree
         self.project_sidebar.all_analyses_tree.analysis_renamed.connect(
@@ -356,7 +356,7 @@ class MainWindowKD(QMainWindow):
             return
         self._apply_loaded_project(project, default_path)
 
-    def _on_project_units_changed(self, index: int) -> None:
+    def _on_project_units_changed_main_window(self, index: int) -> None:
         if index == 0:
             self._open_custom_unit_manager()
         else:
@@ -365,7 +365,7 @@ class MainWindowKD(QMainWindow):
                 self.project.current_unit_system = selected_system
 
                 # Update the all_analyses_tree
-                self.on_units_changed()
+                self.on_project_units_changed()
 
                 # Raise a "need to save flag" prior to exiting the project
                 self.project.mark_modified()
@@ -459,6 +459,7 @@ class MainWindowKD(QMainWindow):
         # - clear combo selection if a deleted fluid was selected
         # - redraw chart lines / annotations tied to fluids
 
-    def on_units_changed(self) -> None:
+    def on_project_units_changed(self) -> None:
         self.project_sidebar.all_analyses_tree.refresh_self()
+        self.analysis_workspace.on_project_units_changed()
 

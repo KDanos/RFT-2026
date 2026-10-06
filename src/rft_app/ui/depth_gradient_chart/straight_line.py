@@ -104,15 +104,16 @@ class StraightLine(pg.LineSegmentROI):
             )
             return
 
-        gradient = self.calculate_line_gradient()
+        gradient = self.calculate_fluid_gradient_si()
+        y_intercept = self.calculate_y_intercept_si()
 
         dlg = NewFluidDialog(
             self.parent_chart,
             self.project,
             self.view,
             signal_coordinator= self.signal_coordinator,
-            pressure_gradient=gradient,
-            gradient_in_SI=True,
+            pressure_gradient_si=gradient,
+            zero_pressure_depth_si = y_intercept,
             base_line=self,
         )
         # Assign the dialog window to the view widget to avoid having dublicate windows open at the same time
@@ -237,7 +238,15 @@ class StraightLine(pg.LineSegmentROI):
         menu.addAction(self.actionDeleteLine)
         return menu
 
-    def calculate_line_gradient(self) -> float:
+    def calculate_fluid_gradient_si(self)->float:
+        slope = self.calculate_line_slope_si()
+        if slope == 0: 
+            raise ValueError(
+                "Cannot compute fluid gradient: line has has zero pressure span"
+            )
+        return 1/slope
+        
+    def calculate_line_slope_si(self) -> float:
         p0, p1 = self.listPoints()
         p0 = self.mapToView(p0)
         p1 = self.mapToView(p1)
@@ -253,7 +262,13 @@ class StraightLine(pg.LineSegmentROI):
         dx = normalise_from_user_units(self.x_unit, self.x_quantity_key, dx)
         dy = normalise_from_user_units(self.y_unit, self.y_quantity_key, dy)
 
-        return dx / dy
+        return dy / dx
+
+    def calculate_y_intercept_si(self)->float | None:
+        m = self.calculate_line_slope_si()
+        if m is not None:
+            return self.starting_point[1]-m*self.starting_point[0]
+        return None
 
     def extract_units_and_quantities(self) -> None:
         parent = self.parent_chart
