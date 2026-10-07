@@ -3,6 +3,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
+from units import convert_from_normalised_to_user_units
 from utilities import show_dataframe_table_dialog
 
 
@@ -25,7 +26,8 @@ class AnalysesTree(QTreeWidget):
         self.project: ProjectDataManager | None = project
 
         # Set module variables
-        # (none)
+        self.depth_unit:str = self.project.current_unit_system.units_by_quantity["length"]
+        self.pressure_unit:str = self.project.current_unit_system.units_by_quantity["pressure"]
 
         # Initialisation methods
         self.setHeaderLabel("Analyses")
@@ -41,6 +43,10 @@ class AnalysesTree(QTreeWidget):
         self.new_view_requested.emit(analysis)
 
     def _build_tree(self) -> None:
+        self.depth_unit:str = self.project.current_unit_system.units_by_quantity["length"]
+        self.pressure_unit:str = self.project.current_unit_system.units_by_quantity["pressure"]
+        self.pressure_gradient_unit:str = self.project.current_unit_system.units_by_quantity["pressure_gradient"]
+        
         for analysis in self.project.analyses:
             # Add the top level item
             text = analysis.name
@@ -94,7 +100,7 @@ class AnalysesTree(QTreeWidget):
                 fluid_item.setData(0, Qt.ItemDataRole.UserRole, fluid)
                 fluids_node.addChild(fluid_item)
 
-                fluid_type = QTreeWidgetItem([fluid.type])
+                fluid_type = QTreeWidgetItem([f"Fluid type: {fluid.type}"])
                 fluid_item.addChild(fluid_type)
 
                 if fluid.gradient_si is not None:
@@ -103,12 +109,8 @@ class AnalysesTree(QTreeWidget):
                         "pressure_gradient",
                         fluid.gradient_si,
                     )
-                    pressure_gradient_unit = (
-                        self.project.current_unit_system.units_by_quantity[
-                            "pressure_gradient"
-                        ]
-                    )
-                    gradient_text = f"{gradient:.3} [{pressure_gradient_unit}]"
+
+                    gradient_text = f"{gradient:.3} [{self.pressure_gradient_unit}]"
                     fluid_item.addChild(QTreeWidgetItem([gradient_text]))
 
                 if fluid.zero_pressure_depth_si is not None:
@@ -117,14 +119,38 @@ class AnalysesTree(QTreeWidget):
                         "length",
                         fluid.zero_pressure_depth_si,
                     )
-                    depth_unit = (
-                        self.project.current_unit_system.units_by_quantity["length"]
-                    )
-                    zero_depth_text = f"0 pressure at {zero_depth:.3} [{depth_unit}]"
+                    zero_depth_text = f"0 pressure at {zero_depth:.1f} [{self.depth_unit}]"
                     fluid_item.addChild(QTreeWidgetItem([zero_depth_text]))
 
-                contact_item = QTreeWidgetItem(["Underlying Contact"])
+                contact_item = QTreeWidgetItem(["Underlying Contact:"])
                 fluid_item.addChild(contact_item)
+
+                contact = fluid.bottom_contact
+                
+                if contact.bottom_fluid:
+                    contact_item.addChild(QTreeWidgetItem([f"Type: {contact.type}"]))
+                    contact_item.addChild(QTreeWidgetItem([f"Fluid: {contact.bottom_fluid.name}"]))  
+                else: 
+                    contact_item.addChild(QTreeWidgetItem(["None specified"]))
+
+                if contact.exists: 
+                    # Contact Depth
+                    contact_depth = convert_from_normalised_to_user_units(
+                        self.depth_unit,
+                        "length",
+                        contact.depth
+                    )
+                    contact_depth_txt = f"Depth: {contact_depth:.1f} [{self.depth_unit}]"
+                    contact_item.addChild(QTreeWidgetItem([contact_depth_txt]))
+                    # Contact Pressure
+                    contact_pressure = convert_from_normalised_to_user_units(
+                        self.pressure_unit,
+                        "pressure",
+                        contact.pressure
+                    )
+                    contact_pressure_txt = f"Pressure: {contact_pressure:.0f} [{self.pressure_unit}]"
+                    contact_item.addChild(QTreeWidgetItem([contact_pressure_txt]))
+
 
             # Analysis Views
             view_node = QTreeWidgetItem(["Analysis Views:"])

@@ -50,11 +50,11 @@ class FluidContact:
         return None
 
     def set_contact_data(self)->None:
-        if not self.exists: 
-            return 
-        
+       
         if not self.bottom_fluid:
             self.exists = False
+            self.depth = None
+            self.pressure = None
             return 
         
         # y = m1.x + c1, where 1 is the top fluid and 2 is the bottom fluid
@@ -74,7 +74,7 @@ class FluidContact:
             contact_depth_si = 1/self.top_fluid.gradient_si*contact_pressure_si+self.top_fluid.zero_pressure_depth_si
             contact_depth_si_verification = 1/self.bottom_fluid.gradient_si*contact_pressure_si+self.bottom_fluid.zero_pressure_depth_si
 
-            self.exist = True
+            self.exists = True
             self.depth = contact_depth_si
             self.pressure = contact_pressure_si
         except: 
