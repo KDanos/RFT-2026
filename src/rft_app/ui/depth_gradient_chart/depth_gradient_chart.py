@@ -7,11 +7,12 @@ import pyqtgraph as pg
 from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from project.models import RectAnnotation, StraightLineAnnotation
+from ui.analysis_view.analysis_view_data_manager import ScatterSeriesDefinition
 from ui.main_window.signal_collection_protocol import SignalCoordinator
 from ui.depth_gradient_chart.depth_chart_menu import DepthChartMenu
 from ui.depth_gradient_chart.rectangle_annotation import RectangleAnnotation
 from ui.depth_gradient_chart.straight_line import StraightLine
-from units.units_normalisation import UREG, app_unit_to_pint, identify_si_storage_unit
+from units.units_normalisation import UREG, app_unit_to_pint, convert_array_to_user_units, identify_si_storage_unit
 
 
 class DepthGradientChart(pg.PlotWidget):
@@ -38,13 +39,13 @@ class DepthGradientChart(pg.PlotWidget):
         self.project: ProjectDataManager = project
         self.signal_coordinator = signal_coordinator
 
-
         # Set module variables
         self.x_axis: str = x_axis
         self.col_specs: list[ColumnSpec] | None = col_specs
         self.chart_id: str = chart_id
         self.vb_menu = None
         self.df: pd.DataFrame | None = None
+        self.all_scatter_plot_items : list[pg.ScatterPlotItem]=[]
         self.all_lines: list[StraightLine] = []
         self.all_rectangles: list[RectangleAnnotation] = []
         self.annotations_bar = None
@@ -53,6 +54,7 @@ class DepthGradientChart(pg.PlotWidget):
         self._extract_quantity_and_units()
         self._create_line_drawing_variables()
         self._build_ui()
+        self.refresh_self()
         self._connect_signals()
 
     #--------Private UI--------
@@ -117,8 +119,6 @@ class DepthGradientChart(pg.PlotWidget):
                 )
                 new_rect.id = a.rect_id
                 self.all_rectangles.append(new_rect)
-        self._paint_all_lines()
-        self._paint_all_rectangles()
 
     def _clear_draw_preview_item(self) -> None:
         if self.preview_drawing_item is not None:
@@ -145,6 +145,40 @@ class DepthGradientChart(pg.PlotWidget):
         self.draw_tool: str | None = None
         self.first_click: QPoint | None = None
         self.preview_drawing_item = None
+
+    def create_all_scatter_plot_items(self, scatter_definitions:list[ScatterSeriesDefinition])-> None:
+        self.all_scatter_plot_items.clear()
+        
+        x_si = pd.to_numeric(self.df[self.x_axis], errors = "coerce").to_numpy(dtype=float)
+        y_si = pd.to_numeric(self.df[CANONICAL_VERTICAL_DEPTH], errors = "coerce").to_numpy(dtype=float)
+
+
+        x = convert_array_to_user_units(
+            x_si,
+            self.x_quantity_key,
+            self.x_unit
+        )
+        y=convert_array_to_user_units(
+            y_si,
+            "length",
+            self.y_unit
+        )
+        
+        for scatter in scatter_definitions:
+            
+            
+            new_scatter_item = pg.ScatterPlotItem(
+                x=x[scatter.mask.to_numpy()],
+                y=y[scatter.mask.to_numpy()],
+                symbol=scatter.symbol,
+                size=8,
+                brush=pg.mkBrush("white"),
+                pen=pg.mkPen(scatter.color, width=2),
+                hoverable=True,
+                tip=self._point_tip,
+                name=scatter.name,
+            )
+            self.all_scatter_plot_items.append(new_scatter_item)
 
     def _end_draw_square(self) -> None:
         pos = self.preview_drawing_item.pos()
@@ -229,7 +263,7 @@ class DepthGradientChart(pg.PlotWidget):
 
         y_label = f"{CANONICAL_VERTICAL_DEPTH} ({self.y_unit})"
         self.setLabel("left", y_label)
-        x_label = f"{CANONICAL_FORMATION_PRESSURE} ({self.x_unit})"
+        x_label = f"{self.x_axis} ({self.x_unit})"
         self.setLabel("bottom", x_label)
 
         self.getAxis("left").enableAutoSIPrefix(False)
@@ -313,6 +347,11 @@ class DepthGradientChart(pg.PlotWidget):
             rect.refresh_geometry()
             self.addItem(rect)
 
+    def _paint_all_scatter_items(self)-> None: 
+        for scatter in self.all_scatter_plot_items:
+            self.removeItem(scatter) 
+            self.addItem(scatter)
+
     def _point_tip(self, x: float, y: float, data) -> str:
         return (
             f"{CANONICAL_VERTICAL_DEPTH}: {y:.3g} ({self.y_unit})\n"
@@ -377,40 +416,9 @@ class DepthGradientChart(pg.PlotWidget):
         self._clear_draw_preview_item()
         self.draw_tool = self.TOOL_LINE
 
-    def set_data(self, df: pd.DataFrame) -> None:
-        self.df = df
+    def refresh_self(self)->None:
         self.clear()
-
-        self.col_specs = self.view.column_specs
-        self._extract_quantity_and_units()
-        self._format_chart()
-
-        if df is None or df.empty or CANONICAL_VERTICAL_DEPTH not in df.columns:
-            return
-
-        y = self._convert_array_to_user_units(
-            df[CANONICAL_VERTICAL_DEPTH].to_numpy(dtype=float),
-            self.y_quantity_key,
-            self.y_unit,
-        )
-
-        if self.x_axis:
-            x = self._convert_array_to_user_units(
-                df[self.x_axis].to_numpy(dtype=float),
-                self.x_quantity_key,
-                self.x_unit,
-            )
-
-        scatter = pg.ScatterPlotItem(
-            x=x,
-            y=y,
-            symbol="o",
-            size=8,
-            brush=pg.mkBrush("white"),
-            pen=pg.mkPen("blue", width=2),
-            hoverable=True,
-            tip=self._point_tip,
-        )
-        self.addItem(scatter)
+        self._paint_all_scatter_items()
         self._paint_all_lines()
         self._paint_all_rectangles()
+    

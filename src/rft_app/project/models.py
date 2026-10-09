@@ -31,6 +31,13 @@ class AnalysisObject:
                 other.contact_fluid = None
         self.fluids.remove(fluid)
 
+@dataclass
+class ViewWidgetSidebar:
+    """Captures the selections of the GUI sidebar"""
+    ref_fluid:Fluid|None =None
+    primary_series_identifier:str = "None"
+    secondary_series_identifier:str = "None"
+    active_fluid:Fluid|None = None
 
 @dataclass
 class AnalysisView:
@@ -45,6 +52,8 @@ class AnalysisView:
     annotations: list[
         StraightLineAnnotation | RectAnnotation
         ] = field(default_factory=list)
+    sidebar:ViewWidgetSidebar =field(default_factory=ViewWidgetSidebar)
+
 
 
 @dataclass

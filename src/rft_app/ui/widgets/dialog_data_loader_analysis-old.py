@@ -1,13 +1,14 @@
 from PyQt6.QtCore import QSignalBlocker, Qt
-from PyQt6.QtWidgets import (QComboBox,QDialog,QFrame,QGridLayout,QLabel,QLineEdit,
-    QMessageBox,QPushButton,QSplitter,QTreeWidget,QTreeWidgetItem,QTreeWidgetItemIterator,
-    QVBoxLayout,QWidget,
-    )
+from PyQt6.QtWidgets import (
+    QCheckBox,
+QComboBox,QDialog,QFrame,QGridLayout,QHBoxLayout,QLabel,QLineEdit,
+    QMessageBox,QPushButton,QSpinBox,QSplitter,QTableWidget,QTableWidgetItem,
+    QTreeWidget,QTreeWidgetItem,QTreeWidgetItemIterator,QVBoxLayout,QWidget,
+)
 import pandas as pd
 
 from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
 from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
-from ui.filterable_table.filterable_table import FilterableTable
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from utilities import (
     get_tree_item_by_name,
@@ -142,19 +143,36 @@ class DataLoaderDialogAnalysis(QDialog):
         self.start_btn = QPushButton("Start Analysis", self.data_frame)
         self.data_frame_layout.addWidget(self.start_btn)
 
+        #Create the decimal rounding options
+        decimalsContainer = QHBoxLayout()
+        self.decimals_check_box = QCheckBox("Round decimals")
+        self.decimals_check_box.setCheckState(Qt.CheckState.Checked)
+        self.decimal_limit_spin = QSpinBox()
+        self.decimal_limit_spin.setValue(1)
+        self.decimal_limit_spin.setMaximum(10000)
+        self.decimal_limit_spin.setEnabled(True)
+        decimalsContainer.addWidget(self.decimals_check_box)
+        decimalsContainer.addWidget(self.decimal_limit_spin)
+        self.data_frame_layout.addLayout(decimalsContainer)
+
+        #Ensure manual typing works in the decimals spinbox
+        self.decimal_limit_spin.setReadOnly(False)
+        self.decimal_limit_spin.lineEdit().setReadOnly(False)
+        self.decimal_limit_spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.decimal_limit_spin.setKeyboardTracking(False)
+
         # Create the table preview
+        self.preview_table = QTableWidget()
         table_layout = QVBoxLayout(self.table_frame)
-        self.preview_table=FilterableTable(
-            self.table_frame, 
-            self.project, 
-            pd.DataFrame(),
-            []
-        )
         table_layout.addWidget(self.preview_table)
-        self.preview_table.load_data(pd.DataFrame(),[])
+        self.preview_table.setRowCount(20)
+        self.preview_table.setColumnCount(10)
+        self.preview_table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._update_table()
 
     def _connect_signals(self) -> None:
         self.loaded_data_tree.itemChanged.connect(self._on_tree_item_changed)
+        self.decimal_limit_spin.valueChanged.connect(self._update_table_values)
         self.start_btn.clicked.connect(self._start_analysis)
 
     def _create_analysis_dataframe(self) -> None:
@@ -196,11 +214,17 @@ class DataLoaderDialogAnalysis(QDialog):
 
         return new_analysis_object
 
+    def _create_empty_preview_table(self) -> None:
+        table = self.preview_table
+        table.setColumnCount(5)
+        table.setRowCount(5)
+        table.clear()
+
     def _create_options_list(
         self,
         user_quantity: str,
         column_specs: list[ColumnSpec],
-        ) -> list[str]:
+    ) -> list[str]:
         options = []
         for spec in column_specs:
             name = spec.name
@@ -356,16 +380,72 @@ class DataLoaderDialogAnalysis(QDialog):
 
     def _update_table(self) -> None:
         # Create the dimensions of the table
-        if (
-            not self.selected_dataset
-            or not self.selected_columns
-            or self.analysis_dataset is None
-            ):
-            self.preview_table.load_data(pd.DataFrame(), [])
+        if not self.selected_dataset or not self.selected_columns:
+            self._create_empty_preview_table()
             return
 
-        self.preview_table.load_data(
-            self.analysis_dataset.dataframe,
-            self.analysis_dataset.column_specs
-        )
+        column_count = len(self.selected_columns)
+        header_list = self.selected_columns
+        self.preview_table.setColumnCount(column_count)
+        self.preview_table.setHorizontalHeaderLabels(header_list)
+
+        if len(self.selected_columns) > 0:
+            all_columns = list(self.selected_dataset.dataframe.columns)
+
+            for c in range(column_count):
+                header = header_list[c]
+                idx = all_columns.index(header)
+                quantity_key = self.selected_dataset.column_specs[idx].quantity_key
+                units_combo = UnitsComboBox(quantity_key, self.project)
+                units_combo.currentTextChanged.connect(self._update_table_values)
+
+                self.preview_table.setCellWidget(0, c, units_combo)
+
+            # Update the values in the new table
+            self._update_table_rows()
+            self._update_table_values()
+
+    def _update_table_rows(self) -> None:
+        row_count, _ = self.selected_dataset.dataframe.shape
+        self.preview_table.setRowCount(row_count + 1)
+        vert_headers = ["Units"] + [str(i + 1) for i in range(row_count + 1)]
+        self.preview_table.setVerticalHeaderLabels(vert_headers)
+
+    def _update_table_values(self) -> None:
+        if self.analysis_dataset is None:
+            return
+
+        df = self.analysis_dataset.dataframe
+        row_count, column_count = df.shape
+
+        for c in range(column_count):
+            units_combo = self.preview_table.cellWidget(0, c)
+            user_unit = units_combo.currentText() if units_combo is not None else ""
+            quantity_key = self.analysis_dataset.column_specs[c].quantity_key
+            quantity_type = STANDARD_QUANTITIES[quantity_key]
+            for r in range(row_count):
+                value = df.iat[r, c]
+
+                if quantity_type.is_numeric:
+                    if pd.isna(value):
+                        value = ""
+                    elif not is_numeric(value):
+                        value = ""
+                    elif user_unit != "":
+                        value = convert_from_normalised_to_user_units(
+                            user_output_unit=user_unit,
+                            quantity_type=quantity_key,
+                            value=value,
+                        )
+
+                        #Round the values to selected decimal points
+                        value = round_value_to_decimal_points(
+                            value, self.decimals_check_box, self.decimal_limit_spin
+                        )
+                display = str(value)
+
+                item = QTableWidgetItem(display)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.preview_table.setItem(r + 1, c, item)
+
     #--------Public API--------

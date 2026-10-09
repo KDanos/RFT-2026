@@ -1,5 +1,5 @@
 import pint
-
+import numpy as np
 
 #Define the normalized unit for each quantity type: 
 SI_STORAGE_BY_QUANTITY = {
@@ -194,3 +194,13 @@ def convert_from_normalised_to_user_units(user_output_unit:str, quantity_type:st
     #Extract and return the numeric element of the result
     display_value = float(result.to(pint_output_unit).magnitude)
     return display_value
+
+def convert_array_to_user_units(
+            data: np.ndarray,
+            quantity_key: str,
+            user_unit: str,
+            ) -> np.ndarray:
+    """Apply the unit conversion from SI to user units on a whole array, not just a number"""
+    si_unit = app_unit_to_pint(identify_si_storage_unit(quantity_key))
+    pint_user_unit = app_unit_to_pint(user_unit)
+    return UREG.Quantity(data, si_unit).to(pint_user_unit).magnitude

@@ -33,7 +33,7 @@ Use when the user is thinking through a problem and wants room to implement them
 
 Use when the user cannot (or does not want to) work through the problem and needs the fix handed over.
 
-- Give the **correct replacement code** for the function or section that needs changing.
+- Give only the **minimal insert/replace** (the lines that change), not the whole function or section, unless the user asks for the full block.
 - Point to the **file and location** where it goes.
 - Clear and direct — no exploratory homework left for the user in this mode.
 - No full-file rewrites unless asked; no unsolicited refactors or side topics.

@@ -1,4 +1,4 @@
-from .analysis_view import AnalysisViewWidget
+from .analysis_view_widget import AnalysisViewWidget
 from .graphical_frame import GraphicalFrame
 from .graphical_sidebar import GraphicalSidebar
 from .tabular_sidebar import TabularSidebar
