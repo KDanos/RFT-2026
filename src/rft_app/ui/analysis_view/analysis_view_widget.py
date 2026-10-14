@@ -133,9 +133,6 @@ class AnalysisViewWidget(QWidget):
         self.graphical_frame.xs_pressure_frame.setVisible(show_xs)
         self.graphical_frame.xs_pressure_chart.setVisible(show_xs)
 
-        #
-       
-
         # Update the table 
         self.tabular_frame.load_data(
                 self.view.df, 
