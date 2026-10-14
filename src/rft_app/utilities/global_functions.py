@@ -30,7 +30,7 @@ def create_dataframe_table( df:pd.DataFrame,
                             parent = None, 
                             project = None
                                 )->QTableWidget:
-    from ui.widgets.table_widgets import UnitsComboBox
+    from units.units_combo_box import UnitsComboBox
     
     rows, columns = df.shape
     data_table = QTableWidget(rows+1, columns,parent)

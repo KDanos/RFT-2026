@@ -20,7 +20,7 @@ from project import AnalysisObject, AnalysisView, ProjectDataManager
 from project.fluid_model import STANDARD_FLUIDS, Fluid, FluidContact, guess_fluid_type_from_psi_ft
 from ui.main_window.signal_collection_protocol import SignalCoordinator
 from units import convert_from_normalised_to_user_units
-from ui.widgets import UnitsComboBox
+from units.units_combo_box import UnitsComboBox
 from utilities import unique_name
 
 if TYPE_CHECKING:

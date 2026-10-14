@@ -19,7 +19,7 @@ from utilities import (
     update_tree_ancestors,
     update_tree_descendants,
 )
-from .table_widgets import UnitsComboBox
+from units.units_combo_box import UnitsComboBox
 from ui.main_window.sidebar import AllDataSetsTree
 
 

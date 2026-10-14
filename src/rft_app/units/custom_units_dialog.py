@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import  (QDialog, QDialogButtonBox, QFrame,  QGridLayout, Q
 
 from project import ProjectDataManager
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
-from ui.widgets.table_widgets import UnitsComboBox
+from .units_combo_box import UnitsComboBox
 from units import STANDARD_QUANTITIES
 from utilities import clear_layout_items, unique_name
 from ui import app_icon

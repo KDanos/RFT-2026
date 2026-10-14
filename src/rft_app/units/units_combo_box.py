@@ -1,8 +1,7 @@
 from PyQt6 import QtWidgets
 
 from project import ProjectDataManager
-from units import STANDARD_QUANTITIES
-from units.units_manager import QuantityType
+from units.units_manager import STANDARD_QUANTITIES, QuantityType
 
 
 class UnitsComboBox(QtWidgets.QComboBox):

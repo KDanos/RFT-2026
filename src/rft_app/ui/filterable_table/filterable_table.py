@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QLabel, QPushButton
 from project import ColumnSpec, ProjectDataManager
 from ui import app_icon
 from ui.filterable_table.custom_table_view import CustomTableView
-from ui.widgets.table_widgets import UnitsComboBox
+from units.units_combo_box import UnitsComboBox
 from units import STANDARD_QUANTITIES
 
 import pandas as pd

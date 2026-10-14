@@ -6,7 +6,7 @@ from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.fluid_model import Fluid
 from project.models import AnalysisObject, ViewWidgetSidebar
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
-from ui.widgets import UnitsComboBox
+from units.units_combo_box import UnitsComboBox
 from utilities import print_current_location_function
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
 from units.units_normalisation import convert_array_to_user_units
