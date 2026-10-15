@@ -100,6 +100,7 @@ class AnalysisViewWidget(QWidget):
         self.tabular_sidebar.view_df_changed.connect(self._on_view_df_change)
         self.tabular_frame.column_unit_change.connect(self._on_column_unit_change)
         self.proxy.filters_changed.connect(self._pass_df_to_plots)
+        self.proxy.filters_changed.connect(self.graphical_sidebar.define_scatters_for_plotting)
         self.graphical_sidebar.reference_fluid_changed.connect(self._on_reference_fluid_change)
 
     def _load_filterable_table(self) -> None:
@@ -121,8 +122,16 @@ class AnalysisViewWidget(QWidget):
             CANONICAL_EXCESS_PRESSURE,
         }
         if header in chart_headers:
-            self._pass_df_to_plots()
-
+            for plot in [
+                self.graphical_frame.pressure_chart,
+                self.graphical_frame.xs_pressure_chart
+            ]:
+                plot._extract_quantity_and_units()
+                plot._format_chart()
+            
+        self._pass_df_to_plots()
+        self.graphical_sidebar.define_scatters_for_plotting()
+        
         self.project.mark_modified()
 
     def _on_reference_fluid_change(self, reference_fluid:Fluid| None) -> None:

@@ -570,7 +570,12 @@ class DataLoaderDialogProject(QDialog):
 
             #Select the units associated with the quantity
             quantity_chosen = quantity_combo.currentData()
-            units_combo = UnitsComboBox(quantity_chosen, self.project)
+            # Guard if the column is selected to be ignored, since the units_combo_box can not populated when quantity combo is set to 'ignore'
+            if quantity_chosen == "ignore" or quantity_chosen not in STANDARD_QUANTITIES:
+                units_combo = UnitsComboBox("length", self.project)
+                units_combo.clear()           
+            else:   
+                units_combo = UnitsComboBox(quantity_chosen, self.project)
 
             self.mapping_table.setCellWidget(0, mapping_col, quantity_combo)
             self.mapping_table.setCellWidget(1, mapping_col, units_combo)

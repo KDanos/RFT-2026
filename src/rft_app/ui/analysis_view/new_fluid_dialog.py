@@ -60,7 +60,6 @@ class NewFluidDialog(QDialog):
             self.base_line.starting_point if self.base_line is not None else None)
         self.temp_contact:FluidContact=FluidContact()
         
-
         # Initialisation methods
         self._build_ui()
         self._connect_signals()
@@ -225,7 +224,6 @@ class NewFluidDialog(QDialog):
         # Update contacts on contact fluid selection change
         self.contact_fluid_combo.currentTextChanged.connect(self._update_contact_data_display)
 
-
         self.button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.reject)
         self.button_box.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self._on_accept)
         self.finished.connect(self._on_finished)
@@ -240,7 +238,7 @@ class NewFluidDialog(QDialog):
         self._check_name_uniqueness()
         name = self.name_line_edit.text().strip()
         fluid_type = self.fluid_type_combo.currentData()
-        
+
         bottom_contact = FluidContact(
              bottom_fluid = self.contact_fluid_combo.currentData()
         )
@@ -250,7 +248,10 @@ class NewFluidDialog(QDialog):
             type=fluid_type.label,
             gradient_si=self.pressure_gradient_si,
             zero_pressure_depth_si=self.zero_pressure_depth_si,
-            bottom_contact=bottom_contact
+            bottom_contact=bottom_contact,
+            plotting_depth_min_si=min(self.base_line.starting_point[1], self.base_line.end_point[1]),
+            plotting_depth_max_si=max(self.base_line.starting_point[1], self.base_line.end_point[1]),
+
         )
         #Reset the contact top fluid (to the newly created one)
         bottom_contact.top_fluid = new_fluid
@@ -321,7 +322,7 @@ class NewFluidDialog(QDialog):
             self.pressure_gradient_si,
         )
         self.gradient_value.setText(f"{value:.3f}")
-
+        
     def _update_temp_fluid(self)-> Fluid:
         self.temp_fluid = Fluid(
             name = "temp", 

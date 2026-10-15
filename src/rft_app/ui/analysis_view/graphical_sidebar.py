@@ -6,6 +6,7 @@ from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.fluid_model import Fluid
 from project.models import AnalysisObject, ViewWidgetSidebar
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from units import convert_from_normalised_to_user_units
 from units.units_combo_box import UnitsComboBox
 from utilities import print_current_location_function
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
@@ -34,8 +35,8 @@ class GraphicalSidebar(QFrame):
         self.col_specs: list[ColumnSpec] = col_specs
         self.analysis: AnalysisObject = self.parent.analysis
         self.view: AnalysisView = self.parent.view
-        if getattr(self.view, "sidebar", None) is None:
-            self.view.sidebar = ViewWidgetSidebar()
+        # if getattr(self.view, "sidebar", None) is None:
+        #     self.view.sidebar = ViewWidgetSidebar()
         self.sidebar_summary: ViewWidgetSidebar = self.view.sidebar
         self.sidebar_summary:ViewWidgetSidebar = self.view.sidebar
 
@@ -48,9 +49,8 @@ class GraphicalSidebar(QFrame):
         # Initialisation methods
         self._extract_current_table_depth_and_pressure_units()
         self._build_ui()
-        self._populate_all_fluid_combos()
-        self._populate_visible_fluids_tree()
-        self._populate_widgets_from_persisted_data()
+        self.refresh_self()
+        
         self._connect_signals()
         self._refresh_depth_gradient_plots()
 
@@ -59,7 +59,6 @@ class GraphicalSidebar(QFrame):
     def _build_ui(self) -> None:
         # Scroll area
         self.scroll_area = QScrollArea(self)
-        
         self.scroll_area.setWidgetResizable(True) # required, otherwise the scroll_area takes only a small space and does not expand to fill the layout
         self.scroll_area.setStyleSheet("QScrollArea { border: None }") # remove the visible border
         self.scroll_area_layout = QVBoxLayout()
@@ -69,9 +68,8 @@ class GraphicalSidebar(QFrame):
         # Set the main Layout 
         self.setLayout(self.scroll_area_layout)
 
-        # Main Container-effectively self, if no Scroll area is required
+        # Main Container-effectively self, if no scroll area was required
         self.main_container = QFrame (self)
-
         self.scroll_area.setWidget(self.main_container)
         self.main_container.setAutoFillBackground(False) # required to avoid the main_container setting its background to grey
         self.main_container.setFrameShape(QFrame.Shape.NoFrame)
@@ -79,7 +77,7 @@ class GraphicalSidebar(QFrame):
         self.main_layout.setContentsMargins(0,0,0,0)
         self.horizontal_layout = QHBoxLayout()
         self.main_layout.addLayout(self.horizontal_layout)
-        
+
         self.grid_layout = QGridLayout()
         self.horizontal_layout.addLayout(self.grid_layout)
         self.horizontal_layout.addStretch()
@@ -118,7 +116,6 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_grid.addWidget(self.active_fluid_label, 0, 0)
         self.active_fluid_grid.addWidget(self.active_fluid_combo, 0, 1)
         
-
         # Active Fluid Plotting depth
         self.active_fluid_plotting_depth_label = QLabel("Plotting Depth: ")
         self.active_fluid_grid.addWidget(self.active_fluid_plotting_depth_label, 1,0)
@@ -143,6 +140,7 @@ class GraphicalSidebar(QFrame):
         # Gradient
         self.active_fluid_gradient_label = QLabel("Gradient: ")
         self.active_fluid_gradient_value = QLineEdit(self)
+        self.active_fluid_gradient_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.active_fluid_gradient_unit = UnitsComboBox("pressure_gradient", self.project)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_label, 5,0)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_value, 5,1)
@@ -150,6 +148,7 @@ class GraphicalSidebar(QFrame):
         # Zero Pressure Depth
         self.active_fluid_zero_pressure_depth_label = QLabel("Zero Pressure Depth: ")
         self.active_fluid_zero_pressure_depth_value = QLineEdit(self)
+        self.active_fluid_zero_pressure_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.active_fluid_zero_pressure_depth_unit = UnitsComboBox("length", self.project)
         self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_label, 6,0,1,2)
         self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_value, 6,1)
@@ -203,9 +202,18 @@ class GraphicalSidebar(QFrame):
             return
         combos = [self.ref_fluid_combo, self.active_fluid_combo]
         for combo in combos:
+            combo.clear()
             combo.addItem("None", None)
             for fluid in self.analysis.fluids:
-                combo.addItem(fluid.name, fluid)
+                    combo.addItem(fluid.name, fluid)
+
+    def _populate_active_fluid_contact_combo(self)->None:
+        self.active_fluid_contact_value.clear()
+        self.active_fluid_contact_value.addItem("None", None)
+        for fluid in self.analysis.fluids: 
+            if fluid.name != self.active_fluid_combo.currentText():
+                self.active_fluid_contact_value.addItem(fluid.name, fluid)
+            
 
     def _populate_identifier_combo(self, sender_combo:QComboBox)->None:     
                 
@@ -248,20 +256,22 @@ class GraphicalSidebar(QFrame):
 
     def _populate_visible_fluids_tree(self)->None:
         tree = self.visible_fluids_tree
+        tree.clear()
         tree.setHeaderHidden(True)
-        # tree.setRootIsDecorated(False)
         tree.setIndentation(0)
 
+        tree.clear()
         for fluid in self.analysis.fluids:
             fluid_item = QTreeWidgetItem([fluid.name])
             fluid_item.setData(0,Qt.ItemDataRole.UserRole, fluid)
             fluid_item.setCheckState(0, Qt.CheckState.Unchecked)
             tree.addTopLevelItem(fluid_item)
+        
         height = (
             tree.frameWidth() * 2
             + tree.header().height()
             + sum(tree.sizeHintForRow(i) for i in range(tree.topLevelItemCount()))
-        )
+            )
         tree.setMinimumHeight(height)
         tree.setFrameShape(QFrame.Shape.NoFrame)
         tree.header().setFrameShape(QFrame.Shape.NoFrame)
@@ -272,7 +282,16 @@ class GraphicalSidebar(QFrame):
             self.ref_fluid_combo.setCurrentText(saved.ref_fluid.name if saved.ref_fluid is not None else "None")
             self.primary_identifier_combo.setCurrentText(saved.primary_series_identifier)
             self.secondary_identifier_combo.setCurrentText(saved.secondary_series_identifier)
-            self.active_fluid_combo.setCurrentText(saved.active_fluid.name if saved.active_fluid is not None else "None")
+            
+            # Active fluid selection
+            active_fluid = saved.active_fluid
+            if active_fluid is not None:
+                idx = self.active_fluid_combo.findText(active_fluid.name)
+                if idx >= 0:
+                    self.active_fluid_combo.setCurrentIndex(idx)
+                    self.active_fluid = self.active_fluid_combo.currentData()
+
+            # self.active_fluid_combo.setCurrentText(saved.active_fluid.name if saved.active_fluid is not None else "None")
 
     def _refresh_depth_gradient_plots(self)->None:
         for chart in [
@@ -314,6 +333,37 @@ class GraphicalSidebar(QFrame):
             
         self.project.mark_modified()
 
+    def _update_active_fluid_widgets(self)-> None:
+        
+        if self.active_fluid is not None:
+            gradient_si = self.active_fluid.gradient_si
+            gradient_unit = self.active_fluid_gradient_unit.currentText()
+            gradient = convert_from_normalised_to_user_units(
+                gradient_unit, 
+                "pressure_gradient",
+                gradient_si
+            )
+            self.active_fluid_gradient_value.setText(f"{gradient:.3}")
+
+            zero_pressure_depth_si = self.active_fluid.zero_pressure_depth_si
+            zero_pressure_depth_unit = self.active_fluid_zero_pressure_depth_unit.currentText()
+            zero_pressure_depth = convert_from_normalised_to_user_units(
+                zero_pressure_depth_unit, 
+                "length",
+                zero_pressure_depth_si
+            )
+            self.active_fluid_zero_pressure_depth_value.setText(f"{zero_pressure_depth:.3}")
+            
+            if self.active_fluid.bottom_contact is not None:
+                self.active_fluid_contact_value.addItem(self.active_fluid.name, self.active_fluid)
+            else: 
+                self.active_fluid_contact_value.addItem(None, "None")
+        
+        else: 
+            self.active_fluid_gradient_value.setText("")
+            self.active_fluid_zero_pressure_depth_value.setText("")
+            self.active_fluid_contact_value.addItem(None, "None")
+
     #--------Public API--------
 
     def define_scatters_for_plotting(self)->None:
@@ -338,3 +388,12 @@ class GraphicalSidebar(QFrame):
             ]:
             chart.create_all_scatter_plot_items(scatter_item_list)
             chart.refresh_self()
+
+    def refresh_self(self)->None:
+        self._populate_all_fluid_combos()
+        self._populate_widgets_from_persisted_data()
+        self._populate_active_fluid_contact_combo()
+        self._populate_visible_fluids_tree()
+
+        
+        self._update_active_fluid_widgets()

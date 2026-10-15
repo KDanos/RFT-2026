@@ -50,6 +50,7 @@ class UnitsComboBox(QtWidgets.QComboBox):
         self.quantity_key = quantity_key
         self.quantity_object = STANDARD_QUANTITIES.get(quantity_key)
         self.clear()
+        
         if self.quantity_object is None:
             raise ValueError(
                 f"Unknown quantity key for UnitsComboBox: {quantity_key!r}"

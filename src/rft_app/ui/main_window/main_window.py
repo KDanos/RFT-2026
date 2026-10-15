@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
 from units.custom_units_dialog import CustomUnitsDialog
-from ui.analysis_view import insert_excess_pressure_column
+from ui.analysis_view import AnalysisViewWidget, insert_excess_pressure_column
 from ui.widgets import DataLoaderDialogAnalysis, NewViewDialog
 from ui.project_data_loader import DataLoaderDialogProject
 from ui.main_window.analysis_workspace import AnalysisWorkspace
@@ -44,7 +44,7 @@ class MainWindowKD(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("261006 Pickle Resolve KD")
+        self._load_default_project_on_startup("261015 Making Fluids KD")
 
     #--------Private UI--------
 
@@ -453,7 +453,20 @@ class MainWindowKD(QMainWindow):
     #--------Protocol Methods--------
 
     def on_fluids_changed(self) -> None:
+        #Update the project sidebar analyses tree
         self.project_sidebar.all_analyses_tree.refresh_self()
+        
+        # Update the analysis view widget sidebar
+        for i in range(self.analysis_workspace.analyses_tabs.count()):
+            page = self.analysis_workspace.analyses_tabs.widget(i)
+            if page is None:
+                continue
+            inner_tabs = page.findChild(QTabWidget)
+            for j in range (inner_tabs.count()):
+                widget = inner_tabs.widget(j)
+                if isinstance(widget, AnalysisViewWidget):
+                    widget.graphical_sidebar.refresh_self()
+
         # Placeholder: refresh open analysis views after fluid create/delete
         # - reference / active fluid combos (GraphicalSidebar)
         # - clear combo selection if a deleted fluid was selected

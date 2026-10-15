@@ -21,6 +21,8 @@ class Fluid:
     gradient_si: float # in unints of pressure/lenght, i.e. inverse of line slope
     zero_pressure_depth_si: float 
     bottom_contact:FluidContact
+    plotting_depth_min_si:float | None = None
+    plotting_depth_max_si:float | None = None
 
     def values_in_project_units(
         self,
