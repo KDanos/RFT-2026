@@ -164,12 +164,15 @@ class DepthGradientChart(pg.PlotWidget):
             self.y_unit
         )
         
-        for scatter in scatter_definitions:
-            
-            
+        for scatter in scatter_definitions:          
+            xs = x[scatter.mask.to_numpy()]
+            ys = y[scatter.mask.to_numpy()]
+            finite = np.isfinite(xs) & np.isfinite(ys)
+            if not np.any(finite):
+                continue
             new_scatter_item = pg.ScatterPlotItem(
-                x=x[scatter.mask.to_numpy()],
-                y=y[scatter.mask.to_numpy()],
+                x=xs,
+                y=ys,
                 symbol=scatter.symbol,
                 size=8,
                 brush=pg.mkBrush("white"),

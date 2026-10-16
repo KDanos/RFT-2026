@@ -38,6 +38,7 @@ class ViewWidgetSidebar:
     primary_series_identifier:str = "None"
     secondary_series_identifier:str = "None"
     active_fluid:Fluid|None = None
+    visible_fluids:list[Fluid] = field(default_factory = list)
 
 @dataclass
 class AnalysisView:

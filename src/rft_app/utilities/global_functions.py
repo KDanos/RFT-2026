@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from typing import Any, Callable, Iterable, Literal
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
@@ -105,48 +106,6 @@ def create_log_table(dataset:DataSet, parent = None)->QTableWidget:
             table.setItem(r,c,item)
     return table
 
-def create_user_comments_table(dataset:DataSet, parent:None)->QTableWidget:
-    # Define Column Count and Name
-    columns = 2
-    column_names = ["Date", "Comment"]
-    
-    # Define Row Count
-    rows = len(dataset.user_comments)
-    
-    # Define the table structure
-    table=QTableWidget(rows, columns, parent)
-    table.setHorizontalHeaderLabels(column_names)
-
-    #Format the table for readability
-    table.setWordWrap(True)
-    table.horizontalHeader().setStretchLastSection(True)
-    table.horizontalHeader().sectionResized.connect(lambda _idx, _old, _new:table.resizeRowsToContents())
-    
-    for r, entry in enumerate(dataset.user_comments):
-        if isinstance(entry, tuple) and len(entry) == 2:
-            comment_datetime, comment_text = entry
-            if isinstance(comment_datetime, datetime):
-                date_text = comment_datetime.strftime("%Y-%m-%d %H:%M")
-            else:
-                date_text = str(comment_datetime)
-            comment_text = str(comment_text)
-        else:
-            date_text = ""
-            comment_text = str(entry)
-
-        date_item = QTableWidgetItem(date_text)
-        date_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        comment_item = QTableWidgetItem(comment_text)
-        comment_item.setTextAlignment(Qt.AlignmentFlag.AlignTop)
-        table.setItem(r,0,date_item)
-        table.setItem(r, 1, comment_item)
-    
-    table.resizeRowsToContents()
-   
-   
-    
-    return table
-    
 def create_table_view_frame(
     df:pd.DataFrame,
         column_specs:list[ColumnSpec]|None=None,
@@ -225,6 +184,48 @@ def create_table_view_frame(
     
     return frame, table, update_column_values
 
+def create_user_comments_table(dataset:DataSet, parent:None)->QTableWidget:
+    # Define Column Count and Name
+    columns = 2
+    column_names = ["Date", "Comment"]
+    
+    # Define Row Count
+    rows = len(dataset.user_comments)
+    
+    # Define the table structure
+    table=QTableWidget(rows, columns, parent)
+    table.setHorizontalHeaderLabels(column_names)
+
+    #Format the table for readability
+    table.setWordWrap(True)
+    table.horizontalHeader().setStretchLastSection(True)
+    table.horizontalHeader().sectionResized.connect(lambda _idx, _old, _new:table.resizeRowsToContents())
+    
+    for r, entry in enumerate(dataset.user_comments):
+        if isinstance(entry, tuple) and len(entry) == 2:
+            comment_datetime, comment_text = entry
+            if isinstance(comment_datetime, datetime):
+                date_text = comment_datetime.strftime("%Y-%m-%d %H:%M")
+            else:
+                date_text = str(comment_datetime)
+            comment_text = str(comment_text)
+        else:
+            date_text = ""
+            comment_text = str(entry)
+
+        date_item = QTableWidgetItem(date_text)
+        date_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        comment_item = QTableWidgetItem(comment_text)
+        comment_item.setTextAlignment(Qt.AlignmentFlag.AlignTop)
+        table.setItem(r,0,date_item)
+        table.setItem(r, 1, comment_item)
+    
+    table.resizeRowsToContents()
+   
+   
+    
+    return table
+
 def force_numeric(value:Any)->float| None:
     try:
          return(float(value))
@@ -287,7 +288,32 @@ def round_value_to_decimal_points(
         value = int(round(float(value),decimal_points))
     else:
         value = round(float(value),decimal_points)
-    return(str(value))          
+    return(str(value))
+
+def limit_decimals(value: Any, limit: int = 3) -> str:
+    "Avoid Python default behaviour to retun str in scientific notation""
+    
+    """Round to at least ``significant_figures`` significant figures as a float.
+
+    ``order`` is the power of 10 of the leading digit place:
+    327 → floor(log10(327)) = 2 (because 10**2 ≤ 327 < 10**3);
+    3.27 → 0; 0.0327 → -2.
+
+    ``decimals`` is how many digits after the decimal point ``round`` needs
+    so that the result still has ``significant_figures`` significant digits:
+    decimals = max(0, significant_figures - 1 - order).
+    """
+    from math import floor, log10
+
+    number = force_numeric(value)
+    if number is None:
+        return ""
+    if number == 0:
+        return "0"
+        
+    order = floor(log10(abs(number)))
+    decimals = max(0, limit - 1 - order)
+    return f"{number:.{decimals}f}"
 
 def show_dataframe_table_dialog(
     df:pd.DataFrame,
@@ -317,7 +343,7 @@ def show_dataframe_table_dialog(
     window_layout.setContentsMargins(0,0,0,0)
     window_layout.addWidget(table_window)
     window.show()
-   
+
 def show_import_log_or_user_comments_table(
     dataset:DataSet,
     table_type:Literal["import_log", "user_comments"],

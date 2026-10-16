@@ -6,6 +6,7 @@ from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.fluid_model import Fluid
 from project.models import AnalysisObject, ViewWidgetSidebar
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from utilities.global_functions import limit_decimals
 from units import convert_from_normalised_to_user_units
 from units.units_combo_box import UnitsComboBox
 from utilities import print_current_location_function
@@ -35,10 +36,7 @@ class GraphicalSidebar(QFrame):
         self.col_specs: list[ColumnSpec] = col_specs
         self.analysis: AnalysisObject = self.parent.analysis
         self.view: AnalysisView = self.parent.view
-        # if getattr(self.view, "sidebar", None) is None:
-        #     self.view.sidebar = ViewWidgetSidebar()
         self.sidebar_summary: ViewWidgetSidebar = self.view.sidebar
-        self.sidebar_summary:ViewWidgetSidebar = self.view.sidebar
 
         # Set module variables
         self.ref_fluid: Fluid | None = None
@@ -49,8 +47,9 @@ class GraphicalSidebar(QFrame):
         # Initialisation methods
         self._extract_current_table_depth_and_pressure_units()
         self._build_ui()
-        self.refresh_self()
-        
+        self._populate_all_fluid_combos()
+        self._populate_visible_fluids_tree()
+        self._populate_widgets_from_persisted_data()
         self._connect_signals()
         self._refresh_depth_gradient_plots()
 
@@ -122,6 +121,7 @@ class GraphicalSidebar(QFrame):
         # Min
         self.active_fluid_min_plotting_depth_label = QLabel("Min:")
         self.active_fluid_min_plotting_depth_value = QLineEdit(self)
+        self.active_fluid_min_plotting_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.active_fluid_min_plotting_depth_unit = UnitsComboBox("length", self.project)
         self.active_fluid_grid.addWidget(self.active_fluid_min_plotting_depth_label, 2,0)
         self.active_fluid_grid.addWidget(self.active_fluid_min_plotting_depth_value, 2,1)
@@ -129,6 +129,7 @@ class GraphicalSidebar(QFrame):
         # Max
         self.active_fluid_max_plotting_depth_label = QLabel("Max:")
         self.active_fluid_max_plotting_depth_value = QLineEdit(self)
+        self.active_fluid_max_plotting_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.active_fluid_max_plotting_depth_unit = UnitsComboBox("length", self.project)
         self.active_fluid_grid.addWidget(self.active_fluid_max_plotting_depth_label, 3,0)
         self.active_fluid_grid.addWidget(self.active_fluid_max_plotting_depth_value, 3,1)
@@ -155,9 +156,9 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_unit,6,2)
         # Underlying Fluid:
         self.active_fluid_contact_label = QLabel("Underlying Contact:")
-        self.active_fluid_contact_value = QComboBox()
+        self.active_fluid_contact_combo = QComboBox()
         self.active_fluid_grid.addWidget(self.active_fluid_contact_label,7,0)
-        self.active_fluid_grid.addWidget(self.active_fluid_contact_value,7,1)
+        self.active_fluid_grid.addWidget(self.active_fluid_contact_combo,7,1)
 
         # Visible Fluids
         self.grid_layout.setRowMinimumHeight(5,20)
@@ -181,6 +182,9 @@ class GraphicalSidebar(QFrame):
         # Active Fluid
         self.active_fluid_combo.currentIndexChanged.connect(lambda _idx: self._on_active_fluid_combo_changed())
 
+        # Visible fluids
+        self.visible_fluids_tree.itemChanged.connect(self._on_visible_fluids_changed)
+
     def _extract_current_table_depth_and_pressure_units(self)->None:
         table_unit = self.parent.tabular_frame.units_table       
         self.pressure_unit =table_unit.cellWidget(0,1).currentText()
@@ -189,6 +193,7 @@ class GraphicalSidebar(QFrame):
     def _on_active_fluid_combo_changed(self) -> None:
         self.active_fluid = self.active_fluid_combo.currentData()
         self.sidebar_summary.active_fluid = self.active_fluid
+        self._update_active_fluid_widgets()
         self.project.mark_modified()
 
     def _on_ref_fluid_combo_changed(self) -> None:
@@ -197,8 +202,27 @@ class GraphicalSidebar(QFrame):
         self.project.mark_modified()
         self.reference_fluid_changed.emit(self.ref_fluid)
 
+    def _on_visible_fluids_changed(self, item:QTreeWidgetItem, column:int)-> None:
+        tree = self.visible_fluids_tree
+        self.parent.visible_fluids.clear()
+       
+        for i in range(tree.topLevelItemCount()):
+            top_item = tree.topLevelItem(i)
+            if top_item.checkState(0)==Qt.CheckState.Checked:
+                fluid = top_item.data(0,Qt.ItemDataRole.UserRole)
+                if fluid is not None:
+                    self.parent.visible_fluids.append(fluid)
+
+
+        self.sidebar_summary.visible_fluids = list(self.parent.visible_fluids)
+
+        # to do: Notify the graph to plot the visible fluids
+
+        self.project.mark_modified()
+
     def _populate_all_fluid_combos(self) -> None:
         if len(self.analysis.fluids) == 0:
+            print("There are no fluids in the analysis")
             return
         combos = [self.ref_fluid_combo, self.active_fluid_combo]
         for combo in combos:
@@ -208,13 +232,12 @@ class GraphicalSidebar(QFrame):
                     combo.addItem(fluid.name, fluid)
 
     def _populate_active_fluid_contact_combo(self)->None:
-        self.active_fluid_contact_value.clear()
-        self.active_fluid_contact_value.addItem("None", None)
+        self.active_fluid_contact_combo.clear()
+        self.active_fluid_contact_combo.addItem("None", None)
         for fluid in self.analysis.fluids: 
             if fluid.name != self.active_fluid_combo.currentText():
-                self.active_fluid_contact_value.addItem(fluid.name, fluid)
+               self.active_fluid_contact_combo.addItem(fluid.name, fluid)
             
-
     def _populate_identifier_combo(self, sender_combo:QComboBox)->None:     
                 
         headers = self.view.df.columns
@@ -277,19 +300,38 @@ class GraphicalSidebar(QFrame):
         tree.header().setFrameShape(QFrame.Shape.NoFrame)
 
     def _populate_widgets_from_persisted_data(self)->None:
-        saved = self.sidebar_summary
+        saved_state = self.sidebar_summary
+        # Reference fluid combo, color and series combos
         with QSignalBlocker(self):
-            self.ref_fluid_combo.setCurrentText(saved.ref_fluid.name if saved.ref_fluid is not None else "None")
-            self.primary_identifier_combo.setCurrentText(saved.primary_series_identifier)
-            self.secondary_identifier_combo.setCurrentText(saved.secondary_series_identifier)
+            self.ref_fluid_combo.setCurrentText(saved_state.ref_fluid.name if saved_state.ref_fluid is not None else "None")
+            self.ref_fluid = self.ref_fluid_combo.currentData(Qt.ItemDataRole.UserRole)
+            
+            self.primary_identifier_combo.setCurrentText(saved_state.primary_series_identifier)
+            self.secondary_identifier_combo.setCurrentText(saved_state.secondary_series_identifier)
             
             # Active fluid selection
-            active_fluid = saved.active_fluid
+            active_fluid = saved_state.active_fluid
             if active_fluid is not None:
                 idx = self.active_fluid_combo.findText(active_fluid.name)
                 if idx >= 0:
                     self.active_fluid_combo.setCurrentIndex(idx)
                     self.active_fluid = self.active_fluid_combo.currentData()
+
+        # Active fluid combo
+        self._update_active_fluid_widgets()
+        # self.active_fluid_combo.setCurrentText(saved_state.active_fluid.name if saved_state.active_fluid is not None else "None")
+        # self._update_active_fluid_widgets()
+        # self._populate_active_fluid_contact_combo()
+
+
+        # Visible fluid tree
+        saved_visible = list([fluid.name for fluid in saved_state.visible_fluids])
+        with QSignalBlocker(self.visible_fluids_tree):
+            for i in range(self.visible_fluids_tree.topLevelItemCount()):
+                fluid = self.visible_fluids_tree.topLevelItem(i).text(0)
+                if fluid in saved_visible:
+                    self.visible_fluids_tree.topLevelItem(i).setCheckState(0, Qt.CheckState.Checked)
+                             
 
             # self.active_fluid_combo.setCurrentText(saved.active_fluid.name if saved.active_fluid is not None else "None")
 
@@ -335,7 +377,17 @@ class GraphicalSidebar(QFrame):
 
     def _update_active_fluid_widgets(self)-> None:
         
-        if self.active_fluid is not None:
+        # Ensure that if a fluid has been selected in the contact combo, it has updated the widgets active fluid
+        self.active_fluid = self.active_fluid_combo.currentData(Qt.ItemDataRole.UserRole)
+        
+        # Active fluid
+        if self.active_fluid is None:
+            self.active_fluid_gradient_value.setText("")
+            self.active_fluid_zero_pressure_depth_value.setText("")
+            self.active_fluid_min_plotting_depth_value.setText("")
+            self.active_fluid_max_plotting_depth_value.setText("")
+            self.active_fluid_contact_combo.setCurrentText("None")
+        else: 
             gradient_si = self.active_fluid.gradient_si
             gradient_unit = self.active_fluid_gradient_unit.currentText()
             gradient = convert_from_normalised_to_user_units(
@@ -343,7 +395,7 @@ class GraphicalSidebar(QFrame):
                 "pressure_gradient",
                 gradient_si
             )
-            self.active_fluid_gradient_value.setText(f"{gradient:.3}")
+            self.active_fluid_gradient_value.setText(limit_decimals(gradient))
 
             zero_pressure_depth_si = self.active_fluid.zero_pressure_depth_si
             zero_pressure_depth_unit = self.active_fluid_zero_pressure_depth_unit.currentText()
@@ -352,17 +404,26 @@ class GraphicalSidebar(QFrame):
                 "length",
                 zero_pressure_depth_si
             )
-            self.active_fluid_zero_pressure_depth_value.setText(f"{zero_pressure_depth:.3}")
-            
-            if self.active_fluid.bottom_contact is not None:
-                self.active_fluid_contact_value.addItem(self.active_fluid.name, self.active_fluid)
-            else: 
-                self.active_fluid_contact_value.addItem(None, "None")
+            self.active_fluid_zero_pressure_depth_value.setText(limit_decimals(zero_pressure_depth))
         
-        else: 
-            self.active_fluid_gradient_value.setText("")
-            self.active_fluid_zero_pressure_depth_value.setText("")
-            self.active_fluid_contact_value.addItem(None, "None")
+            # Plotting depths
+            unit = self.active_fluid_min_plotting_depth_unit.currentText()
+            value_si = self.active_fluid.plotting_depth_min_si
+            value = convert_from_normalised_to_user_units(unit, "length", value_si)
+            self.active_fluid_min_plotting_depth_value.setText(limit_decimals(value))
+
+            unit = self.active_fluid_max_plotting_depth_unit.currentText()
+            value_si = self.active_fluid.plotting_depth_max_si
+            value = convert_from_normalised_to_user_units(unit, "length", value_si)
+            self.active_fluid_max_plotting_depth_value.setText(limit_decimals(value))
+            
+            # Active fluid contact
+            self._populate_active_fluid_contact_combo()       
+            contact_fluid = self.active_fluid.bottom_contact.bottom_fluid
+            idx = self.active_fluid_contact_combo.findData(contact_fluid)
+            if idx>=0:
+                self.active_fluid_contact_combo.setCurrentIndex(idx)
+
 
     #--------Public API--------
 
@@ -391,7 +452,6 @@ class GraphicalSidebar(QFrame):
 
     def refresh_self(self)->None:
         self._populate_all_fluid_combos()
-        self._populate_widgets_from_persisted_data()
         self._populate_active_fluid_contact_combo()
         self._populate_visible_fluids_tree()
 

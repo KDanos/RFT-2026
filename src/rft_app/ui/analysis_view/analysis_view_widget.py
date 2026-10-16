@@ -8,6 +8,7 @@ from project.canonical_names import (
     CANONICAL_VERTICAL_DEPTH,
 )
 from project.fluid_model import Fluid
+from project.models import ViewWidgetSidebar
 from ui.filterable_table.proxy_model import ProxyFilterModel
 from ui.main_window.signal_collection_protocol import SignalCoordinator
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
@@ -35,9 +36,11 @@ class AnalysisViewWidget(QWidget):
         self.analysis: AnalysisObject = analysis
         self.view: AnalysisView = analysis_view_object
         self.signal_coordinator:SignalCoordinator = signal_coordinator
+        self.sidebar_summary: ViewWidgetSidebar = self.view.sidebar
 
         # Set module variables
         self.new_fluid_dialog: NewFluidDialog | None = None
+        self.visible_fluids:list[Fluid] = list(self.view.sidebar.visible_fluids)
 
         # Initialisation methods
         self._build_ui()
@@ -88,7 +91,6 @@ class AnalysisViewWidget(QWidget):
         
         # Check if the excess pressure column should be calculated. 
         ref_fluid = self.graphical_sidebar.ref_fluid_combo.currentData()
-        print (ref_fluid)
         if ref_fluid is not None:
             self._on_reference_fluid_change(ref_fluid)
 
