@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget, QTabWidget
 
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from ui.main_window.signal_collection_protocol import SignalCoordinator
+from ui.main_window.project_signals import ProjectSignals
 from ui.analysis_view import AnalysisViewWidget
 
 
@@ -12,14 +12,14 @@ class AnalysisWorkspace(QFrame):
         self,
         parent:QObject,
         project: ProjectDataManager,
-        signal_coordinator:SignalCoordinator,
+        signals:ProjectSignals,
         ) -> None:
         super().__init__(parent)
 
         # Set project variables
         
         self.project = project
-        self.signal_coordinator = signal_coordinator
+        self.signals = signals
 
         # Set module variables
         self._current_analysis: AnalysisObject | None = None
@@ -240,7 +240,7 @@ class AnalysisWorkspace(QFrame):
             project=self.project,
             analysis=analysis,
             analysis_view_object=view,
-            signal_coordinator= self.signal_coordinator,
+            signals= self.signals,
         )
 
         idx = analysis_tab.addTab(widget, view.name)

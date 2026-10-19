@@ -7,6 +7,7 @@ from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.fluid_model import STANDARD_FLUIDS, Fluid
 from project.models import AnalysisObject, ViewWidgetSidebar
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from ui.main_window.project_signals import ProjectSignals
 from utilities.global_functions import limit_decimals
 from units import convert_from_normalised_to_user_units
 from units.units_combo_box import UnitsComboBox
@@ -28,6 +29,7 @@ class GraphicalSidebar(QFrame):
             parent: QWidget,
             project: ProjectDataManager,
             col_specs: list[ColumnSpec],
+            signals:ProjectSignals,
             ) -> None:
         super().__init__(parent)
 
@@ -38,6 +40,7 @@ class GraphicalSidebar(QFrame):
         self.analysis: AnalysisObject = self.parent.analysis
         self.view: AnalysisView = self.parent.view
         self.sidebar_summary: ViewWidgetSidebar = self.view.sidebar
+        self.signals= signals
 
         # Set module variables
         self.ref_fluid: Fluid | None = None
@@ -214,7 +217,9 @@ class GraphicalSidebar(QFrame):
         # Active Fluid
         self.active_fluid_combo.currentIndexChanged.connect(lambda _idx: self._on_active_fluid_combo_changed())
         self.contact_fluid_combo.currentIndexChanged.connect(lambda _idx: self._on_bottom_contact_fluid_combo_changed())
-        self.active_fluid_type_combo.currentIndexChanged.connect(lambda _idx: self._on_active_fluid_type_combo_changed())
+        self.active_fluid_type_combo.currentIndexChanged.connect(lambda idx: self._on_active_fluid_type_combo_changed())
+        
+
         # Visible fluids
         self.visible_fluids_tree.itemChanged.connect(self._on_visible_fluids_changed)
         # Unit combos
@@ -255,10 +260,6 @@ class GraphicalSidebar(QFrame):
         self._update_active_fluid_widgets()
         self.project.mark_modified()
 
-    def _on_active_fluid_type_combo_changed(self)-> None:
-        self
-
-
     def _on_ref_fluid_combo_changed(self) -> None:
         self.ref_fluid = self.ref_fluid_combo.currentData()
         self.sidebar_summary.ref_fluid = self.ref_fluid
@@ -271,8 +272,18 @@ class GraphicalSidebar(QFrame):
         contact = self.active_fluid.bottom_contact
         contact.bottom_fluid = self.contact_fluid_combo.currentData(Qt.ItemDataRole.UserRole)
         contact.set_contact_data()
-        self.parent.signal_coordinator.on_fluids_changed()
+        self.signals.fluids_changed.emit()
         self.project.mark_modified()
+
+    def _on_active_fluid_type_combo_changed(self)->None:
+        if self.active_fluid is None:
+            return
+        fluid_type = self.active_fluid_type_combo.currentText()
+        self.active_fluid.type = fluid_type
+        self.active_fluid.bottom_contact.set_contact_data()
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+
 
     def _on_visible_fluids_changed(self, item:QTreeWidgetItem, column:int)-> None:
         tree = self.visible_fluids_tree

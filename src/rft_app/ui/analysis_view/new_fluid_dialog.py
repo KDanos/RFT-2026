@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from project.fluid_model import STANDARD_FLUIDS, Fluid, FluidContact, guess_fluid_type_from_psi_ft
-from ui.main_window.signal_collection_protocol import SignalCoordinator
+from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
 from units.units_combo_box import UnitsComboBox
 from utilities import unique_name
@@ -36,7 +36,7 @@ class NewFluidDialog(QDialog):
             parent: QWidget,
             project: ProjectDataManager,
             view: AnalysisView,
-            signal_coordinator:SignalCoordinator,
+            signals:ProjectSignals,
             pressure_gradient_si: float | None = None,
             zero_pressure_depth_si:float | None = None, 
             base_line: StraightLine | None = None,
@@ -49,7 +49,7 @@ class NewFluidDialog(QDialog):
         self.analysis: AnalysisObject = self.view.analysis_object
 
         # Signal Coordinator
-        self.signal_coordinator:SignalCoordinator =signal_coordinator
+        self.signals:ProjectSignals =signals
 
         # Set module variables
         self.pressure_gradient_si: float | None = pressure_gradient_si
@@ -232,7 +232,7 @@ class NewFluidDialog(QDialog):
             self.base_line.sigRegionChanged.connect(self._update_contact_data_display)
 
         # Pass the new fluid created signal to the main window
-        self.new_fluid_created.connect(self.signal_coordinator.on_fluids_changed)
+        self.signals.fluids_changed.emit()
 
     def _on_accept(self) -> None:
         self._check_name_uniqueness()

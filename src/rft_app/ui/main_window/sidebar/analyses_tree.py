@@ -3,6 +3,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
+from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
 from utilities import show_dataframe_table_dialog
 
@@ -11,19 +12,20 @@ class AnalysesTree(QTreeWidget):
     analysis_renamed = pyqtSignal(AnalysisObject)
     analysis_deleted = pyqtSignal()
     analysis_visibility_changed = pyqtSignal(object, object)  # (AnalysisObject | None, AnalysisView | None)
-    fluids_changed = pyqtSignal()
     new_view_requested = pyqtSignal(AnalysisObject)
 
     def __init__(
         self,
-        parent: QWidget | None = None,
-        project: ProjectDataManager | None = None,
+        parent: QWidget,
+        project: ProjectDataManager,
+        signals:ProjectSignals,
         ) -> None:
         super().__init__(parent)
 
         # Set project variables
         self.parent: QWidget | None = parent
         self.project: ProjectDataManager | None = project
+        self.signals = signals
 
         # Set module variables
         self.depth_unit:str = self.project.current_unit_system.units_by_quantity["length"]
@@ -343,7 +345,7 @@ class AnalysesTree(QTreeWidget):
 
         analysis.delete_fluid(fluid)
         self.project.mark_modified()
-        self.fluids_changed.emit()
+        self.signals.fluids_changed.emit()
 
     def _delete_view(self, item: QTreeWidgetItem) -> None:
         top_level_item = item

@@ -57,6 +57,7 @@ APP_UNIT_TO_PINT: dict[str, str] = {
     "kg/m³": "kilogram / meter**3",
     "g/cm³": "gram / centimeter**3",
     "lb/ft³": "lb / foot**3",
+    "ppg": "lb / gallon",
     # volume
     "m³": "meter**3",
     "cm³": "centimeter**3",
@@ -90,6 +91,8 @@ APP_UNIT_TO_PINT: dict[str, str] = {
     "psi/ft": "psi / foot",
     "bar/m": "bar / meter",
     "bar/ft": "bar / foot",
+    # EMW as gradient: ppg equiv = (psi/ft) / 0.052  →  1 ppg equiv = 0.052 psi/ft
+    "ppg equiv": "ppg_equiv",
     # temperature gradient (use delta scales, not absolute °C/°F)
     "K/m": "kelvin / meter",
     "K/ft": "kelvin / foot",
@@ -122,6 +125,8 @@ UNITS_ADDITIONAL_TO_PINT:dict[str, tuple[str, float]]= {
     #Permeability
     "darcy":("meter**2", 9.869233e-13),
     "millidarcy":("darcy", 1e-3),
+    # Pressure gradient EMW (ppg equiv): psi/ft = 0.052 * ppg equiv
+    "ppg_equiv": ("psi / foot", 0.052),
 }
 
 #Function to add developer defined units to the pint registry

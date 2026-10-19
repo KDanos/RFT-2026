@@ -7,7 +7,7 @@ from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
 from utilities import print_current_location_function
-from ui.main_window.signal_collection_protocol import SignalCoordinator
+from ui.main_window.project_signals import ProjectSignals
 from ui.depth_gradient_chart.depth_gradient_chart import DepthGradientChart
 
 
@@ -18,7 +18,7 @@ class GraphicalFrame(QFrame):
             project: ProjectDataManager,
             col_specs: list[ColumnSpec],
             view: AnalysisView,
-            signal_coordinator: SignalCoordinator,
+            signals: ProjectSignals,
             ) -> None:
         super().__init__(parent)
 
@@ -26,7 +26,7 @@ class GraphicalFrame(QFrame):
         self.project: ProjectDataManager = project
         self.view: AnalysisView = view
         self.col_specs: list[ColumnSpec] = col_specs
-        self.signal_coordinator = signal_coordinator
+        self.signals = signals
 
 
         # Set module variables
@@ -50,7 +50,7 @@ class GraphicalFrame(QFrame):
             parent=self.pressure_frame,
             view=self.view,
             project=self.project,
-            signal_coordinator= self.signal_coordinator,
+            signals= self.signals,
             x_axis=CANONICAL_FORMATION_PRESSURE,
             col_specs=self.col_specs,
             chart_id="pressure_plot",
@@ -76,7 +76,7 @@ class GraphicalFrame(QFrame):
             parent=self.xs_pressure_frame,
             view=self.view,
             project=self.project,
-            signal_coordinator=self.signal_coordinator,
+            signals=self.signals,
             x_axis=CANONICAL_EXCESS_PRESSURE,
             col_specs=self.col_specs,
             chart_id="xs_pressure_plot",

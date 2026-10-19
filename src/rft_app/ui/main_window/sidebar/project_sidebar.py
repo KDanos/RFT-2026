@@ -2,6 +2,7 @@ from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtWidgets import QFrame, QScrollArea, QTreeWidget, QVBoxLayout, QWidget
 
 from project import ProjectDataManager
+from ui.main_window.project_signals import ProjectSignals
 from .all_datasets_tree import AllDataSetsTree
 from .analyses_tree import AnalysesTree
 
@@ -12,12 +13,15 @@ class ProjectSidebar(QFrame):
     def __init__(
         self,
         project: ProjectDataManager,
+        signals:ProjectSignals,
         parent: QWidget | None = None,
+        
         ) -> None:
         super().__init__(parent)
 
         # Set project variables
         self.project = project
+        self.signals = signals
 
         # Set module variables
         # (none)
@@ -66,7 +70,7 @@ class ProjectSidebar(QFrame):
         self.analyses_tree_layout = QVBoxLayout(self.project_analyses_frame)
 
         #Create the analyses tree
-        self.all_analyses_tree = AnalysesTree(self.project_analyses_frame, self.project)
+        self.all_analyses_tree = AnalysesTree(self.project_analyses_frame, self.project, self.signals)
         self.analyses_tree_layout.addWidget(self.all_analyses_tree)
 
         #Create the main sidebar layout

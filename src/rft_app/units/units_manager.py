@@ -23,7 +23,7 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
    "density": QuantityType(
         key="density",
         label="Density",
-        units=("kg/m³", "g/cm³", "lb/ft³"),
+        units=("kg/m³", "g/cm³", "lb/ft³", "ppg"),
         symbols=("ρ",),
         is_numeric = True,
     ),
@@ -79,7 +79,7 @@ STANDARD_QUANTITIES: Dict[str, QuantityType]={
     "pressure_gradient": QuantityType(
         key="pressure_gradient",
         label="Pressure Gradient",
-        units=("Pa/m", "psi/m", "psi/ft", "bar/m", "bar/ft"),
+        units=("Pa/m", "psi/m", "psi/ft", "bar/m", "bar/ft", "ppg equiv"),
         symbols=("∇P",),
         is_numeric=True,
     ),

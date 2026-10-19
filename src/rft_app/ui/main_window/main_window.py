@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
+from ui.main_window.project_signals import ProjectSignals
 from units.custom_units_dialog import CustomUnitsDialog
 from ui.analysis_view import AnalysisViewWidget, insert_excess_pressure_column
 from ui.widgets import DataLoaderDialogAnalysis, NewViewDialog
@@ -38,7 +39,7 @@ class MainWindowKD(QMainWindow):
         self.project_path: Path | None = None
 
         # Set module variables
-        # (none)
+        self.signals:ProjectSignals = ProjectSignals(self)
 
         # Initialisation methods
         self._build_ui()
@@ -75,11 +76,11 @@ class MainWindowKD(QMainWindow):
         self.analysis_workspace = AnalysisWorkspace(
             self,
             self.project,
-            signal_coordinator=self,
+            signals = self.signals,
         )
 
         # Create the Sidebar
-        self.project_sidebar = ProjectSidebar(self.project)
+        self.project_sidebar = ProjectSidebar(self.project, self.signals)
         #Status Bar
 
         #Manage the main splitter
@@ -282,9 +283,10 @@ class MainWindowKD(QMainWindow):
         self.project_sidebar.all_analyses_tree.new_view_requested.connect(
             lambda analysis: self._create_new_analysis_view(analysis)
         )
-        self.project_sidebar.all_analyses_tree.fluids_changed.connect(
-            self.on_fluids_changed
-        )
+        
+        # Project Signals
+        self.signals.fluids_changed.connect(self.on_fluids_changed)
+        self.signals.project_units_changed.connect(self._on_project_units_changed_main_window)
 
     def _create_default_analysis_view(
         self,

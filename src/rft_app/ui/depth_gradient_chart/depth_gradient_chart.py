@@ -8,7 +8,7 @@ from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from project.models import RectAnnotation, StraightLineAnnotation
 from ui.analysis_view.analysis_view_data_manager import ScatterSeriesDefinition
-from ui.main_window.signal_collection_protocol import SignalCoordinator
+from ui.main_window.project_signals import ProjectSignals
 from ui.depth_gradient_chart.depth_chart_menu import DepthChartMenu
 from ui.depth_gradient_chart.rectangle_annotation import RectangleAnnotation
 from ui.depth_gradient_chart.straight_line import StraightLine
@@ -27,7 +27,7 @@ class DepthGradientChart(pg.PlotWidget):
             parent: QWidget,
             view: AnalysisView,
             project: ProjectDataManager,
-            signal_coordinator:SignalCoordinator,
+            signals:ProjectSignals,
             x_axis: str = "",
             col_specs: list[ColumnSpec] | None = None,
             chart_id: str = "",
@@ -37,7 +37,7 @@ class DepthGradientChart(pg.PlotWidget):
         # Set project variables
         self.view: AnalysisView = view
         self.project: ProjectDataManager = project
-        self.signal_coordinator = signal_coordinator
+        self.signals = signals
 
         # Set module variables
         self.x_axis: str = x_axis
@@ -101,7 +101,7 @@ class DepthGradientChart(pg.PlotWidget):
             if isinstance(a, StraightLineAnnotation) and a.chart_id == self.chart_id:
                 new_line = StraightLine(
                     parent=self,
-                    signal_coordinator = self.signal_coordinator,
+                    signals = self.signals,
                     starting_point=a.start_si,
                     end_point=a.end_si,
                     color=a.color,
@@ -219,7 +219,7 @@ class DepthGradientChart(pg.PlotWidget):
             self,
             starting_point=self.first_click,
             end_point=self.line_end,
-            signal_coordinator=self.signal_coordinator
+            signals=self.signals
         )
         self.addItem(new_line)
         self.all_lines.append(new_line)

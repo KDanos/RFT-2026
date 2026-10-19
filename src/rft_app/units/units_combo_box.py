@@ -55,4 +55,4 @@ class UnitsComboBox(QtWidgets.QComboBox):
             raise ValueError(
                 f"Unknown quantity key for UnitsComboBox: {quantity_key!r}"
             )
-        self.addItems(self.quantity_object.units)
+        self.addItems(sorted(self.quantity_object.units))

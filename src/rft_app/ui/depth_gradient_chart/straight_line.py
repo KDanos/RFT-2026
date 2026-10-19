@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QMenu, QMessageBox
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
-from ui.main_window.signal_collection_protocol import SignalCoordinator
+from ui.main_window.project_signals import ProjectSignals
 
 
 
@@ -24,7 +24,7 @@ class StraightLine(pg.LineSegmentROI):
     def __init__(
             self,
             parent: pg.PlotWidget,
-            signal_coordinator:SignalCoordinator,
+            signals:ProjectSignals,
             color: QColor | str = "black",
             style: Qt.PenStyle = Qt.PenStyle.DashLine,
             starting_point: tuple[float, float] | None = None,
@@ -37,7 +37,7 @@ class StraightLine(pg.LineSegmentROI):
         self.project: ProjectDataManager = self.parent_chart.project
         self.view: AnalysisView = self.parent_chart.view
         self.analysis: AnalysisObject = self.view.analysis_object
-        self.signal_coordinator:SignalCoordinator = signal_coordinator
+        self.signals:ProjectSignals = signals
 
         # Set module variables
         self.color: QColor | str = color
@@ -111,7 +111,7 @@ class StraightLine(pg.LineSegmentROI):
             self.parent_chart,
             self.project,
             self.view,
-            signal_coordinator= self.signal_coordinator,
+            signals= self.signals,
             pressure_gradient_si=gradient,
             zero_pressure_depth_si = y_intercept,
             base_line=self,

@@ -10,7 +10,7 @@ from project.canonical_names import (
 from project.fluid_model import Fluid
 from project.models import ViewWidgetSidebar
 from ui.filterable_table.proxy_model import ProxyFilterModel
-from ui.main_window.signal_collection_protocol import SignalCoordinator
+from ui.main_window.project_signals import ProjectSignals
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
 from ui.filterable_table.filterable_table import FilterableTable
 from .analysis_view_data_manager import calculate_excess_pressure_column, refresh_view_object_from_column_tree_selection
@@ -27,7 +27,7 @@ class AnalysisViewWidget(QWidget):
             project: ProjectDataManager,
             analysis: AnalysisObject,
             analysis_view_object: AnalysisView,
-            signal_coordinator:SignalCoordinator,           
+            signals:ProjectSignals,           
             ) -> None:
         super().__init__(parent)
 
@@ -35,7 +35,7 @@ class AnalysisViewWidget(QWidget):
         self.project: ProjectDataManager = project
         self.analysis: AnalysisObject = analysis
         self.view: AnalysisView = analysis_view_object
-        self.signal_coordinator:SignalCoordinator = signal_coordinator
+        self.signals:ProjectSignals = signals
         self.sidebar_summary: ViewWidgetSidebar = self.view.sidebar
 
         # Set module variables
@@ -61,13 +61,14 @@ class AnalysisViewWidget(QWidget):
             project=self.project,
             col_specs=self.view.column_specs,
             view=self.view,
-            signal_coordinator=self.signal_coordinator
+            signals=self.signals
             )
 
         self.graphical_sidebar = GraphicalSidebar(
             self,
             self.project,
             self.view.column_specs,
+            self.signals,
             )
 
         self.graphical_row_splitter = QSplitter(Qt.Orientation.Horizontal)
