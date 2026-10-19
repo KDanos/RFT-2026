@@ -291,7 +291,7 @@ def round_value_to_decimal_points(
     return(str(value))
 
 def limit_decimals(value: Any, limit: int = 3) -> str:
-    "Avoid Python default behaviour to retun str in scientific notation""
+    "Avoid Python default behaviour to retun str in scientific notation"
     
     """Round to at least ``significant_figures`` significant figures as a float.
 

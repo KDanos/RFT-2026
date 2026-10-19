@@ -122,7 +122,7 @@ class AnalysesTree(QTreeWidget):
                     zero_depth_text = f"0 pressure at {zero_depth:.1f} [{self.depth_unit}]"
                     fluid_item.addChild(QTreeWidgetItem([zero_depth_text]))
 
-                contact_item = QTreeWidgetItem(["Underlying Contact:"])
+                contact_item = QTreeWidgetItem(["Bottom Contact:"])
                 fluid_item.addChild(contact_item)
 
                 contact = fluid.bottom_contact

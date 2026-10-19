@@ -56,7 +56,6 @@ class AnalysisView:
     sidebar:ViewWidgetSidebar =field(default_factory=ViewWidgetSidebar)
 
 
-
 @dataclass
 class StraightLineAnnotation:
     """Persisted straight-line annotation for charts in an AnalysisView."""

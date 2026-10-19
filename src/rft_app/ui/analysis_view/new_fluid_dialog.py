@@ -255,7 +255,6 @@ class NewFluidDialog(QDialog):
         )
         #Reset the contact top fluid (to the newly created one)
         bottom_contact.top_fluid = new_fluid
-        bottom_contact.type = bottom_contact.contact_type()
         bottom_contact.set_contact_data()
 
         self.analysis.fluids.append(new_fluid)

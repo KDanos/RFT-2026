@@ -52,7 +52,10 @@ class FluidContact:
         return None
 
     def set_contact_data(self)->None:
-       
+        # Set the contact type
+        self.type = self.contact_type()
+
+        # Set the pressure, depth and depth intercepts
         if not self.bottom_fluid:
             self.exists = False
             self.depth = None
