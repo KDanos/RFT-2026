@@ -251,6 +251,7 @@ class NewFluidDialog(QDialog):
             bottom_contact=bottom_contact,
             plotting_depth_min_si=min(self.base_line.starting_point[1], self.base_line.end_point[1]),
             plotting_depth_max_si=max(self.base_line.starting_point[1], self.base_line.end_point[1]),
+            analysis_object=self.analysis,
 
         )
         #Reset the contact top fluid (to the newly created one)
@@ -348,7 +349,6 @@ class NewFluidDialog(QDialog):
         self.zero_pressure_depth_si = self.base_line.calculate_y_intercept_si()
         self._update_fluid_gradient_display()
         self._update_zero_pressure_depth_display()
-
     
     #--------Public API--------
 

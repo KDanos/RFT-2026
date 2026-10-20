@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from units import convert_from_normalised_to_user_units
 
 if TYPE_CHECKING:
-    from project import ProjectDataManager
+    from project import ProjectDataManager, AnalysisObject
 
 
 @dataclass
@@ -23,6 +23,7 @@ class Fluid:
     bottom_contact:FluidContact
     plotting_depth_min_si:float | None = None
     plotting_depth_max_si:float | None = None
+    analysis_object: AnalysisObject = None
 
     def values_in_project_units(
         self,

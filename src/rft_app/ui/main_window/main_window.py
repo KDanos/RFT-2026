@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
+from units.unit_conversion_dialog import UnitConversionDialog
 from ui.main_window.project_signals import ProjectSignals
 from units.custom_units_dialog import CustomUnitsDialog
 from ui.analysis_view import AnalysisViewWidget, insert_excess_pressure_column
@@ -122,6 +123,10 @@ class MainWindowKD(QMainWindow):
         self.actionAbout = QAction("About", self)
         self.actionContact_Us = QAction("Contact Us", self)
 
+        # Unit converter
+        self.actionLoadUnitConversionDialog = QAction("Unit Convertor", self)
+        self.actionLoadUnitConversionDialog.setIcon(app_icon("mdi.swap-horizontal"))
+
     def _build_menubar(self) -> None:
         menubar = self.menuBar()
 
@@ -176,7 +181,7 @@ class MainWindowKD(QMainWindow):
             self.actionChangeProjecUnits,
             self.actionAbout,
             self.actionContact_Us,
-        ):
+            ):
             self.toolBar.addAction(action)
 
         #Create the units combo
@@ -193,6 +198,7 @@ class MainWindowKD(QMainWindow):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.toolBar.addWidget(spacer)
+        self.toolBar.addAction(self.actionLoadUnitConversionDialog)
         self.toolBar.addWidget(units_frame)
 
     def _build_ui(self) -> None:
@@ -202,8 +208,7 @@ class MainWindowKD(QMainWindow):
         self._build_menu_actions()
         self._build_central_widget()
         self._build_menubar()
-        # self._build_statusbar()
-        
+
         self.setWindowState(self.windowState() | Qt.WindowState.WindowMaximized)
 
     def _check_if_project_has_path(self) -> None:
@@ -263,6 +268,7 @@ class MainWindowKD(QMainWindow):
         self.actionCloseProject.triggered.connect(self._close_project)
         self.actionExitApplication.triggered.connect(self._exit_application)
         self.actionNewAnalysis.triggered.connect(self._start_new_analysis)
+        self.actionLoadUnitConversionDialog.triggered.connect(self._load_unit_converter)
 
         #Widgets
         self.units_combo.currentIndexChanged.connect(self._on_project_units_changed_main_window)
@@ -358,6 +364,10 @@ class MainWindowKD(QMainWindow):
             return
         self._apply_loaded_project(project, default_path)
 
+    def _load_unit_converter(self) -> None:
+        converter = UnitConversionDialog(self)
+        converter.show()
+
     def _on_project_units_changed_main_window(self, index: int) -> None:
         if index == 0:
             self._open_custom_unit_manager()
@@ -439,6 +449,23 @@ class MainWindowKD(QMainWindow):
             return
         event.accept()
 
+    def on_fluids_changed(self) -> None:
+        self.project_sidebar.all_analyses_tree.refresh_self()
+
+        for i in range(self.analysis_workspace.analyses_tabs.count()):
+            page = self.analysis_workspace.analyses_tabs.widget(i)
+            if page is None:
+                continue
+            inner_tabs = page.findChild(QTabWidget)
+            for j in range(inner_tabs.count()):
+                widget = inner_tabs.widget(j)
+                if isinstance(widget, AnalysisViewWidget):
+                    widget.graphical_sidebar.refresh_self()
+
+    def on_project_units_changed(self) -> None:
+        self.project_sidebar.all_analyses_tree.refresh_self()
+        self.analysis_workspace.on_project_units_changed()
+
     def reset_units_combo(self) -> None:
         with QSignalBlocker(self.units_combo):
             self.units_combo.clear()
@@ -451,30 +478,4 @@ class MainWindowKD(QMainWindow):
             idx = self.units_combo.findText(self.project.current_unit_system.label)
             if idx >= 0:
                 self.units_combo.setCurrentIndex(idx)
-
-    #--------Protocol Methods--------
-
-    def on_fluids_changed(self) -> None:
-        #Update the project sidebar analyses tree
-        self.project_sidebar.all_analyses_tree.refresh_self()
-        
-        # Update the analysis view widget sidebar
-        for i in range(self.analysis_workspace.analyses_tabs.count()):
-            page = self.analysis_workspace.analyses_tabs.widget(i)
-            if page is None:
-                continue
-            inner_tabs = page.findChild(QTabWidget)
-            for j in range (inner_tabs.count()):
-                widget = inner_tabs.widget(j)
-                if isinstance(widget, AnalysisViewWidget):
-                    widget.graphical_sidebar.refresh_self()
-
-        # Placeholder: refresh open analysis views after fluid create/delete
-        # - reference / active fluid combos (GraphicalSidebar)
-        # - clear combo selection if a deleted fluid was selected
-        # - redraw chart lines / annotations tied to fluids
-
-    def on_project_units_changed(self) -> None:
-        self.project_sidebar.all_analyses_tree.refresh_self()
-        self.analysis_workspace.on_project_units_changed()
 

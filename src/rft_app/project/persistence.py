@@ -24,4 +24,12 @@ def load_project(path: str | Path) -> ProjectDataManager:
             if not hasattr(view, "annotations"):
                 view.annotations = []
 
+    # Migrate older projects pickled before Fluid.analysis_object existed
+    btc = next((a for a in project.analyses if a.name == "Best Technical Case"), None)
+    for analysis in project.analyses:
+        for fluid in analysis.fluids:
+            if not hasattr(fluid, "analysis_object") or fluid.analysis_object is None:
+                fluid.analysis_object = btc if btc is not None else analysis
+
     return project
+

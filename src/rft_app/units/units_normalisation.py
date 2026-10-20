@@ -209,3 +209,12 @@ def convert_array_to_user_units(
     si_unit = app_unit_to_pint(identify_si_storage_unit(quantity_key))
     pint_user_unit = app_unit_to_pint(user_unit)
     return UREG.Quantity(data, si_unit).to(pint_user_unit).magnitude
+
+def convert_from_user_unit_to_user_unit(
+    input_unit: str,
+    output_unit: str,
+    value: float,
+    ) -> float:
+    from_unit = app_unit_to_pint(input_unit)
+    to_unit = app_unit_to_pint(output_unit)
+    return float(UREG.Quantity(value, from_unit).to(to_unit).magnitude)

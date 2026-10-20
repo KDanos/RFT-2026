@@ -3,9 +3,10 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
+from project.fluid_model import Fluid
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
-from utilities import show_dataframe_table_dialog
+from utilities import show_dataframe_table_dialog, unique_name
 
 
 class AnalysesTree(QTreeWidget):
@@ -18,18 +19,18 @@ class AnalysesTree(QTreeWidget):
         self,
         parent: QWidget,
         project: ProjectDataManager,
-        signals:ProjectSignals,
+        signals: ProjectSignals,
         ) -> None:
         super().__init__(parent)
 
         # Set project variables
         self.parent: QWidget | None = parent
         self.project: ProjectDataManager | None = project
-        self.signals = signals
+        self.signals: ProjectSignals = signals
 
         # Set module variables
-        self.depth_unit:str = self.project.current_unit_system.units_by_quantity["length"]
-        self.pressure_unit:str = self.project.current_unit_system.units_by_quantity["pressure"]
+        self.depth_unit: str = self.project.current_unit_system.units_by_quantity["length"]
+        self.pressure_unit: str = self.project.current_unit_system.units_by_quantity["pressure"]
 
         # Initialisation methods
         self.setHeaderLabel("Analyses")
@@ -91,15 +92,13 @@ class AnalysesTree(QTreeWidget):
             text = f"Pressure Column: {analysis.formation_pres_src_col}"
             top_level.addChild(QTreeWidgetItem([text]))
 
-            # Displayed dataframe
-            # hold, not sure what this represents yet
-
             # Fluids
             fluids_node = QTreeWidgetItem(["Fluids:"])
             top_level.addChild(fluids_node)
             for fluid in analysis.fluids:
                 fluid_item = QTreeWidgetItem([fluid.name])
                 fluid_item.setData(0, Qt.ItemDataRole.UserRole, fluid)
+                fluid_item.setFlags(fluid_item.flags() | Qt.ItemFlag.ItemIsEditable)
                 fluids_node.addChild(fluid_item)
 
                 fluid_type = QTreeWidgetItem([f"Fluid type: {fluid.type}"])
@@ -130,8 +129,8 @@ class AnalysesTree(QTreeWidget):
                 contact = fluid.bottom_contact
                 
                 if contact.bottom_fluid:
-                    contact_item.addChild(QTreeWidgetItem([f"Type: {contact.type}"]))
                     contact_item.addChild(QTreeWidgetItem([f"Fluid: {contact.bottom_fluid.name}"]))  
+                    contact_item.addChild(QTreeWidgetItem([f"Type: {contact.type}"]))
                 else: 
                     contact_item.addChild(QTreeWidgetItem(["None specified"]))
 
@@ -152,7 +151,6 @@ class AnalysesTree(QTreeWidget):
                     )
                     contact_pressure_txt = f"Pressure: {contact_pressure:.0f} [{self.pressure_unit}]"
                     contact_item.addChild(QTreeWidgetItem([contact_pressure_txt]))
-
 
             # Analysis Views
             view_node = QTreeWidgetItem(["Analysis Views:"])
@@ -250,15 +248,9 @@ class AnalysesTree(QTreeWidget):
 
         rename_fluid_action = QAction("Rename", self)
         rename_fluid_action.triggered.connect(
-            lambda _checked=False: print("I want to be renamed")
+            lambda _checked=False, item=item: self._start_rename_fluid(item)
         )
         list_of_actions.append(rename_fluid_action)
-
-        edit_fluid_action = QAction("Edit", self)
-        edit_fluid_action.triggered.connect(
-            lambda _checked=False: print("I want to be edited")
-        )
-        list_of_actions.append(edit_fluid_action)
 
         delete_fluid_action = QAction("Delete", self)
         delete_fluid_action.triggered.connect(
@@ -425,17 +417,42 @@ class AnalysesTree(QTreeWidget):
             self._rename_analysis(item)
         elif isinstance(obj, AnalysisView):
             self._rename_view(item)
+        elif isinstance(obj, Fluid):
+            self._rename_fluid(item)
 
     def _rename_analysis(self, item: QTreeWidgetItem) -> None:
         analysis = item.data(0, Qt.ItemDataRole.UserRole)
-        analysis.name = item.text(0).strip()
+        input_name = item.text(0).strip()
+        new_name = unique_name(
+            input_name,
+            [a.name for a in self.project.analyses if a is not analysis],
+            )
+        analysis.name = new_name
         self.analysis_renamed.emit(analysis)
+        self.project.mark_modified()
+
+    def _rename_fluid(self, item: QTreeWidgetItem) -> None:
+        fluid = item.data(0, Qt.ItemDataRole.UserRole)
+        analysis = fluid.analysis_object
+        input_name = item.text(0).strip()
+        new_name = unique_name(
+            input_name,
+            [f.name for f in analysis.fluids if f is not fluid],
+            )
+        fluid.name = new_name
+        self.signals.fluids_changed.emit()
         self.project.mark_modified()
 
     def _rename_view(self, item: QTreeWidgetItem) -> None:
         view = item.data(0, Qt.ItemDataRole.UserRole)
-        view.name = item.text(0).strip()
-        self.analysis_visibility_changed.emit(view.analysis_object, view)
+        analysis = view.analysis_object
+        input_name = item.text(0).strip()
+        new_name = unique_name(
+            input_name,
+            [v.name for v in analysis.analysis_views if v is not view],
+            )
+        view.name = new_name
+        self.analysis_visibility_changed.emit(analysis, view)
         self.project.mark_modified()
 
     def _restore_expanded_paths(self, expanded_nodes: set[tuple[str, ...]]) -> None:
@@ -480,6 +497,13 @@ class AnalysesTree(QTreeWidget):
 
     def _start_rename_analysis(self, item: QTreeWidgetItem) -> None:
         if item.parent() is not None:
+            return
+        self.setCurrentItem(item, 0)  # focus on the row
+        self.editItem(item, 0)  # same as pressing F2
+
+    def _start_rename_fluid(self, item: QTreeWidgetItem) -> None:
+        fluid = item.data(0, Qt.ItemDataRole.UserRole)
+        if fluid is None or not isinstance(fluid, Fluid):
             return
         self.setCurrentItem(item, 0)  # focus on the row
         self.editItem(item, 0)  # same as pressing F2
