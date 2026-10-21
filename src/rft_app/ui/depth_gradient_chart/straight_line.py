@@ -1,43 +1,39 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+import uuid
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction, QColor
+from PyQt6.QtWidgets import QMenu, QMessageBox
+import pyqtgraph as pg
+
+from project import AnalysisObject, AnalysisView, ProjectDataManager
+from ui.analysis_view.new_fluid_dialog import NewFluidDialog
+from ui.main_window.project_signals import ProjectSignals
+from units import convert_from_normalised_to_user_units, normalise_from_user_units
 
 if TYPE_CHECKING:
     from ui.analysis_view import AnalysisViewWidget
 
-import uuid
-
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QColor, QCursor
-from PyQt6.QtWidgets import QMenu, QMessageBox
-import pyqtgraph as pg
-from pyqtgraph.graphicsItems.ROI import Handle
-from ui.analysis_view.new_fluid_dialog import NewFluidDialog
-from ui.main_window.project_signals import ProjectSignals
-
-
-
-from project import AnalysisObject, AnalysisView, ProjectDataManager
-from units import convert_from_normalised_to_user_units, normalise_from_user_units
-
 
 class StraightLine(pg.LineSegmentROI):
     def __init__(
-            self,
-            parent: pg.PlotWidget,
-            signals:ProjectSignals,
-            color: QColor | str = "black",
-            style: Qt.PenStyle = Qt.PenStyle.DashLine,
-            starting_point: tuple[float, float] | None = None,
-            end_point: tuple[float, float] | None = None,
-            points_are_si: bool = False,
-            ) -> None:
-        
+        self,
+        parent: pg.PlotWidget,
+        signals: ProjectSignals,
+        color: QColor | str = "black",
+        style: Qt.PenStyle = Qt.PenStyle.DashLine,
+        starting_point: tuple[float, float] | None = None,
+        end_point: tuple[float, float] | None = None,
+        points_are_si: bool = False,
+        ) -> None:
         # Set project variables
         self.parent_chart: pg.PlotWidget = parent
         self.project: ProjectDataManager = self.parent_chart.project
         self.view: AnalysisView = self.parent_chart.view
         self.analysis: AnalysisObject = self.view.analysis_object
-        self.signals:ProjectSignals = signals
+        self.signals: ProjectSignals = signals
 
         # Set module variables
         self.color: QColor | str = color
@@ -47,10 +43,7 @@ class StraightLine(pg.LineSegmentROI):
         self.is_visible: bool = True
         self.pen = pg.mkPen(color=self.color, width=2, style=self.style)
         self.id: str = str(uuid.uuid4())
-        super().__init__(
-            positions=((0.0, 0.0), (0.0, 0.0)),
-            pen=self.pen,
-        )
+
         from ui.analysis_view import AnalysisViewWidget
         w = self.parent_chart
         while w is not None and not isinstance(w, AnalysisViewWidget):
@@ -58,7 +51,12 @@ class StraightLine(pg.LineSegmentROI):
         self.view_widget: AnalysisViewWidget | None = w
 
         # Initialisation methods
+        super().__init__(
+            positions=((0.0, 0.0), (0.0, 0.0)),
+            pen=self.pen,
+            )
         self._build_ui()
+        self._set_handle_pen_options()
         self._define_menu_actions()
         self._connect_signals()
         self.extract_units_and_quantities()
@@ -67,41 +65,45 @@ class StraightLine(pg.LineSegmentROI):
 
     #--------Private UI--------
 
-    def _build_ui(self) -> None:
-        self.hoverPen = pg.mkPen(color=self.color, width=3, style=self.style)
+    def _build_ui(self)->None:
+        # Hover Pen
+        self.hoverPen = pg.mkPen(self.pen)
+        self.hoverPen.setWidth(4)      
+        
+    def _set_handle_pen_options(self)->None:
+        self.handlePen = pg.mkPen(color = (0,0,0,0), width = 2)
+        self.handleHoverPen = pg.mkPen(self.pen)
+        self.handleHoverPen.setStyle(Qt.PenStyle.SolidLine)
+        self.handleHoverPen.sides = 12
+        self.handleHoverPen.radius = 10
 
-        handle_pen = pg.mkPen(color=self.color, width=2)
-        self.handlePen = handle_pen
-        self.handleHoverPen = handle_pen
         for handle in self.getHandles():
-            handle.pen = handle_pen
-            handle.hoverPen = handle_pen
-            handle.currentPen = handle_pen
             handle.sides = 12
-            handle.startAng = 0.0
+            handle.radius = 10
             handle.buildPath()
-            handle._shape = None
+            
+            handle.pen = self.handlePen
+            handle.currentPen = self.handlePen
+            handle.hoverPen = self.handleHoverPen
+            
             handle.update()
-            self._install_handle_hover_guard(handle)
-
-        self._set_handles_visibility(False)
     
     def _connect_signals(self) -> None:
-        self.sigRegionChangeStarted.connect(self._on_region_change_started)
         self.sigRegionChangeFinished.connect(self._on_region_change_finished)
         self.actionConvertLineToFluid.triggered.connect(self._convert_line_to_fluid)
         self.actionDuplicateLine.triggered.connect(self._duplicate_self)
         self.actionDeleteLine.triggered.connect(self._delete_self)
+        
+        self.sigRegionChangeStarted.connect(self._on_region_change_started)
 
     def _convert_line_to_fluid(self) -> None:
-        # Check if a New Fluid Dialog is already open
         if self.view_widget is not None and self.view_widget.new_fluid_dialog:
             QMessageBox.critical(
                 self.parent_chart,
                 "New Fluid Dialog Already Open",
                 """An instacne of a New Fluid Dialog Window is already open for this view. 
                 \nPLease close that one to proceed.""",
-            )
+                )
             return
 
         gradient = self.calculate_fluid_gradient_si()
@@ -111,18 +113,16 @@ class StraightLine(pg.LineSegmentROI):
             self.parent_chart,
             self.project,
             self.view,
-            signals= self.signals,
+            signals=self.signals,
             pressure_gradient_si=gradient,
-            zero_pressure_depth_si = y_intercept,
+            zero_pressure_depth_si=y_intercept,
             base_line=self,
-        )
-        # Assign the dialog window to the view widget to avoid having dublicate windows open at the same time
+            )
         if self.view_widget is not None:
             self.view_widget.new_fluid_dialog = dlg
-            # dlg.new_fluid_created.connect(self.view_widget.refresh_fluid_ui)
             dlg.finished.connect(
                 lambda: setattr(self.view_widget, "new_fluid_dialog", None)
-            )
+                )
         dlg.show()
 
     def _convert_viewbox_cordinates_to_SI(self) -> None:
@@ -130,34 +130,25 @@ class StraightLine(pg.LineSegmentROI):
             self.x_unit,
             self.x_quantity_key,
             self.starting_point[0],
-        )
+            )
         y_SI = normalise_from_user_units(
             self.y_unit,
             self.y_quantity_key,
             self.starting_point[1],
-        )
+            )
         self.starting_point = (x_SI, y_SI)
 
         x_SI = normalise_from_user_units(
             self.x_unit,
             self.x_quantity_key,
             self.end_point[0],
-        )
+            )
         y_SI = normalise_from_user_units(
             self.y_unit,
             self.y_quantity_key,
             self.end_point[1],
-        )
+            )
         self.end_point = (x_SI, y_SI)
-
-    def _cursor_over_any_handle(self) -> bool:
-        scene = self.scene()
-        view_widget = self.parent_chart
-        if scene is None or view_widget is None:
-            return False
-        scene_pos = view_widget.mapToScene(view_widget.mapFromGlobal(QCursor.pos()))
-        handles = set(self.getHandles())
-        return any(item in handles for item in scene.items(scene_pos))
 
     def _define_menu_actions(self) -> None:
         self.actionConvertLineToFluid = QAction("Convert to Fluid", self)
@@ -182,26 +173,6 @@ class StraightLine(pg.LineSegmentROI):
     def _duplicate_self(self) -> None:
         pass
 
-    def _handles_drag_active(self) -> bool:
-        return any(handle.isMoving for handle in self.getHandles())
-
-    def _hide_handles_if_idle(self) -> None:
-        if self._handles_drag_active() or self.mouseHovering:
-            return
-        if self._cursor_over_any_handle():
-            return
-        self._set_handles_visibility(False)
-
-    def _install_handle_hover_guard(self, handle: Handle) -> None:
-        def hoverEvent(ev) -> None:
-            Handle.hoverEvent(handle, ev)
-            if ev.isExit():
-                QTimer.singleShot(0, self._hide_handles_if_idle)
-            else:
-                self._set_handles_visibility(True)
-
-        handle.hoverEvent = hoverEvent
-
     def _on_position_changed(self) -> None:
         p0, p1 = self.listPoints()
         p0 = self.mapToView(p0)
@@ -220,15 +191,13 @@ class StraightLine(pg.LineSegmentROI):
 
     def _on_region_change_finished(self, _roi: object) -> None:
         self._on_position_changed()
-        QTimer.singleShot(0, self._hide_handles_if_idle)
+        self._set_handle_pen_options()
 
-    def _on_region_change_started(self, _roi: object) -> None:
-        self._set_handles_visibility(True)
-
-    def _set_handles_visibility(self, visible: bool) -> None:
-        for handle in self.getHandles():
-            handle.setVisible(visible)
-
+    def _on_region_change_started(self, _roi:object) -> None: 
+        self._set_handle_pen_options()
+        # for handle in self.getHandles():
+        #     handle.setVisible(True)
+        
     #--------Public API--------
 
     def build_menu(self) -> QMenu:
@@ -238,14 +207,14 @@ class StraightLine(pg.LineSegmentROI):
         menu.addAction(self.actionDeleteLine)
         return menu
 
-    def calculate_fluid_gradient_si(self)->float:
+    def calculate_fluid_gradient_si(self) -> float:
         slope = self.calculate_line_slope_si()
-        if slope == 0: 
+        if slope == 0:
             raise ValueError(
                 "Cannot compute fluid gradient: line has has zero pressure span"
-            )
-        return 1/slope
-        
+                )
+        return 1 / slope
+
     def calculate_line_slope_si(self) -> float:
         p0, p1 = self.listPoints()
         p0 = self.mapToView(p0)
@@ -256,18 +225,16 @@ class StraightLine(pg.LineSegmentROI):
         if dy == 0:
             raise ValueError(
                 "Cannot compute fluid gradient: line has zero depth span"
-            )
+                )
 
-        # Convert to SI
         dx = normalise_from_user_units(self.x_unit, self.x_quantity_key, dx)
         dy = normalise_from_user_units(self.y_unit, self.y_quantity_key, dy)
-
         return dy / dx
 
-    def calculate_y_intercept_si(self)->float | None:
+    def calculate_y_intercept_si(self) -> float | None:
         m = self.calculate_line_slope_si()
         if m is not None:
-            return self.starting_point[1]-m*self.starting_point[0]
+            return self.starting_point[1] - m * self.starting_point[0]
         return None
 
     def extract_units_and_quantities(self) -> None:
@@ -280,24 +247,21 @@ class StraightLine(pg.LineSegmentROI):
     def refresh_geometry(self) -> None:
         x0 = convert_from_normalised_to_user_units(
             self.x_unit, self.x_quantity_key, self.starting_point[0]
-        )
+            )
         y0 = convert_from_normalised_to_user_units(
             self.y_unit, self.y_quantity_key, self.starting_point[1]
-        )
+            )
         x1 = convert_from_normalised_to_user_units(
             self.x_unit, self.x_quantity_key, self.end_point[0]
-        )
+            )
         y1 = convert_from_normalised_to_user_units(
             self.y_unit, self.y_quantity_key, self.end_point[1]
-        )
+            )
 
         handles = self.getHandles()
         self.movePoint(handles[0], (x0, y0), finish=False)
         self.movePoint(handles[1], (x1, y1), finish=False)
 
-    def setMouseHover(self, hover: bool) -> None:
+    def setMouseHover(self, hover: bool)-> None: 
         super().setMouseHover(hover)
-        if hover:
-            self._set_handles_visibility(True)
-        else:
-            QTimer.singleShot(0, self._hide_handles_if_idle)
+        self._set_handle_pen_options()

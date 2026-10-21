@@ -101,7 +101,7 @@ class DepthGradientChart(pg.PlotWidget):
             if isinstance(a, StraightLineAnnotation) and a.chart_id == self.chart_id:
                 new_line = StraightLine(
                     parent=self,
-                    signals = self.signals,
+                    signals=self.signals,
                     starting_point=a.start_si,
                     end_point=a.end_si,
                     color=a.color,
