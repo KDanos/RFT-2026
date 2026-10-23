@@ -146,7 +146,7 @@ STANDARD_FLUIDS: dict[str, FluidType] = {
     "other": FluidType(
         key="other",
         label="Other",
-        color="black",
+        color="purple",
     ),
 }
 

@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pandas as pd
 from units.units_manager import BUILT_IN_UNIT_SYSTEMS, UnitSystem
-from .models import AnalysisObject, ColumnSpec, DataSet, DataSetLogEntry
+from .data_models import AnalysisObject, ColumnSpec, DataSet, DataSetLogEntry
 from utilities import unique_name
 
 

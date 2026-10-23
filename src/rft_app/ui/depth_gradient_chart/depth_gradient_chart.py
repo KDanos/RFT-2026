@@ -10,7 +10,7 @@ import pyqtgraph as pg
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.canonical_names import CANONICAL_VERTICAL_DEPTH
-from project.models import RectAnnotation, StraightLineAnnotation
+from project.view_state import RectAnnotation, StraightLineAnnotation
 from ui.analysis_view.analysis_view_data_manager import ScatterSeriesDefinition
 from ui.depth_gradient_chart.depth_chart_menu import DepthChartMenu
 from ui.depth_gradient_chart.fluid_line import FluidLine

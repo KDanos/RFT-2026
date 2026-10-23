@@ -26,7 +26,8 @@ from project.canonical_names import (
     CANONICAL_VERTICAL_DEPTH,
     )
 from project.fluid_model import STANDARD_FLUIDS, Fluid
-from project.models import AnalysisObject, ViewWidgetSidebar
+from project.data_models import AnalysisObject
+from project.view_state import ViewWidgetSidebar
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units

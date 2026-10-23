@@ -8,7 +8,7 @@ from project.canonical_names import (
     CANONICAL_VERTICAL_DEPTH,
 )
 from project.fluid_model import Fluid
-from project.models import ViewWidgetSidebar
+from project.view_state import ViewWidgetSidebar
 from ui.filterable_table.proxy_model import ProxyFilterModel
 from ui.main_window.project_signals import ProjectSignals
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog

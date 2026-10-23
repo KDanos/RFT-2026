@@ -1,11 +1,18 @@
+"""Domain data models (datasets, analyses, analysis views)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+
 import pandas as pd
 
 from project.fluid_model import Fluid
+from project.view_state import (
+    RectAnnotation,
+    StraightLineAnnotation,
+    ViewWidgetSidebar,
+    )
 
 
 @dataclass
@@ -31,7 +38,7 @@ class AnalysisObject:
             if bottom_fluid is not None and bottom_fluid is fluid:
                 other.bottom_contact.bottom_fluid = None
                 other.bottom_contact.set_contact_data()
-        
+
         # Remove the fluid from the analysis fluids
         self.fluids.remove(fluid)
 
@@ -45,14 +52,6 @@ class AnalysisObject:
             if fluid is sidebar.ref_fluid:
                 sidebar.ref_fluid = None
 
-@dataclass
-class ViewWidgetSidebar:
-    """Captures the selections of the GUI sidebar"""
-    ref_fluid:Fluid|None =None
-    primary_series_identifier:str = "None"
-    secondary_series_identifier:str = "None"
-    active_fluid:Fluid|None = None
-    visible_fluids:list[Fluid] = field(default_factory = list)
 
 @dataclass
 class AnalysisView:
@@ -67,26 +66,7 @@ class AnalysisView:
     annotations: list[
         StraightLineAnnotation | RectAnnotation
         ] = field(default_factory=list)
-    sidebar:ViewWidgetSidebar =field(default_factory=ViewWidgetSidebar)
-
-
-@dataclass
-class StraightLineAnnotation:
-    """Persisted straight-line annotation for charts in an AnalysisView."""
-    start_si: tuple[float, float]
-    end_si: tuple[float, float]
-    color: str
-    chart_id: str
-    line_id: str
-
-@dataclass
-class RectAnnotation:
-    """Persisted rectangle annotation for charts in an AnalysisView."""
-    pos_si: tuple[float, float]
-    size_si: tuple[float, float]
-    color: str
-    chart_id: str
-    rect_id: str
+    sidebar: ViewWidgetSidebar = field(default_factory=ViewWidgetSidebar)
 
 
 @dataclass(frozen=True)
@@ -126,4 +106,3 @@ class DataSetLogEntry:
     new_value: Any = None
     quantity_key: str | None = None
     reason: str | None = None
-

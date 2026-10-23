@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QLayout, QTreeWidget, QTreeWidgetItem, QTreeWidgetI
 import pandas as pd
 from dataclasses import fields
 
-from project.models import ColumnSpec, DataSet, DataSetLogEntry
+from project.data_models import ColumnSpec, DataSet, DataSetLogEntry
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 
 
