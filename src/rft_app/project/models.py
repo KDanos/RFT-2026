@@ -25,11 +25,25 @@ class AnalysisObject:
         return any(view.is_visible for view in self.analysis_views)
 
     def delete_fluid(self, fluid: Fluid) -> None:
+        # Remove the fluid as a possible contact to other fluids
         for other in self.fluids:
             bottom_fluid = other.bottom_contact.bottom_fluid
             if bottom_fluid is not None and bottom_fluid is fluid:
-                other.contact_fluid = None
+                other.bottom_contact.bottom_fluid = None
+                other.bottom_contact.set_contact_data()
+        
+        # Remove the fluid from the analysis fluids
         self.fluids.remove(fluid)
+
+        # Remove it from the analysis view persisted data
+        for view in self.analysis_views:
+            sidebar = view.sidebar
+            if fluid in sidebar.visible_fluids:
+                sidebar.visible_fluids.remove(fluid)
+            if fluid is sidebar.active_fluid:
+                sidebar.active_fluid = None
+            if fluid is sidebar.ref_fluid:
+                sidebar.ref_fluid = None
 
 @dataclass
 class ViewWidgetSidebar:
@@ -64,7 +78,6 @@ class StraightLineAnnotation:
     color: str
     chart_id: str
     line_id: str
-
 
 @dataclass
 class RectAnnotation:

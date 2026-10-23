@@ -1,0 +1,45 @@
+---
+description: KD class boilerplate — empty __init__ skeleton when user asks to "boilerplate"
+globs: src/rft_app/**/*.py
+alwaysApply: false
+---
+
+# KD class boilerplate
+
+When the user asks to **boilerplate** a class (or “KD boilerplate”), apply this exact skeleton to the **current class** in the file they are working on. Do not invent domain logic, extra private methods, or init calls beyond what is shown.
+
+Keep the existing class name and base class(es). Keep existing imports that are still needed for the base type. Replace the class body with:
+
+```python
+class ClassName(BaseClass):
+    def __init__(self) -> None:
+        super().__init__()
+
+        # Set project variables
+
+        # Set module variables
+
+        # Initialisation methods
+        self._build_ui()
+        self._connect_signals()
+
+    #--------Private UI--------
+
+    def _build_ui(self) -> None:
+        pass
+
+    def _connect_signals(self) -> None:
+        pass
+
+    #--------Public API--------
+    # (none)
+```
+
+## Rules
+
+- `__init__` starts empty of domain code: only `super().__init__()`, the three comment blocks, and `_build_ui()` / `_connect_signals()`.
+- Under Initialisation methods: **only** those two calls (no `_define_menu_actions`, no refresh, no `exec`).
+- Private UI stubs: **only** `_build_ui` and `_connect_signals`, each with `pass`.
+- Do not add other private/public methods in the boilerplate pass.
+- Parameters on `__init__` / `super().__init__(...)` may be filled in a later step when the user asks; the boilerplate itself stays empty `self` / bare `super().__init__()` unless the base class requires arguments to construct (then pass the minimum required to keep the file importable, still with empty project/module variable sections).
+- This is distinct from full **KD class module format** (alpha sort, typed attrs, full method layout). Boilerplate is the starting stub only.

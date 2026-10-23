@@ -449,7 +449,7 @@ class MainWindowKD(QMainWindow):
             return
         event.accept()
 
-    def on_fluids_changed(self) -> None:
+    def on_fluids_changed(self, source_chart = None) -> None:
         self.project_sidebar.all_analyses_tree.refresh_self()
 
         for i in range(self.analysis_workspace.analyses_tabs.count()):
@@ -461,6 +461,8 @@ class MainWindowKD(QMainWindow):
                 widget = inner_tabs.widget(j)
                 if isinstance(widget, AnalysisViewWidget):
                     widget.graphical_sidebar.refresh_self()
+                    if source_chart is not widget.graphical_frame.pressure_chart:
+                        widget.graphical_frame.pressure_chart.refresh_self()
 
     def on_project_units_changed(self) -> None:
         self.project_sidebar.all_analyses_tree.refresh_self()

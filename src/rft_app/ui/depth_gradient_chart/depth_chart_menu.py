@@ -23,15 +23,15 @@ class DepthChartMenu(QMenu):
 
     def _build_ui(self) -> None:
         self.addAction(self.actionShowAnnotations)
-        self.addAction(self.actionDrawStraightLine)
+        self.addAction(self.actionDrawLineAnnotation)
 
     def _connect_signals(self) -> None:
-        self.actionDrawStraightLine.triggered.connect(self._draw_straight_line)
+        self.actionDrawLineAnnotation.triggered.connect(self._draw_straight_line)
         self.actionShowAnnotations.triggered.connect(self._show_annotations_toolbar)
 
     def _define_main_menu_actions(self) -> None:
         self.actionShowAnnotations = QAction("Make Annotations", self)
-        self.actionDrawStraightLine = QAction("Draw straight line", self)
+        self.actionDrawLineAnnotation = QAction("Draw straight line", self)
 
     def _draw_straight_line(self) -> None:
         chart = self.parent()

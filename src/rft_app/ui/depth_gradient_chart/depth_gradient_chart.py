@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtWidgets import QMenu, QWidget
 import numpy as np
@@ -5,50 +9,60 @@ import pandas as pd
 import pyqtgraph as pg
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
-from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from project.canonical_names import CANONICAL_VERTICAL_DEPTH
 from project.models import RectAnnotation, StraightLineAnnotation
 from ui.analysis_view.analysis_view_data_manager import ScatterSeriesDefinition
-from ui.main_window.project_signals import ProjectSignals
 from ui.depth_gradient_chart.depth_chart_menu import DepthChartMenu
+from ui.depth_gradient_chart.fluid_line import FluidLine
+from ui.depth_gradient_chart.line_annot import LineAnnot
 from ui.depth_gradient_chart.rectangle_annotation import RectangleAnnotation
-from ui.depth_gradient_chart.straight_line import StraightLine
-from units.units_normalisation import UREG, app_unit_to_pint, convert_array_to_user_units, identify_si_storage_unit
+from ui.main_window.project_signals import ProjectSignals
+from units.units_normalisation import (
+    UREG,
+    app_unit_to_pint,
+    convert_array_to_user_units,
+    identify_si_storage_unit,
+    )
+
+if TYPE_CHECKING:
+    from ui.annotations.annotations_bar import AnnotationsBar
 
 
 class DepthGradientChart(pg.PlotWidget):
+    TOOL_ARROW = "arrow"
+    TOOL_CIRCLE = "circle"
     TOOL_LINE = "straight_line"
     TOOL_SQUARE = "square"
-    TOOL_CIRCLE = "circle"
-    TOOL_ARROW = "arrow"
     TOOL_TEXT = "text_box"
 
     def __init__(
-            self,
-            parent: QWidget,
-            view: AnalysisView,
-            project: ProjectDataManager,
-            signals:ProjectSignals,
-            x_axis: str = "",
-            col_specs: list[ColumnSpec] | None = None,
-            chart_id: str = "",
-            ) -> None:
+        self,
+        parent: QWidget,
+        view: AnalysisView,
+        project: ProjectDataManager,
+        signals: ProjectSignals,
+        x_axis: str = "",
+        col_specs: list[ColumnSpec] | None = None,
+        chart_id: str = "",
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
         self.view: AnalysisView = view
         self.project: ProjectDataManager = project
-        self.signals = signals
+        self.signals: ProjectSignals = signals
 
         # Set module variables
         self.x_axis: str = x_axis
         self.col_specs: list[ColumnSpec] | None = col_specs
         self.chart_id: str = chart_id
-        self.vb_menu = None
+        self.vb_menu: QMenu | None = None
         self.df: pd.DataFrame | None = None
-        self.all_scatter_plot_items : list[pg.ScatterPlotItem]=[]
-        self.all_lines: list[StraightLine] = []
+        self.all_scatter_plot_items: list[pg.ScatterPlotItem] = []
+        self.all_lines: list[LineAnnot] = []
+        self.all_visible_fluids: list[FluidLine] = []
         self.all_rectangles: list[RectangleAnnotation] = []
-        self.annotations_bar = None
+        self.annotations_bar: AnnotationsBar | None = None
 
         # Initialisation methods
         self._extract_quantity_and_units()
@@ -69,7 +83,7 @@ class DepthGradientChart(pg.PlotWidget):
                 size=(1e-9, 1e-9),
                 pen=pen,
                 invertible=True,
-            )
+                )
 
         self.addItem(self.preview_drawing_item)
         self.preview_drawing_item.hide()
@@ -97,16 +111,17 @@ class DepthGradientChart(pg.PlotWidget):
         self.all_lines.clear()
         self.all_rectangles.clear()
         assert self.view is not None, "DepthGradientChart requires a view"
+
         for a in self.view.annotations:
             if isinstance(a, StraightLineAnnotation) and a.chart_id == self.chart_id:
-                new_line = StraightLine(
+                new_line = LineAnnot(
                     parent=self,
                     signals=self.signals,
                     starting_point=a.start_si,
                     end_point=a.end_si,
-                    color=a.color,
                     points_are_si=True,
-                )
+                    color=a.color,
+                    )
                 new_line.id = a.line_id
                 self.all_lines.append(new_line)
             elif isinstance(a, RectAnnotation) and a.chart_id == self.chart_id:
@@ -116,9 +131,14 @@ class DepthGradientChart(pg.PlotWidget):
                     size=a.size_si,
                     color=a.color,
                     points_are_si=True,
-                )
+                    )
                 new_rect.id = a.rect_id
                 self.all_rectangles.append(new_rect)
+        self.all_visible_fluids.clear()
+        for fluid in self.view.sidebar.visible_fluids:
+            self.all_visible_fluids.append(
+                FluidLine(parent=self, fluid=fluid, signals=self.signals)
+                )
 
     def _clear_draw_preview_item(self) -> None:
         if self.preview_drawing_item is not None:
@@ -132,56 +152,19 @@ class DepthGradientChart(pg.PlotWidget):
         self.scene().sigMouseMoved.connect(self._on_plot_mouse_move)
 
     def _convert_array_to_user_units(
-            self,
-            data: np.ndarray,
-            quantity_key: str,
-            user_unit: str,
-            ) -> np.ndarray:
+        self,
+        data: np.ndarray,
+        quantity_key: str,
+        user_unit: str,
+        ) -> np.ndarray:
         si_unit = app_unit_to_pint(identify_si_storage_unit(quantity_key))
         pint_user_unit = app_unit_to_pint(user_unit)
         return UREG.Quantity(data, si_unit).to(pint_user_unit).magnitude
 
     def _create_line_drawing_variables(self) -> None:
         self.draw_tool: str | None = None
-        self.first_click: QPoint | None = None
-        self.preview_drawing_item = None
-
-    def create_all_scatter_plot_items(self, scatter_definitions:list[ScatterSeriesDefinition])-> None:
-        self.all_scatter_plot_items.clear()
-        
-        x_si = pd.to_numeric(self.df[self.x_axis], errors = "coerce").to_numpy(dtype=float)
-        y_si = pd.to_numeric(self.df[CANONICAL_VERTICAL_DEPTH], errors = "coerce").to_numpy(dtype=float)
-
-
-        x = convert_array_to_user_units(
-            x_si,
-            self.x_quantity_key,
-            self.x_unit
-        )
-        y=convert_array_to_user_units(
-            y_si,
-            "length",
-            self.y_unit
-        )
-        
-        for scatter in scatter_definitions:          
-            xs = x[scatter.mask.to_numpy()]
-            ys = y[scatter.mask.to_numpy()]
-            finite = np.isfinite(xs) & np.isfinite(ys)
-            if not np.any(finite):
-                continue
-            new_scatter_item = pg.ScatterPlotItem(
-                x=xs,
-                y=ys,
-                symbol=scatter.symbol,
-                size=8,
-                brush=pg.mkBrush("white"),
-                pen=pg.mkPen(scatter.color, width=2),
-                hoverable=True,
-                tip=self._point_tip,
-                name=scatter.name,
-            )
-            self.all_scatter_plot_items.append(new_scatter_item)
+        self.first_click: tuple[float, float] | None = None
+        self.preview_drawing_item: pg.GraphicsObject | None = None
 
     def _end_draw_square(self) -> None:
         pos = self.preview_drawing_item.pos()
@@ -193,7 +176,7 @@ class DepthGradientChart(pg.PlotWidget):
             self,
             position=position,
             size=rect_size,
-        )
+            )
         self.addItem(new_rect)
         self.all_rectangles.append(new_rect)
         new_rect.refresh_geometry()
@@ -207,7 +190,7 @@ class DepthGradientChart(pg.PlotWidget):
             color=str(new_rect.color),
             chart_id=self.chart_id,
             rect_id=new_rect.id,
-        )
+            )
         self.view.annotations.append(to_save)
         self.project.mark_modified()
 
@@ -215,12 +198,12 @@ class DepthGradientChart(pg.PlotWidget):
             self.annotations_bar.clear_tool_selection()
 
     def _end_draw_straight_line(self) -> None:
-        new_line = StraightLine(
-            self,
+        new_line = LineAnnot(
+            parent=self,
+            signals=self.signals,
             starting_point=self.first_click,
             end_point=self.line_end,
-            signals=self.signals
-        )
+            )
         self.addItem(new_line)
         self.all_lines.append(new_line)
         new_line.refresh_geometry()
@@ -231,10 +214,10 @@ class DepthGradientChart(pg.PlotWidget):
         to_save = StraightLineAnnotation(
             start_si=new_line.starting_point,
             end_si=new_line.end_point,
-            color=new_line.color,
+            color=str(new_line.color),
             chart_id=self.chart_id,
             line_id=new_line.id,
-        )
+            )
         self.view.annotations.append(to_save)
         self.project.mark_modified()
 
@@ -273,10 +256,10 @@ class DepthGradientChart(pg.PlotWidget):
         self.getAxis("bottom").enableAutoSIPrefix(False)
 
     def _is_in_rectangle(
-            self,
-            rect: RectangleAnnotation,
-            mouse_view: object,
-            ) -> bool:
+        self,
+        rect: RectangleAnnotation,
+        mouse_view: object,
+        ) -> bool:
         pos = rect.pos()
         size = rect.size()
         x0, x1 = sorted((float(pos.x()), float(pos.x()) + float(size.x())))
@@ -285,11 +268,11 @@ class DepthGradientChart(pg.PlotWidget):
         return x0 <= mx <= x1 and y0 <= my <= y1
 
     def _is_near_line(
-            self,
-            line: StraightLine,
-            mouse_view: object,
-            px_tol: float = 30,
-            ) -> bool:
+        self,
+        line: LineAnnot,
+        mouse_view: object,
+        px_tol: float = 10,
+        ) -> bool:
         p0, p1 = line.listPoints()
         p0 = line.mapToView(p0)
         p1 = line.mapToView(p1)
@@ -336,6 +319,19 @@ class DepthGradientChart(pg.PlotWidget):
         elif self.draw_tool == self.TOOL_SQUARE:
             self._track_rectangle_size(pos)
 
+    def _paint_all_fluids(self) -> None:
+        self.all_visible_fluids.clear()
+        for fluid in self.view.sidebar.visible_fluids:
+            self.all_visible_fluids.append(
+                FluidLine(parent=self, fluid=fluid, signals=self.signals)
+                )
+
+        for line in self.all_visible_fluids:
+            self.removeItem(line)
+            line.extract_units_and_quantities()
+            line.refresh_geometry()
+            self.addItem(line)
+
     def _paint_all_lines(self) -> None:
         for line in self.all_lines:
             self.removeItem(line)
@@ -350,23 +346,23 @@ class DepthGradientChart(pg.PlotWidget):
             rect.refresh_geometry()
             self.addItem(rect)
 
-    def _paint_all_scatter_items(self)-> None: 
+    def _paint_all_scatter_items(self) -> None:
         for scatter in self.all_scatter_plot_items:
-            self.removeItem(scatter) 
+            self.removeItem(scatter)
             self.addItem(scatter)
 
     def _point_tip(self, x: float, y: float, data) -> str:
         return (
             f"{CANONICAL_VERTICAL_DEPTH}: {y:.3g} ({self.y_unit})\n"
             f"{self.x_axis}:{x:.3g} ({self.x_unit})"
-        )
+            )
 
     def _show_menu(self, pos: QPoint) -> None:
         scene_pos = self.mapToScene(pos)
         mouse = self.getViewBox().mapSceneToView(scene_pos)
         menu = None
 
-        for line in self.all_lines:
+        for line in self.all_lines + self.all_visible_fluids:
             if self._is_near_line(line, mouse):
                 menu = line.build_menu()
                 break
@@ -402,6 +398,47 @@ class DepthGradientChart(pg.PlotWidget):
 
     #--------Public API--------
 
+    def create_all_scatter_plot_items(
+        self,
+        scatter_definitions: list[ScatterSeriesDefinition],
+        ) -> None:
+        self.all_scatter_plot_items.clear()
+
+        x_si = pd.to_numeric(self.df[self.x_axis], errors="coerce").to_numpy(dtype=float)
+        y_si = pd.to_numeric(
+            self.df[CANONICAL_VERTICAL_DEPTH], errors="coerce"
+            ).to_numpy(dtype=float)
+
+        x = convert_array_to_user_units(
+            x_si,
+            self.x_quantity_key,
+            self.x_unit,
+            )
+        y = convert_array_to_user_units(
+            y_si,
+            "length",
+            self.y_unit,
+            )
+
+        for scatter in scatter_definitions:
+            xs = x[scatter.mask.to_numpy()]
+            ys = y[scatter.mask.to_numpy()]
+            finite = np.isfinite(xs) & np.isfinite(ys)
+            if not np.any(finite):
+                continue
+            new_scatter_item = pg.ScatterPlotItem(
+                x=xs,
+                y=ys,
+                symbol=scatter.symbol,
+                size=8,
+                brush=pg.mkBrush("white"),
+                pen=pg.mkPen(scatter.color, width=2),
+                hoverable=True,
+                tip=self._point_tip,
+                name=scatter.name,
+                )
+            self.all_scatter_plot_items.append(new_scatter_item)
+
     def enter_add_text(self) -> None:
         pass
 
@@ -419,9 +456,10 @@ class DepthGradientChart(pg.PlotWidget):
         self._clear_draw_preview_item()
         self.draw_tool = self.TOOL_LINE
 
-    def refresh_self(self)->None:
+    def refresh_self(self) -> None:
         self.clear()
         self._paint_all_scatter_items()
         self._paint_all_lines()
+        self._paint_all_fluids()
         self._paint_all_rectangles()
-    
+

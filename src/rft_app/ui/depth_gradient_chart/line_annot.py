@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import QMenu, QMessageBox
 import pyqtgraph as pg
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from ui.analysis_view.new_fluid_dialog import NewFluidDialog
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units, normalise_from_user_units
 
@@ -17,17 +16,25 @@ if TYPE_CHECKING:
     from ui.analysis_view import AnalysisViewWidget
 
 
-class StraightLine(pg.LineSegmentROI):
+class LineAnnot(pg.LineSegmentROI):
     def __init__(
         self,
         parent: pg.PlotWidget,
         signals: ProjectSignals,
-        color: QColor | str = "black",
-        style: Qt.PenStyle = Qt.PenStyle.DashLine,
         starting_point: tuple[float, float] | None = None,
         end_point: tuple[float, float] | None = None,
         points_are_si: bool = False,
+        color: QColor | str = "black",
+        style: Qt.PenStyle = Qt.PenStyle.DashLine,
         ) -> None:
+        # Locals only until LineSegmentROI is constructed (no self.* before super)
+        pen = pg.mkPen(color=color, width=2, style=style)
+
+        super().__init__(
+            positions=((0.0, 0.0), (0.0, 0.0)),
+            pen=pen,
+            )
+
         # Set project variables
         self.parent_chart: pg.PlotWidget = parent
         self.project: ProjectDataManager = self.parent_chart.project
@@ -38,10 +45,10 @@ class StraightLine(pg.LineSegmentROI):
         # Set module variables
         self.color: QColor | str = color
         self.style: Qt.PenStyle = style
+        self.pen = pen
         self.starting_point: tuple[float, float] | None = starting_point
         self.end_point: tuple[float, float] | None = end_point
         self.is_visible: bool = True
-        self.pen = pg.mkPen(color=self.color, width=2, style=self.style)
         self.id: str = str(uuid.uuid4())
 
         from ui.analysis_view import AnalysisViewWidget
@@ -51,10 +58,6 @@ class StraightLine(pg.LineSegmentROI):
         self.view_widget: AnalysisViewWidget | None = w
 
         # Initialisation methods
-        super().__init__(
-            positions=((0.0, 0.0), (0.0, 0.0)),
-            pen=self.pen,
-            )
         self._build_ui()
         self._set_handle_pen_options()
         self._define_menu_actions()
@@ -66,6 +69,7 @@ class StraightLine(pg.LineSegmentROI):
     #--------Private UI--------
 
     def _build_ui(self)->None:
+        
         # Hover Pen
         self.hoverPen = pg.mkPen(self.pen)
         self.hoverPen.setWidth(4)      
@@ -89,14 +93,20 @@ class StraightLine(pg.LineSegmentROI):
             handle.update()
     
     def _connect_signals(self) -> None:
+        # Line Movement
+        self.sigRegionChangeStarted.connect(self._on_region_change_started)
         self.sigRegionChangeFinished.connect(self._on_region_change_finished)
+        
+        # Menu Actions 
         self.actionConvertLineToFluid.triggered.connect(self._convert_line_to_fluid)
         self.actionDuplicateLine.triggered.connect(self._duplicate_self)
-        self.actionDeleteLine.triggered.connect(self._delete_self)
+        self.actionDeleteLine.triggered.connect(self.delete_self)
         
         self.sigRegionChangeStarted.connect(self._on_region_change_started)
 
     def _convert_line_to_fluid(self) -> None:
+        from ui.analysis_view.new_fluid_dialog import NewFluidDialog
+
         if self.view_widget is not None and self.view_widget.new_fluid_dialog:
             QMessageBox.critical(
                 self.parent_chart,
@@ -155,21 +165,6 @@ class StraightLine(pg.LineSegmentROI):
         self.actionDuplicateLine = QAction("Duplicate", self)
         self.actionDeleteLine = QAction("Delete", self)
 
-    def _delete_self(self) -> None:
-        for line in self.parent_chart.all_lines:
-            if line.id == self.id:
-                self.parent_chart.all_lines.remove(line)
-                break
-
-        for line in self.parent_chart.view.annotations:
-            if line.line_id == self.id:
-                self.parent_chart.view.annotations.remove(line)
-                break
-
-        self.parent_chart.removeItem(self)
-        self.deleteLater()
-        self.parent_chart.project.mark_modified()
-
     def _duplicate_self(self) -> None:
         pass
 
@@ -195,9 +190,7 @@ class StraightLine(pg.LineSegmentROI):
 
     def _on_region_change_started(self, _roi:object) -> None: 
         self._set_handle_pen_options()
-        # for handle in self.getHandles():
-        #     handle.setVisible(True)
-        
+
     #--------Public API--------
 
     def build_menu(self) -> QMenu:
@@ -236,6 +229,21 @@ class StraightLine(pg.LineSegmentROI):
         if m is not None:
             return self.starting_point[1] - m * self.starting_point[0]
         return None
+
+    def delete_self(self) -> None:
+        for line in self.parent_chart.all_lines:
+            if line.id == self.id:
+                self.parent_chart.all_lines.remove(line)
+                break
+
+        for line in self.parent_chart.view.annotations:
+            if line.line_id == self.id:
+                self.parent_chart.view.annotations.remove(line)
+                break
+
+        self.parent_chart.removeItem(self)
+        self.deleteLater()
+        self.parent_chart.project.mark_modified()
 
     def extract_units_and_quantities(self) -> None:
         parent = self.parent_chart

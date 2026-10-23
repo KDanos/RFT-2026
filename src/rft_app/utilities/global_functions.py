@@ -448,3 +448,4 @@ def update_tree_descendants(item: QTreeWidgetItem, state: Qt.CheckState):
         child = item.child(i)
         child.setCheckState(0, state)
         update_tree_descendants(child, state)
+

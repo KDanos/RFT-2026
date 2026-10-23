@@ -18,13 +18,15 @@ from PyQt6.QtWidgets import (
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from project.fluid_model import STANDARD_FLUIDS, Fluid, FluidContact, guess_fluid_type_from_psi_ft
+if TYPE_CHECKING:
+    from ui.analysis_view import AnalysisViewWidget
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
 from units.units_combo_box import UnitsComboBox
 from utilities import unique_name
 
 if TYPE_CHECKING:
-    from ui.depth_gradient_chart.straight_line import StraightLine
+    from ui.depth_gradient_chart.line_annot import LineAnnot
 
 
 class NewFluidDialog(QDialog):
@@ -39,7 +41,7 @@ class NewFluidDialog(QDialog):
             signals:ProjectSignals,
             pressure_gradient_si: float | None = None,
             zero_pressure_depth_si:float | None = None, 
-            base_line: StraightLine | None = None,
+            base_line: LineAnnot | None = None,
             ) -> None:
         super().__init__(parent)
 
@@ -47,19 +49,18 @@ class NewFluidDialog(QDialog):
         self.project: ProjectDataManager = project
         self.view: AnalysisView = view
         self.analysis: AnalysisObject = self.view.analysis_object
-
-        # Signal Coordinator
         self.signals:ProjectSignals =signals
-
+              
         # Set module variables
         self.pressure_gradient_si: float | None = pressure_gradient_si
         self.zero_pressure_depth_si:float |None  = zero_pressure_depth_si
-        self.base_line: StraightLine | None = base_line
+        self.base_line: LineAnnot | None = base_line
         self.list_of_unit_combos:list[UnitsComboBox]=[]
         self.fluid_single_point:tuple[float,float] |None = (
             self.base_line.starting_point if self.base_line is not None else None)
         self.temp_contact:FluidContact=FluidContact()
-        
+        self.view_widget:AnalysisViewWidget = self.base_line.view_widget if self.base_line is not None else None
+
         # Initialisation methods
         self._build_ui()
         self._connect_signals()
@@ -231,9 +232,6 @@ class NewFluidDialog(QDialog):
             self.base_line.sigRegionChanged.connect(self._update_fluid_info_from_base_line)
             self.base_line.sigRegionChanged.connect(self._update_contact_data_display)
 
-        # Pass the new fluid created signal to the main window
-        self.signals.fluids_changed.emit()
-
     def _on_accept(self) -> None:
         self._check_name_uniqueness()
         name = self.name_line_edit.text().strip()
@@ -258,10 +256,28 @@ class NewFluidDialog(QDialog):
         bottom_contact.top_fluid = new_fluid
         bottom_contact.set_contact_data()
 
-        self.analysis.fluids.append(new_fluid)
-        self.project.mark_modified()
-        self.new_fluid_created.emit()
+        # Add the new fluid to the analysis object list of fluids
+        self.analysis.fluids.append(new_fluid)        
+        
+        # Delete the line annotation used as the basis
+        if self.base_line is not None:
+            self.base_line.delete_self()
+        
+        # Update the project to incorporate the new fluid
+        self.signals.fluids_changed.emit()
+        
+        #Update the sidebar active_fluid combo
+        combo = self.view_widget.graphical_sidebar.active_fluid_combo
+        idx = combo.findText(name)
+        if idx>=0:
+            combo.setCurrentIndex(idx)
+        #Ensure the fluid is visible on the graph
+        tree = self.view_widget.graphical_sidebar.visible_fluids_tree
+        tree_item = tree.findItems(name, Qt.MatchFlag.MatchExactly)
+        tree_item[0].setCheckState(0, Qt.CheckState.Checked)
+
         self.accept()
+        self.project.mark_modified()
 
     def _on_finished(self) -> None:
         if self.base_line is None:
@@ -329,7 +345,9 @@ class NewFluidDialog(QDialog):
             type= self.fluid_type_combo.currentText(),
             gradient_si = self.pressure_gradient_si, 
             zero_pressure_depth_si= self.zero_pressure_depth_si,
-            bottom_contact= self.temp_contact
+            bottom_contact= self.temp_contact,
+            plotting_depth_min_si= 0.0, 
+            plotting_depth_max_si= 0.0
         )
         self.temp_contact.top_fluid = self.temp_fluid
 

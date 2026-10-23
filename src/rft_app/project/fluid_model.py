@@ -21,9 +21,10 @@ class Fluid:
     gradient_si: float # in unints of pressure/lenght, i.e. inverse of line slope
     zero_pressure_depth_si: float 
     bottom_contact:FluidContact
-    plotting_depth_min_si:float | None = None
-    plotting_depth_max_si:float | None = None
+    plotting_depth_min_si:float 
+    plotting_depth_max_si:float 
     analysis_object: AnalysisObject = None
+    is_editable:bool = False
 
     def values_in_project_units(
         self,
@@ -35,6 +36,21 @@ class Fluid:
             return None
         user_unit = project.current_unit_system.units_by_quantity[quantity_key]
         return convert_from_normalised_to_user_units(user_unit, quantity_key, value_si)
+    
+    @property
+    def plotting_pressure_min_si (self)->float:
+        "pressure=  gradient (pressure/depth) (depth-zero pressure depth)"    
+        gradient = self. gradient_si
+        depth = self.plotting_depth_min_si
+        zpd = self.zero_pressure_depth_si
+        return gradient * (depth - zpd)
+    
+    @property
+    def plotting_pressure_max_si (self)->float:
+        gradient = self. gradient_si
+        depth = self.plotting_depth_max_si
+        zpd = self.zero_pressure_depth_si
+        return gradient * (depth - zpd)
 
 @dataclass
 class FluidContact:

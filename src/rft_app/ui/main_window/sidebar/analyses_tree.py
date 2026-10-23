@@ -302,6 +302,7 @@ class AnalysesTree(QTreeWidget):
         self.analysis_deleted.emit()
 
     def _delete_single_fluid(self, item: QTreeWidgetItem) -> None:
+        
         top_level = item
         while top_level.parent() is not None:
             top_level = top_level.parent()

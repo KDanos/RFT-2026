@@ -31,5 +31,13 @@ def load_project(path: str | Path) -> ProjectDataManager:
             if not hasattr(fluid, "analysis_object") or fluid.analysis_object is None:
                 fluid.analysis_object = btc if btc is not None else analysis
 
+    # # Migrate older project pickeld before Fluid.is_editable attribute existed
+    # for analysis in project.analyses:
+    #     for fluid in fluid.analysis: 
+    #         if not hasattr(fluid, "is_editable"):
+    #             fluid.is_editable = False
+
+    
+    
     return project
 
