@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from tkinter import N
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from project.fluid_model import Fluid
@@ -19,6 +20,10 @@ class ScatterSeriesDefinition:
     mask:pd.Series
     color:str
     symbol:str
+    primary_key: str | None = None
+    primary_value: str | None = None
+    secondary_key: str | None = None
+    secondary_value: str |None = None
 
 #--------Public API--------
 
@@ -136,7 +141,7 @@ def build_scatter_series(
     secondary_identifier:str|None
     )-> list[tuple[str, pd.Series, str, str]]:
     
-    """Return [(display_name, boolean_mask, color, symbol)]"""
+    """Return [(display_name, boolean_mask, color, symbol, primary_identifier_key, primary_identifier_value, secondary_identifier_key, secondary_identifier_value)]"""
     
     if df is None or df.empty:
         return []
@@ -193,7 +198,11 @@ def build_scatter_series(
                     name, 
                     mask, 
                     SERIES_COLORS[c], 
-                    SERIES_SYMBOLS[s]
+                    SERIES_SYMBOLS[s],
+                    primary_key = primary,
+                    primary_value = primary_value, 
+                    secondary_key= secondary, 
+                    secondary_value=secondary_value,
                     )
             
             series_defition.append(new_scatter)

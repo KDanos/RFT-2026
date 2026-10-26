@@ -27,6 +27,60 @@ from units.units_normalisation import (
 if TYPE_CHECKING:
     from ui.annotations.annotations_bar import AnnotationsBar
 
+class ScatterItemKD(pg.ScatterPlotItem):
+    """Scatter series with a single-spot ViewBox tooltip.
+    Same as pyqtgraph ScatterPlotItem, except hoverEvent shows tip text for
+    only the topmost hovered spot (not up to three joined tips).
+    Still used today
+    - tip= callable (e.g. chart._point_tip) via opts["tip"]
+    - hoverable gate, _maskAt / exit mask, ViewBox setToolTip, _toolTipCleared
+    - points()[new][::-1] so points[0] is the top spot
+    Present for future use (inactive with current chart options)
+    - old / old^new / sourceRect / updateSpots inside _hasHoverStyle():
+      only runs if hoverPen / hoverBrush / hoverSize / hoverSymbol are set
+    - sigHovered.emit(...): available for listeners; chart does not connect it
+    """
+    
+    
+    def __init__(self,*args, **kwargs)->None: 
+        super().__init__(*args, **kwargs)
+
+    def hoverEvent(self, ev)->None:
+        if not self.opts["hoverable"]: 
+            return
+
+        old = self.data["hovered"] 
+
+        if ev.exit: 
+            new= np.zeros_like(self.data["hovered"])  # new is a boolean mask.
+        else: 
+            new = self._maskAt(ev.pos())
+
+        if self._hasHoverStyle(): 
+            self.data["sourceRect"][old^new] = 0
+            self.data["hovered"] =new
+            self.updateSpots()
+
+        points = self.points()[new][::-1] 
+        vb = self.getViewBox()
+        
+        if vb is not None and self.opts["tip"] is not None: # self.opts["tips"] is either the callable (when ScatterPlotItem.tip = method) or None when the user does not want to see a tip text
+            if len(points)>0:
+                pt = points[0]
+                text = self.opts["tip"](
+                    x = pt.pos().x(), 
+                    y = pt.pos().y(), 
+                    data = pt.data(),
+                )
+                vb.setToolTip (text)
+                self._toolTipCleared = False
+            
+            elif not self._toolTipCleared:
+                vb.setToolTip("")    
+                self._toolTipCleared = True 
+
+        self.sigHovered.emit(self, points, ev)
+
 
 class DepthGradientChart(pg.PlotWidget):
     TOOL_ARROW = "arrow"
@@ -319,6 +373,31 @@ class DepthGradientChart(pg.PlotWidget):
         elif self.draw_tool == self.TOOL_SQUARE:
             self._track_rectangle_size(pos)
 
+    def _on_scatter_hovered(self, _scatter, points, _ev)->None:
+        vb = self.getViewBox()
+        print (points)
+
+
+        if len(points)==0: # happens on hover exit, need to clear the toolpoint for that
+            vb.setToolTip("")
+            return 
+        print ("HIT", len(points))
+        
+        # If there are multiple points under the mouse tip, apply the tool tip text only to the top most one
+        pt = points[0]
+        
+        # Define the text be shown on the tooltip
+        text = self._point_tip(
+            float(pt.pos().x()), 
+            float(pt.pos().y()),  
+            pt.data()
+            )
+        if len(points)>1:
+            text = f"{text}\n({len(points)} coincident points)"
+       
+       # Apply the text to the tooltip
+        vb.setToolTip(text)
+
     def _paint_all_fluids(self) -> None:
         self.all_visible_fluids.clear()
         for fluid in self.view.sidebar.visible_fluids:
@@ -352,10 +431,19 @@ class DepthGradientChart(pg.PlotWidget):
             self.addItem(scatter)
 
     def _point_tip(self, x: float, y: float, data) -> str:
-        return (
-            f"{CANONICAL_VERTICAL_DEPTH}: {y:.3g} ({self.y_unit})\n"
-            f"{self.x_axis}:{x:.3g} ({self.x_unit})"
-            )
+        lines:list[str] = []
+        if data.primary_key is not None:
+            lines.append(f"{data.primary_key}: {data.primary_value}")
+        if data.secondary_key is not None:
+            lines.append(f"{data.secondary_key}: {data.secondary_value}")
+        if len(lines)>0:
+            lines.append("")
+        lines.append(f"{CANONICAL_VERTICAL_DEPTH}: {y:.3g} ({self.y_unit})")
+        lines.append(f"{self.x_axis}: {x:.3g} ({self.x_unit})")
+
+        
+        return "\n".join(lines)
+            
 
     def _show_menu(self, pos: QPoint) -> None:
         scene_pos = self.mapToScene(pos)
@@ -426,7 +514,8 @@ class DepthGradientChart(pg.PlotWidget):
             finite = np.isfinite(xs) & np.isfinite(ys)
             if not np.any(finite):
                 continue
-            new_scatter_item = pg.ScatterPlotItem(
+            
+            new_scatter_item = ScatterItemKD(
                 x=xs,
                 y=ys,
                 symbol=scatter.symbol,
@@ -434,9 +523,11 @@ class DepthGradientChart(pg.PlotWidget):
                 brush=pg.mkBrush("white"),
                 pen=pg.mkPen(scatter.color, width=2),
                 hoverable=True,
-                tip=self._point_tip,
+                tip=self._point_tip, #None, #avoid default ToolTip behaviour. The default ends up printing the tooltip message once for every overlapping point. 
                 name=scatter.name,
+                data = scatter
                 )
+            # new_scatter_item.sigHovered.connect(self._on_scatter_hovered)
             self.all_scatter_plot_items.append(new_scatter_item)
 
     def enter_add_text(self) -> None:
