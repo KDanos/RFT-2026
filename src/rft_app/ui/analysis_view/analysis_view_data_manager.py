@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from tkinter import N
 from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
 from project.fluid_model import Fluid

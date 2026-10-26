@@ -42,12 +42,12 @@ class GraphicalSidebar(QFrame):
     reference_fluid_changed = pyqtSignal(object)  # object instead of Fluid | None
 
     def __init__(
-        self,
+            self,
         parent: QWidget,
         project: ProjectDataManager,
         col_specs: list[ColumnSpec],
         signals: ProjectSignals,
-        ) -> None:
+            ) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -104,7 +104,7 @@ class GraphicalSidebar(QFrame):
         self.horizontal_layout.addLayout(self.grid_layout)
         self.horizontal_layout.addStretch()
         self.main_layout.addStretch()
-
+        
         # self.setLayout(self.main_layout)
         self.main_container.setLayout(self.main_layout)
 
@@ -249,12 +249,12 @@ class GraphicalSidebar(QFrame):
             )
 
         # Visible fluids
-        self.visible_fluids_tree.itemChanged.connect(self._on_visible_fluids_changed)
+        self.visible_fluids_tree.itemChanged.connect(self._on_fluid_visibility_tree_item_change)
         self.visible_fluids_tree.customContextMenuRequested.connect(
             self._on_visible_fluid_context_menu_request
             )
 
-        # Unit combos
+        # Unit combos  
         for combo in self.unit_combo_value_pairs:
             combo.currentIndexChanged.connect(
                 lambda _idx, combo=combo: self._update_single_value_on_units_change(combo)
@@ -276,6 +276,7 @@ class GraphicalSidebar(QFrame):
                 fluid_item = QTreeWidgetItem([fluid.name, "", ""])
                 fluid_item.setData(0, Qt.ItemDataRole.UserRole, fluid)
                 fluid_item.setCheckState(1, Qt.CheckState.Unchecked)
+                fluid_item.setFlags(fluid_item.flags() | Qt.ItemFlag.ItemIsEditable)
                 tree.addTopLevelItem(fluid_item)
 
             # Provide a minimum height to the tree widget, to ensure the whole tree is visible in the sidebar
@@ -344,44 +345,25 @@ class GraphicalSidebar(QFrame):
         self.signals.fluids_changed.emit()
         self.project.mark_modified()
 
-    def _on_ref_fluid_combo_changed(self) -> None:
-        self.ref_fluid = self.ref_fluid_combo.currentData()
-        self.sidebar_summary.ref_fluid = self.ref_fluid
-        self.project.mark_modified()
-        self.reference_fluid_changed.emit(self.ref_fluid)
-
-    def _on_visible_fluid_context_menu_request(self, position: QPoint) -> None:
-        tree = self.visible_fluids_tree
-        item = tree.itemAt(position)
-        if item is None or item.parent() is not None:
-            return
-
-        menu = QMenu(tree)
-
-        #Define the actions
-        #Delete
-        self.actionDeleteFluid = QAction("Delete")
-        menu.addAction(self.actionDeleteFluid)
-        self.actionDeleteFluid.triggered.connect(
-            lambda _checked = False, fluid = item.data(0, Qt.ItemDataRole.UserRole): self.delete_fluid(fluid)
-            )
-        self.actionRenameFluid = QAction("Rename")
-        menu.addAction(self.actionRenameFluid)
-        self.actionDuplicateFluid=QAction("Duplicate")
-        menu.addAction(self.actionDuplicateFluid)
-
-        # Show the menu
-        menu.exec(tree.viewport().mapToGlobal(position))
-               
-    def _on_visible_fluids_changed(
+    def _on_fluid_visibility_tree_item_change(
         self,
         item: QTreeWidgetItem,
         column: int,
         ) -> None:
         tree = self.visible_fluids_tree
         fluid = item.data(0, Qt.ItemDataRole.UserRole)
+        if fluid is None:
+            return
+        analysis = fluid.analysis_object
 
-        if column == 1:
+        # Gate to enter fluid rename
+        if column == 0:
+            new_name = item.text(0).strip()
+            analysis.rename_fluid(fluid, new_name)
+            self.signals.fluids_changed.emit()
+
+        # Gate to adjust the fluid visibility selection
+        elif column == 1:
             with QSignalBlocker(tree):
                 if item.checkState(1) == Qt.CheckState.Checked:
                     item.setCheckState(2, Qt.CheckState.Unchecked)
@@ -402,6 +384,7 @@ class GraphicalSidebar(QFrame):
             self.sidebar_summary.visible_fluids = list(self.parent.visible_fluids)
             self._refresh_depth_gradient_plots()
 
+        # Gate to adjust the fluid editability
         elif column == 2:
             if fluid is not None:
                 fluid.is_editable = item.checkState(2) == Qt.CheckState.Checked
@@ -413,6 +396,38 @@ class GraphicalSidebar(QFrame):
                 self._toggle_active_fluid_widgets_editability()
 
         self.project.mark_modified()
+
+    def _on_ref_fluid_combo_changed(self) -> None:
+        self.ref_fluid = self.ref_fluid_combo.currentData()
+        self.sidebar_summary.ref_fluid = self.ref_fluid
+        self.project.mark_modified()
+        self.reference_fluid_changed.emit(self.ref_fluid)
+
+    def _on_visible_fluid_context_menu_request(self, position: QPoint) -> None:
+        tree = self.visible_fluids_tree
+        item = tree.itemAt(position)
+        if item is None or item.parent() is not None:
+            return
+
+        menu = QMenu(tree)
+
+        # Delete
+        self.actionDeleteFluid = QAction("Delete")
+        menu.addAction(self.actionDeleteFluid)
+        self.actionDeleteFluid.triggered.connect(
+            lambda _checked=False, fluid=item.data(0, Qt.ItemDataRole.UserRole): self.delete_fluid(fluid)
+            )
+        # Rename
+        self.actionRenameFluid = QAction("Rename")
+        menu.addAction(self.actionRenameFluid)
+        self.actionRenameFluid.triggered.connect(
+            lambda _checked=False, item=item: self._start_rename_fluid(item)
+            )
+        # Duplicate
+        self.actionDuplicateFluid = QAction("Duplicate")
+        menu.addAction(self.actionDuplicateFluid)
+
+        menu.exec(tree.viewport().mapToGlobal(position))
 
     def _populate_active_fluid_contact_combo(self) -> None:
         with QSignalBlocker(self.contact_fluid_combo):
@@ -538,6 +553,16 @@ class GraphicalSidebar(QFrame):
             ]:
             chart.refresh_self()
 
+    def _start_rename_fluid(self, item: QTreeWidgetItem) -> None:
+        tree = self.visible_fluids_tree
+        fluid = item.data(0, Qt.ItemDataRole.UserRole)
+
+        if fluid is None or not isinstance(fluid, Fluid):
+            return
+
+        tree.setCurrentItem(item, 0)  # focus on the row, column 0
+        tree.editItem(item, 0)  # same as pressing F2
+
     def _toggle_active_fluid_widgets_editability(self) -> None:
         editability = (
             self.active_fluid is not None
@@ -657,7 +682,7 @@ class GraphicalSidebar(QFrame):
             chart.create_all_scatter_plot_items(scatter_item_list)
             chart.refresh_self()
 
-    def delete_fluid(self, fluid:Fluid)->None:
+    def delete_fluid(self, fluid: Fluid) -> None:
         analysis = self.analysis
         
         # Create Warning Message

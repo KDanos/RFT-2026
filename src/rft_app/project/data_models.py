@@ -8,11 +8,7 @@ from typing import Any
 import pandas as pd
 
 from project.fluid_model import Fluid
-from project.view_state import (
-    RectAnnotation,
-    StraightLineAnnotation,
-    ViewWidgetSidebar,
-    )
+from project.view_state import (RectAnnotation,StraightLineAnnotation,ViewWidgetSidebar,)
 
 
 @dataclass
@@ -51,6 +47,14 @@ class AnalysisObject:
                 sidebar.active_fluid = None
             if fluid is sidebar.ref_fluid:
                 sidebar.ref_fluid = None
+
+    def rename_fluid(self, fluid: Fluid, new_name: str) -> None:
+        from utilities import unique_name
+        checked_name = unique_name(
+            new_name,
+            [f.name for f in self.fluids if f is not fluid],
+            )
+        fluid.name = checked_name
 
 
 @dataclass

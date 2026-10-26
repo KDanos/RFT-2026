@@ -436,11 +436,8 @@ class AnalysesTree(QTreeWidget):
         fluid = item.data(0, Qt.ItemDataRole.UserRole)
         analysis = fluid.analysis_object
         input_name = item.text(0).strip()
-        new_name = unique_name(
-            input_name,
-            [f.name for f in analysis.fluids if f is not fluid],
-            )
-        fluid.name = new_name
+        
+        analysis.rename_fluid(fluid, input_name)
         self.signals.fluids_changed.emit()
         self.project.mark_modified()
 
