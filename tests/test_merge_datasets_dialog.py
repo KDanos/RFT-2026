@@ -12,7 +12,7 @@ sys.path.insert(0, str(APP_ROOT))
 
 from project import ProjectDataManager  # noqa: E402
 from project.persistence import load_project  # noqa: E402
-from project.models import DataSet  # noqa: E402
+from project.data_models import DataSet  # noqa: E402
 from ui.main_window.sidebar.all_datasets_tree import AllDataSetsTree  # noqa: E402
 from ui.main_window.sidebar.merge_datasets_dialog import MergeDatasetsDialog  # noqa: E402
 

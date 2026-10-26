@@ -70,6 +70,7 @@ class GraphicalFrame(QFrame):
 
         # Excess-pressure pane (stretch 4)
         self.xs_pressure_frame = QFrame(self)
+        
         self.xs_pressure_layout = QVBoxLayout(self.xs_pressure_frame)
         self.xs_pressure_layout.setContentsMargins(0, 0, 0, 0)
         self.xs_pressure_chart = DepthGradientChart(
@@ -82,6 +83,8 @@ class GraphicalFrame(QFrame):
             chart_id="xs_pressure_plot",
         )
         self.xs_pressure_layout.addWidget(self.xs_pressure_chart)
+        # Hide the xs pressure chart on load when no reference fluid is defined
+        self.xs_pressure_frame.setVisible(False) # if not hidden, it takes space and remains empty. An option if desired
         self.xs_pressure_chart.setVisible(False)
 
         self.main_layout.addWidget(self.pressure_frame, 4)

@@ -92,10 +92,10 @@ class AnalysisViewWidget(QWidget):
         
         # Check if the excess pressure column should be calculated. 
         ref_fluid = self.graphical_sidebar.ref_fluid_combo.currentData()
-        if ref_fluid is not None:
-            self._on_reference_fluid_change(ref_fluid)
+        self._on_reference_fluid_change(ref_fluid)
 
         self._pass_df_to_plots()
+        
         #Ensure the series are plotted on load
         self.graphical_sidebar.define_scatters_for_plotting()
 

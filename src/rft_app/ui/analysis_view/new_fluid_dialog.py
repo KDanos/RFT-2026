@@ -271,10 +271,11 @@ class NewFluidDialog(QDialog):
         idx = combo.findText(name)
         if idx>=0:
             combo.setCurrentIndex(idx)
+        
         #Ensure the fluid is visible on the graph
         tree = self.view_widget.graphical_sidebar.visible_fluids_tree
         tree_item = tree.findItems(name, Qt.MatchFlag.MatchExactly)
-        tree_item[0].setCheckState(0, Qt.CheckState.Checked)
+        tree_item[0].setCheckState(1, Qt.CheckState.Checked)
 
         self.accept()
         self.project.mark_modified()

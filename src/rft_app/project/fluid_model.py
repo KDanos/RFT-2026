@@ -141,7 +141,7 @@ STANDARD_FLUIDS: dict[str, FluidType] = {
         label="Drill Mud",
         color="brown",
         lower_psi_ft=0.45,
-        upper_psi_ft=0.55,
+        upper_psi_ft=0.65,
     ),
     "other": FluidType(
         key="other",
