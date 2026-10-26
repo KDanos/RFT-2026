@@ -4,8 +4,10 @@ from PyQt6.QtWidgets import QInputDialog, QMenu
 import pyqtgraph as pg
 
 from project.fluid_model import Fluid, STANDARD_FLUIDS
-from ui.main_window.project_signals import ProjectSignals
 from ui.depth_gradient_chart.line_annot import LineAnnot
+from ui.main_window.project_signals import ProjectSignals
+from units import convert_from_normalised_to_user_units
+from utilities.global_functions import limit_decimals
 
 
 class FluidLine(LineAnnot):
@@ -37,8 +39,7 @@ class FluidLine(LineAnnot):
 
         # Set module variables
         self.fluid: Fluid = fluid
-        self.setToolTip(self.fluid.name)
-
+        
         # Initialisation methods
         self.toggle_editable()
 
@@ -131,6 +132,21 @@ class FluidLine(LineAnnot):
         menu.addAction(self.actionDuplicateFluid)
         menu.addAction(self.actionDeleteFluid)
         return menu
+
+    def build_tip(self) -> str:
+        unit = (
+            self.view_widget.graphical_sidebar
+            .active_fluid_gradient_unit.currentText()
+            )
+        gradient = convert_from_normalised_to_user_units(
+            unit,
+            "pressure_gradient",
+            self.fluid.gradient_si,
+            )
+        return (
+            f"{self.fluid.name}\n"
+            f"Gradient: {limit_decimals(gradient)} ({unit})"
+            )
 
     def setMouseHover(self, hover: bool) -> None:
         super().setMouseHover(hover)

@@ -117,6 +117,7 @@ class DepthGradientChart(pg.PlotWidget):
         self.all_visible_fluids: list[FluidLine] = []
         self.all_rectangles: list[RectangleAnnotation] = []
         self.annotations_bar: AnnotationsBar | None = None
+        self.fluid_tip_active: bool = False
 
         # Initialisation methods
         self._extract_quantity_and_units()
@@ -366,37 +367,18 @@ class DepthGradientChart(pg.PlotWidget):
             self._finish_draw()
 
     def _on_plot_mouse_move(self, pos: QPoint) -> None:
+        # If over a fluid line, activate its tip
+        self._update_fluid_line_tip(pos)
+
+        # Exit if annotation drawing has not been initiated
         if self.first_click is None or self.preview_drawing_item is None:
             return
+
+        # Identify what annotation is to be drawn and execute
         if self.draw_tool == self.TOOL_LINE:
             self._track_preview_line(pos)
         elif self.draw_tool == self.TOOL_SQUARE:
             self._track_rectangle_size(pos)
-
-    def _on_scatter_hovered(self, _scatter, points, _ev)->None:
-        vb = self.getViewBox()
-        print (points)
-
-
-        if len(points)==0: # happens on hover exit, need to clear the toolpoint for that
-            vb.setToolTip("")
-            return 
-        print ("HIT", len(points))
-        
-        # If there are multiple points under the mouse tip, apply the tool tip text only to the top most one
-        pt = points[0]
-        
-        # Define the text be shown on the tooltip
-        text = self._point_tip(
-            float(pt.pos().x()), 
-            float(pt.pos().y()),  
-            pt.data()
-            )
-        if len(points)>1:
-            text = f"{text}\n({len(points)} coincident points)"
-       
-       # Apply the text to the tooltip
-        vb.setToolTip(text)
 
     def _paint_all_fluids(self) -> None:
         self.all_visible_fluids.clear()
@@ -444,7 +426,6 @@ class DepthGradientChart(pg.PlotWidget):
         
         return "\n".join(lines)
             
-
     def _show_menu(self, pos: QPoint) -> None:
         scene_pos = self.mapToScene(pos)
         mouse = self.getViewBox().mapSceneToView(scene_pos)
@@ -483,6 +464,18 @@ class DepthGradientChart(pg.PlotWidget):
         self.preview_drawing_item.setPos(rect_pos)
         self.preview_drawing_item.setSize(size)
         self.preview_drawing_item.show()
+
+    def _update_fluid_line_tip(self, scene_pos: QPoint) -> None:
+        vb = self.getViewBox()
+        mouse = vb.mapSceneToView(scene_pos)
+        for line in self.all_visible_fluids:
+            if self._is_near_line(line, mouse):
+                vb.setToolTip(line.build_tip())
+                self.fluid_tip_active = True
+                return
+        if self.fluid_tip_active:
+            vb.setToolTip("")
+            self.fluid_tip_active = False
 
     #--------Public API--------
 
@@ -523,11 +516,10 @@ class DepthGradientChart(pg.PlotWidget):
                 brush=pg.mkBrush("white"),
                 pen=pg.mkPen(scatter.color, width=2),
                 hoverable=True,
-                tip=self._point_tip, #None, #avoid default ToolTip behaviour. The default ends up printing the tooltip message once for every overlapping point. 
+                tip=self._point_tip,
                 name=scatter.name,
-                data = scatter
+                data=scatter,
                 )
-            # new_scatter_item.sigHovered.connect(self._on_scatter_hovered)
             self.all_scatter_plot_items.append(new_scatter_item)
 
     def enter_add_text(self) -> None:
