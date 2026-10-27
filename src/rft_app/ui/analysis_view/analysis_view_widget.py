@@ -84,7 +84,7 @@ class AnalysisViewWidget(QWidget):
         self.main_frame_splitter = QSplitter(Qt.Orientation.Vertical)
         self.main_frame_splitter.addWidget(self.graphical_row_splitter)
         self.main_frame_splitter.addWidget(self.tabular_row_splitter)
-        self.main_frame_splitter.setSizes([5000, 5000])
+        self.main_frame_splitter.setSizes([5000, 1000])
         self.main_frame_splitter.setStretchFactor(0, 1)
         self.main_frame_splitter.setStretchFactor(1, 1)
 

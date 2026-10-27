@@ -1,23 +1,10 @@
 from operator import attrgetter
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPoint, QSignalBlocker, QXmlStreamAttribute, Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, QSignalBlocker,  Qt, pyqtSignal
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import (
-    QComboBox,
-    QFrame,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMenu,
-    QMessageBox,
-    QScrollArea,
-    QTreeWidget,
-    QTreeWidgetItem,
-    QVBoxLayout,
-    QWidget,
-    )
+from PyQt6.QtWidgets import (QComboBox,QFrame,QGridLayout,QHBoxLayout,QLabel,QLineEdit,
+    QMenu,QScrollArea,QTreeWidget,QTreeWidgetItem,QVBoxLayout,QWidget,)
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
 from project.canonical_names import (
@@ -29,6 +16,7 @@ from project.fluid_model import STANDARD_FLUIDS, Fluid
 from project.data_models import AnalysisObject
 from project.view_state import ViewWidgetSidebar
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
+from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
 from units.units_combo_box import UnitsComboBox
@@ -410,22 +398,28 @@ class GraphicalSidebar(QFrame):
             return
 
         menu = QMenu(tree)
+        fluid = item.data(0, Qt.ItemDataRole.UserRole)
 
-        # Delete
-        self.actionDeleteFluid = QAction("Delete")
-        menu.addAction(self.actionDeleteFluid)
-        self.actionDeleteFluid.triggered.connect(
-            lambda _checked=False, fluid=item.data(0, Qt.ItemDataRole.UserRole): self.delete_fluid(fluid)
-            )
-        # Rename
+        # Rename, Duplicate, Delete
         self.actionRenameFluid = QAction("Rename")
         menu.addAction(self.actionRenameFluid)
         self.actionRenameFluid.triggered.connect(
             lambda _checked=False, item=item: self._start_rename_fluid(item)
             )
+        
         # Duplicate
         self.actionDuplicateFluid = QAction("Duplicate")
         menu.addAction(self.actionDuplicateFluid)
+        self.actionDuplicateFluid.triggered.connect(
+            lambda _checked=False, fluid=fluid: self.duplicate_fluid(fluid)
+            )
+        
+        # Delete
+        self.actionDeleteFluid = QAction("Delete")
+        menu.addAction(self.actionDeleteFluid)
+        self.actionDeleteFluid.triggered.connect(
+            lambda _checked=False, fluid=fluid: self.delete_fluid(fluid)
+            )
 
         menu.exec(tree.viewport().mapToGlobal(position))
 
@@ -683,38 +677,15 @@ class GraphicalSidebar(QFrame):
             chart.refresh_self()
 
     def delete_fluid(self, fluid: Fluid) -> None:
-        analysis = self.analysis
-        
-        # Create Warning Message
-        list_of_contacts: list[str] = []
-        
-        for other in analysis.fluids:
-            bottom_fluid = other.bottom_contact.bottom_fluid
-            if bottom_fluid is not None and bottom_fluid is fluid:
-                list_of_contacts.append(other.name)
-
-        if not list_of_contacts:
-            text_1 = f"Are you sure you want to delete fluid {fluid.name}?"
-            text_2 = "\n\nThis action is not reversible"
-            text_3 = ""
-        else:
-            text_1 = f"{fluid.name} is the contact fluid of"
-            if len(list_of_contacts) == 1:
-                text_2 = f" {list_of_contacts[0]}"
-            else:
-                text_2 = ":\n\t" + "\n\t".join(list_of_contacts)
-            text_3 = (
-                "\n\nAre you sure you want to proceed?"
-                "\nThis action is not reversible"
-            )
-        message = text_1 + text_2 + text_3
-
-        reply = QMessageBox.question(self, "Delete Fluid", message)
-        if reply != QMessageBox.StandardButton.Yes:
+        if not confirm_delete_fluid(self, self.analysis, fluid):
             return
-        
-        # Delete the fluid and cascade change to the project
         self.analysis.delete_fluid(fluid)
+        self.project.mark_modified()
+        self.signals.fluids_changed.emit()
+
+    def duplicate_fluid(self, fluid: Fluid) -> None:
+        new_fluid = self.analysis.duplicate_fluid(fluid,100)
+        self.view.sidebar.visible_fluids.append(new_fluid)
         self.project.mark_modified()
         self.signals.fluids_changed.emit()
 

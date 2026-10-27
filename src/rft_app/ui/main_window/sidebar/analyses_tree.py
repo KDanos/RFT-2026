@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QMenu, QMessageBox, QTreeWidget, QTreeWidgetItem, QW
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from project.fluid_model import Fluid
+from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
 from utilities import show_dataframe_table_dialog, unique_name
@@ -103,17 +104,16 @@ class AnalysesTree(QTreeWidget):
 
                 fluid_type = QTreeWidgetItem([f"Fluid type: {fluid.type}"])
                 fluid_item.addChild(fluid_type)
-
+                # Gradient
                 if fluid.gradient_si is not None:
                     gradient = fluid.values_in_project_units(
                         self.project,
                         "pressure_gradient",
                         fluid.gradient_si,
                     )
-
                     gradient_text = f"{gradient:.3} [{self.pressure_gradient_unit}]"
                     fluid_item.addChild(QTreeWidgetItem([gradient_text]))
-
+                # Zero pressure depth
                 if fluid.zero_pressure_depth_si is not None:
                     zero_depth = fluid.values_in_project_units(
                         self.project,
@@ -122,11 +122,10 @@ class AnalysesTree(QTreeWidget):
                     )
                     zero_depth_text = f"0 pressure at {zero_depth:.1f} [{self.depth_unit}]"
                     fluid_item.addChild(QTreeWidgetItem([zero_depth_text]))
-
+                #Contact
+                contact = fluid.bottom_contact
                 contact_item = QTreeWidgetItem(["Bottom Contact:"])
                 fluid_item.addChild(contact_item)
-
-                contact = fluid.bottom_contact
                 
                 if contact.bottom_fluid:
                     contact_item.addChild(QTreeWidgetItem([f"Fluid: {contact.bottom_fluid.name}"]))  
@@ -249,13 +248,19 @@ class AnalysesTree(QTreeWidget):
         rename_fluid_action = QAction("Rename", self)
         rename_fluid_action.triggered.connect(
             lambda _checked=False, item=item: self._start_rename_fluid(item)
-        )
+            )
         list_of_actions.append(rename_fluid_action)
+
+        duplicate_fluid_action = QAction("Duplicate", self)
+        duplicate_fluid_action.triggered.connect(
+            lambda _checked=False, item=item: self._duplicate_single_fluid(item)
+            )
+        list_of_actions.append(duplicate_fluid_action)
 
         delete_fluid_action = QAction("Delete", self)
         delete_fluid_action.triggered.connect(
             lambda _checked=False, item=item: self._delete_single_fluid(item)
-        )
+            )
         list_of_actions.append(delete_fluid_action)
 
         return list_of_actions
@@ -302,38 +307,13 @@ class AnalysesTree(QTreeWidget):
         self.analysis_deleted.emit()
 
     def _delete_single_fluid(self, item: QTreeWidgetItem) -> None:
-        
         top_level = item
         while top_level.parent() is not None:
             top_level = top_level.parent()
         analysis = top_level.data(0, Qt.ItemDataRole.UserRole)
         fluid = item.data(0, Qt.ItemDataRole.UserRole)
 
-        list_of_contacts: list[str] = []
-        
-        for other in analysis.fluids:
-            bottom_fluid = other.bottom_contact.bottom_fluid
-            if bottom_fluid is not None and bottom_fluid is fluid:
-                list_of_contacts.append(other.name)
-
-        if not list_of_contacts:
-            text_1 = f"Are you sure you want to delete fluid {fluid.name}?"
-            text_2 = "\n\nThis action is not reversible"
-            text_3 = ""
-        else:
-            text_1 = f"{fluid.name} is the contact fluid of"
-            if len(list_of_contacts) == 1:
-                text_2 = f" {list_of_contacts[0]}"
-            else:
-                text_2 = ":\n\t" + "\n\t".join(list_of_contacts)
-            text_3 = (
-                "\n\nAre you sure you want to proceed?"
-                "\nThis action is not reversible"
-            )
-        message = text_1 + text_2 + text_3
-
-        reply = QMessageBox.question(self, "Delete Fluid", message)
-        if reply != QMessageBox.StandardButton.Yes:
+        if not confirm_delete_fluid(self, analysis, fluid):
             return
 
         analysis.delete_fluid(fluid)
@@ -353,6 +333,15 @@ class AnalysesTree(QTreeWidget):
         analysis.analysis_views.remove(view)
         self.project.mark_modified()
         self.analysis_visibility_changed.emit(analysis, None)
+
+    def _duplicate_single_fluid(self, item: QTreeWidgetItem) -> None:
+        fluid = item.data(0, Qt.ItemDataRole.UserRole)
+        if fluid is None or not isinstance(fluid, Fluid):
+            return
+        analysis = fluid.analysis_object
+        analysis.duplicate_fluid(fluid,100)
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
 
     def _hide_all_views(self, item: QTreeWidgetItem) -> None:
         while item.parent() is not None:

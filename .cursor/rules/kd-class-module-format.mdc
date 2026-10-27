@@ -8,6 +8,39 @@ alwaysApply: false
 
 When creating or reformatting a class in this project, follow this layout.
 
+## Imports
+
+Prefer compact, readable multi-name imports. Goals: less vertical space, no long horizontal scrolling, and a clear hanging indent on wrap lines (empty column on the left).
+
+- Short import lists may stay on one line.
+- Longer lists use parentheses and **wrap with several names per line**, not one name per line.
+- Continuation lines are indented (typically 4 spaces) under the opening content.
+- A trailing comma after the last name is fine.
+
+```python
+# Prefer
+from PyQt6.QtWidgets import (QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QMenu, QScrollArea, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,)
+
+# Avoid — single-column list burns vertical space
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QScrollArea,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+    )
+```
+
+Same rule for project imports and any other multi-name `from … import (…)`.
+
 ## Order
 
 1. **Class signals / class attributes** — `pyqtSignal`s and other class-level attrs (before any methods)
@@ -134,4 +167,4 @@ class SomeWidget(...):
 ## How to invoke
 
 User may say: "apply KD class module format" or "reformat to my class module format".
-Reorder methods, add missing return annotations, annotate `__init__` instance attributes, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.
+Reorder methods, wrap multi-name imports as above (not single-column), add missing return annotations, annotate `__init__` instance attributes, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.

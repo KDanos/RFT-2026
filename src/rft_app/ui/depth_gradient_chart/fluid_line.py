@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QInputDialog, QMenu
 import pyqtgraph as pg
 
 from project.fluid_model import Fluid, STANDARD_FLUIDS
+from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.depth_gradient_chart.line_annot import LineAnnot
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
@@ -73,10 +74,17 @@ class FluidLine(LineAnnot):
         self.actionDeleteFluid = QAction("Delete", self)
 
     def _delete_fluid(self) -> None:
-        self.view_widget.graphical_sidebar.delete_fluid(self.fluid)
+        if not confirm_delete_fluid(self.parent_chart, self.analysis, self.fluid):
+            return
+        self.analysis.delete_fluid(self.fluid)
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
 
     def _duplicate_fluid(self) -> None:
-        pass
+        new_fluid =self.analysis.duplicate_fluid(self.fluid,100)
+        self.view.sidebar.visible_fluids.append(new_fluid)
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
 
     def _on_region_change_finished(self, _roi: object) -> None:
         super()._on_region_change_finished(self)

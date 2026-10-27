@@ -7,8 +7,9 @@ from typing import Any
 
 import pandas as pd
 
-from project.fluid_model import Fluid
+from project.fluid_model import Fluid, FluidContact
 from project.view_state import (RectAnnotation,StraightLineAnnotation,ViewWidgetSidebar,)
+
 
 
 @dataclass
@@ -47,6 +48,26 @@ class AnalysisObject:
                 sidebar.active_fluid = None
             if fluid is sidebar.ref_fluid:
                 sidebar.ref_fluid = None
+
+    def duplicate_fluid(self, fluid: Fluid, depth_shift:float) ->Fluid:
+        from utilities import unique_name
+        new_name = unique_name(
+            fluid.name, 
+            [f.name for f in self.fluids]
+        )
+        
+        new_fluid = Fluid(
+            name = new_name,
+            type = fluid.type, 
+            gradient_si=fluid.gradient_si,
+            zero_pressure_depth_si= fluid.zero_pressure_depth_si+depth_shift,
+            bottom_contact=  FluidContact(),
+            plotting_depth_min_si= fluid.plotting_depth_min_si +depth_shift,
+            plotting_depth_max_si= fluid.plotting_depth_max_si+depth_shift,
+            analysis_object= self,
+        )
+        self.fluids.append(new_fluid)
+        return new_fluid
 
     def rename_fluid(self, fluid: Fluid, new_name: str) -> None:
         from utilities import unique_name
