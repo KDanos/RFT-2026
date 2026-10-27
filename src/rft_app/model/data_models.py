@@ -7,8 +7,8 @@ from typing import Any
 
 import pandas as pd
 
-from project.fluid_model import Fluid, FluidContact
-from project.view_state import (RectAnnotation,StraightLineAnnotation,ViewWidgetSidebar,)
+from model.fluid_model import Fluid, FluidContact
+from model.view_state import (RectAnnotation, StraightLineAnnotation, ViewWidgetSidebar,)
 
 
 

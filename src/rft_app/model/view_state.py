@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from project.fluid_model import Fluid
+from model.fluid_model import Fluid
 
 
 @dataclass

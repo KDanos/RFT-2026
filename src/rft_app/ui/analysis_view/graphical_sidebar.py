@@ -7,14 +7,14 @@ from PyQt6.QtWidgets import (QComboBox,QFrame,QGridLayout,QHBoxLayout,QLabel,QLi
     QMenu,QScrollArea,QTreeWidget,QTreeWidgetItem,QVBoxLayout,QWidget,)
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
-from project.canonical_names import (
+from model.canonical_names import (
     CANONICAL_EXCESS_PRESSURE,
     CANONICAL_FORMATION_PRESSURE,
     CANONICAL_VERTICAL_DEPTH,
     )
-from project.fluid_model import STANDARD_FLUIDS, Fluid
-from project.data_models import AnalysisObject
-from project.view_state import ViewWidgetSidebar
+from model.fluid_model import STANDARD_FLUIDS, Fluid
+from model.data_models import AnalysisObject
+from model.view_state import ViewWidgetSidebar
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
 from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.main_window.project_signals import ProjectSignals
@@ -133,7 +133,7 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_min_plotting_depth_label = QLabel("Min:")
         self.active_fluid_min_plotting_depth_value = QLineEdit(self)
         self.active_fluid_min_plotting_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.active_fluid_min_plotting_depth_unit = UnitsComboBox("length", self.project)
+        self.active_fluid_min_plotting_depth_unit = UnitsComboBox("length", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.active_fluid_min_plotting_depth_label, 2, 0)
         self.active_fluid_grid.addWidget(self.active_fluid_min_plotting_depth_value, 2, 1)
         self.active_fluid_grid.addWidget(self.active_fluid_min_plotting_depth_unit, 2, 2)
@@ -141,7 +141,7 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_max_plotting_depth_label = QLabel("Max:")
         self.active_fluid_max_plotting_depth_value = QLineEdit(self)
         self.active_fluid_max_plotting_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.active_fluid_max_plotting_depth_unit = UnitsComboBox("length", self.project)
+        self.active_fluid_max_plotting_depth_unit = UnitsComboBox("length", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.active_fluid_max_plotting_depth_label, 3, 0)
         self.active_fluid_grid.addWidget(self.active_fluid_max_plotting_depth_value, 3, 1)
         self.active_fluid_grid.addWidget(self.active_fluid_max_plotting_depth_unit, 3, 2)
@@ -159,7 +159,7 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_gradient_label = QLabel("Gradient: ")
         self.active_fluid_gradient_value = QLineEdit(self)
         self.active_fluid_gradient_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.active_fluid_gradient_unit = UnitsComboBox("pressure_gradient", self.project)
+        self.active_fluid_gradient_unit = UnitsComboBox("pressure_gradient", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_label, 6, 0)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_value, 6, 1)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_unit, 6, 2)
@@ -167,7 +167,7 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_zero_pressure_depth_label = QLabel("Zero Pressure Depth: ")
         self.active_fluid_zero_pressure_depth_value = QLineEdit(self)
         self.active_fluid_zero_pressure_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.active_fluid_zero_pressure_depth_unit = UnitsComboBox("length", self.project)
+        self.active_fluid_zero_pressure_depth_unit = UnitsComboBox("length", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_label, 7, 0)
         self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_value, 7, 1)
         self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_unit, 7, 2)
@@ -187,7 +187,7 @@ class GraphicalSidebar(QFrame):
         self.contact_depth_label = QLabel("Contact Depth:")
         self.contact_depth_value = QLabel()
         self.contact_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.contact_depth_unit = UnitsComboBox("length", self.project)
+        self.contact_depth_unit = UnitsComboBox("length", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.contact_depth_label, 10, 0)
         self.active_fluid_grid.addWidget(self.contact_depth_value, 10, 1)
         self.active_fluid_grid.addWidget(self.contact_depth_unit, 10, 2)
@@ -195,7 +195,7 @@ class GraphicalSidebar(QFrame):
         self.contact_pressure_label = QLabel("Contact Pressure:")
         self.contact_pressure_value = QLabel()
         self.contact_pressure_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.contact_pressure_unit = UnitsComboBox("pressure", self.project)
+        self.contact_pressure_unit = UnitsComboBox("pressure", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.contact_pressure_label, 11, 0)
         self.active_fluid_grid.addWidget(self.contact_pressure_value, 11, 1)
         self.active_fluid_grid.addWidget(self.contact_pressure_unit, 11, 2)

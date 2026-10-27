@@ -3,7 +3,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from project.fluid_model import Fluid
+from model.fluid_model import Fluid
 from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units

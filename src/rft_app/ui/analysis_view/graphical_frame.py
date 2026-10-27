@@ -4,7 +4,7 @@ import pyqtgraph as pg
 import pandas as pd
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
-from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE
+from model.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
 from utilities import print_current_location_function
 from ui.main_window.project_signals import ProjectSignals

@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QComboBox,QDialog,QFrame,QGridLayout,QLabel,QLineEd
 import pandas as pd
 
 from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
-from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from model.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from ui.filterable_table.filterable_table import FilterableTable
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from utilities import (

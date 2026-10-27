@@ -110,8 +110,8 @@ class UnitConversionDialog(QDialog):
 
     def _create_unit_combo_boxes(self) -> None:
         quantity_key = self.quantity_combo.currentData().key
-        self.from_unit_combo = UnitsComboBox(quantity_key, self.project)
-        self.to_unit_combo = UnitsComboBox(quantity_key, self.project)
+        self.from_unit_combo = UnitsComboBox(quantity_key, self.project.current_unit_system)
+        self.to_unit_combo = UnitsComboBox(quantity_key, self.project.current_unit_system)
         self.main_layout.addWidget(self.from_unit_combo, 3, 0)
         self.main_layout.addWidget(self.to_unit_combo, 3, 2)
 

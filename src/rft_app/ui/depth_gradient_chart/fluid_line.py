@@ -3,7 +3,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QInputDialog, QMenu
 import pyqtgraph as pg
 
-from project.fluid_model import Fluid, STANDARD_FLUIDS
+from model.fluid_model import Fluid, STANDARD_FLUIDS
 from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.depth_gradient_chart.line_annot import LineAnnot
 from ui.main_window.project_signals import ProjectSignals

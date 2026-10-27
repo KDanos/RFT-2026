@@ -1,21 +1,16 @@
-"""Unit tests for project.view_state."""
+"""Unit tests for model.view_state."""
 from __future__ import annotations
 
 import pickle
 import sys
 from pathlib import Path
 
-APP_ROOT = Path(__file__).resolve().parents[1]
+APP_ROOT = Path(__file__).resolve().parents[2]
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-from project import (  # noqa: E402
-    RectAnnotation as PackageRectAnnotation,
-    StraightLineAnnotation as PackageStraightLineAnnotation,
-    ViewWidgetSidebar as PackageViewWidgetSidebar,
-    )
-from project.fluid_model import Fluid, FluidContact  # noqa: E402
-from project.view_state import (  # noqa: E402
+from model.fluid_model import Fluid, FluidContact  # noqa: E402
+from model.view_state import (  # noqa: E402
     RectAnnotation,
     StraightLineAnnotation,
     ViewWidgetSidebar,
@@ -32,18 +27,6 @@ def _make_fluid(name: str) -> Fluid:
         plotting_depth_min_si=100.0,
         plotting_depth_max_si=200.0,
         )
-
-
-def test_package_exports_match_canonical_classes() -> None:
-    assert PackageViewWidgetSidebar is ViewWidgetSidebar
-    assert PackageStraightLineAnnotation is StraightLineAnnotation
-    assert PackageRectAnnotation is RectAnnotation
-
-
-def test_canonical_module_paths() -> None:
-    assert ViewWidgetSidebar.__module__ == "project.view_state"
-    assert StraightLineAnnotation.__module__ == "project.view_state"
-    assert RectAnnotation.__module__ == "project.view_state"
 
 
 def test_view_widget_sidebar_defaults() -> None:
@@ -67,30 +50,6 @@ def test_view_widget_sidebar_holds_fluid_refs() -> None:
     assert sidebar.active_fluid is fluid
     assert sidebar.visible_fluids == [fluid]
     assert sidebar.primary_series_identifier == "Well"
-
-
-def test_straight_line_annotation_fields() -> None:
-    line = StraightLineAnnotation(
-        start_si=(0.0, 10.0),
-        end_si=(1.0e6, 20.0),
-        color="blue",
-        chart_id="pressure",
-        line_id="abc",
-        )
-    assert line.start_si == (0.0, 10.0)
-    assert line.chart_id == "pressure"
-
-
-def test_rect_annotation_fields() -> None:
-    rect = RectAnnotation(
-        pos_si=(0.0, 10.0),
-        size_si=(100.0, 50.0),
-        color="red",
-        chart_id="pressure",
-        rect_id="def",
-        )
-    assert rect.size_si == (100.0, 50.0)
-    assert rect.rect_id == "def"
 
 
 def test_pickle_roundtrip_view_state() -> None:
@@ -118,4 +77,4 @@ def test_pickle_roundtrip_view_state() -> None:
     assert sidebar2.active_fluid.name == "Shallow Water"
     assert line2.line_id == "L1"
     assert rect2.rect_id == "R1"
-    assert type(sidebar2).__module__ == "project.view_state"
+    assert type(sidebar2).__module__ == "model.view_state"

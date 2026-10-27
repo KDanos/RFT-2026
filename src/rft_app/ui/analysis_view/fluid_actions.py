@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
-from project.data_models import AnalysisObject
-from project.fluid_model import Fluid
+from model.data_models import AnalysisObject
+from model.fluid_model import Fluid
 
 
 def confirm_delete_fluid(

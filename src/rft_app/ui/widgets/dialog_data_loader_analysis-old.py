@@ -8,7 +8,7 @@ QComboBox,QDialog,QFrame,QGridLayout,QHBoxLayout,QLabel,QLineEdit,
 import pandas as pd
 
 from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
-from project.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from model.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from utilities import (
     get_tree_item_by_name,
@@ -396,7 +396,7 @@ class DataLoaderDialogAnalysis(QDialog):
                 header = header_list[c]
                 idx = all_columns.index(header)
                 quantity_key = self.selected_dataset.column_specs[idx].quantity_key
-                units_combo = UnitsComboBox(quantity_key, self.project)
+                units_combo = UnitsComboBox(quantity_key, self.project.current_unit_system)
                 units_combo.currentTextChanged.connect(self._update_table_values)
 
                 self.preview_table.setCellWidget(0, c, units_combo)

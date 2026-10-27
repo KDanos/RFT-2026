@@ -46,7 +46,7 @@ class MainWindowKD(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("261015 Making Fluids KD")
+        self._load_default_project_on_startup("261027 Tested Data Load Merge and New Analysis KD")
 
     #--------Private UI--------
 

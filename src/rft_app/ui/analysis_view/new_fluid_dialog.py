@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from project.fluid_model import STANDARD_FLUIDS, Fluid, FluidContact, guess_fluid_type_from_psi_ft
+from model.fluid_model import STANDARD_FLUIDS, Fluid, FluidContact, guess_fluid_type_from_psi_ft
 if TYPE_CHECKING:
     from ui.analysis_view import AnalysisViewWidget
 from ui.main_window.project_signals import ProjectSignals
@@ -92,7 +92,7 @@ class NewFluidDialog(QDialog):
             self.gradient_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         else:
             self.gradient_value = QLineEdit(self)
-        self.gradient_units_combo = UnitsComboBox("pressure_gradient", self.project)
+        self.gradient_units_combo = UnitsComboBox("pressure_gradient", self.project.current_unit_system)
         self.list_of_unit_combos.append(self.gradient_units_combo)
         self._update_fluid_gradient_display()
         self.grid_layout.addWidget(self.gradient_label, 1, 0)
@@ -124,7 +124,7 @@ class NewFluidDialog(QDialog):
 
         else: 
             self.zero_pressure_depth_value = QLineEdit()
-        self.zero_pressure_depth_units_combo = UnitsComboBox("length", self.project)
+        self.zero_pressure_depth_units_combo = UnitsComboBox("length", self.project.current_unit_system)
         self.list_of_unit_combos.append(self.zero_pressure_depth_units_combo)
         self._update_zero_pressure_depth_display()
         self.grid_layout.addWidget(self.zero_pressure_depth_label, 3, 0)
@@ -157,7 +157,7 @@ class NewFluidDialog(QDialog):
 
         else: 
             self.contact_depth_value = QLineEdit()
-        self.contact_depth_units_combo = UnitsComboBox("length", self.project)
+        self.contact_depth_units_combo = UnitsComboBox("length", self.project.current_unit_system)
         self.list_of_unit_combos.append(self.contact_depth_units_combo)
         self.grid_layout.addWidget(self.contact_depth_label, 6, 0)
         self.grid_layout.addWidget(self.contact_depth_value, 6, 1)
@@ -171,7 +171,7 @@ class NewFluidDialog(QDialog):
 
         else: 
             self.contact_pressure_value = QLineEdit()
-        self.contact_pressure_units_combo = UnitsComboBox("pressure", self.project)
+        self.contact_pressure_units_combo = UnitsComboBox("pressure", self.project.current_unit_system)
         self.list_of_unit_combos.append(self.contact_pressure_units_combo)
         self._update_contact_data_display()
         self.grid_layout.addWidget(self.contact_pressure_label, 7, 0)
@@ -373,6 +373,6 @@ class NewFluidDialog(QDialog):
 
     def on_project_units_changed(self)->None:
         for combo in self.list_of_unit_combos:
-            combo.set_default_unit(self.project)
+            combo.set_default_unit(self.project.current_unit_system)
         self._update_fluid_gradient_display()
         self._update_zero_pressure_depth_display()

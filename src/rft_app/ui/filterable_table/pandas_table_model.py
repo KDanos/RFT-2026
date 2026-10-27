@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QCheckBox, QSpinBox
 import pandas as pd
 
 from project import ProjectDataManager
-from project.data_models import ColumnSpec
+from model.data_models import ColumnSpec
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 from utilities import round_value_to_decimal_points
 

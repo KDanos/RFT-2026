@@ -1,4 +1,4 @@
-"""Tests for MergeDatasetsDialog against 260903 Merging Data.rftproj fixtures."""
+"""Tests for MergeDatasetsDialog against project/unit_tests TSV fixtures."""
 from __future__ import annotations
 
 import sys
@@ -7,62 +7,61 @@ from pathlib import Path
 import pytest
 from PyQt6.QtWidgets import QApplication, QComboBox, QDialog, QLabel, QMessageBox
 
-APP_ROOT = Path(__file__).resolve().parents[1] / "src" / "rft_app"
+APP_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(APP_ROOT))
 
+from model.data_models import DataSet  # noqa: E402
 from project import ProjectDataManager  # noqa: E402
-from project.persistence import load_project  # noqa: E402
-from project.data_models import DataSet  # noqa: E402
+from project.unit_tests.test_load_merge_analysis import (  # noqa: E402
+    CONVERSION_COLUMNS,
+    FIXTURES,
+    MODIFIED_COLUMNS,
+    ORIGINAL_COLUMNS,
+    load_via_project_data_loader,
+)
 from ui.main_window.sidebar.all_datasets_tree import AllDataSetsTree  # noqa: E402
 from ui.main_window.sidebar.merge_datasets_dialog import MergeDatasetsDialog  # noqa: E402
-
-PROJECT_PATH = APP_ROOT / "260903 Merging Data.rftproj"
 
 MERGE_INSUFFICIENT_DATASETS_MESSAGE = (
     "There must be at least 2 loaded or merged datasets available\n"
     "Please load more data via the 'Load Data' module first."
 )
 
+# Specs as stored after populate_data_rows (SI storage units).
 ORIGINAL_SPECS: list[tuple[str, str, str | None]] = [
     ("TVDSL", "length", "m"),
-    ("Formation Pressure (user import)", "pressure", "psi"),
-    ("Excess Pressure (user import)", "pressure", "psi"),
-    ("Mobility", "mobility", "mD/cP"),
+    ("Formation Pressure (user import)", "pressure", "Pa"),
+    ("Excess Pressure (user import)", "pressure", "Pa"),
+    ("Mobility", "mobility", "m²/(Pa.s)"),
     ("Result", "text", ""),
     ("Comments", "text", ""),
     ("MD", "length", "m"),
     ("Run", "text", ""),
-    ("Temperature", "temperature", "°C"),
+    ("Temperature", "temperature", "K"),
     ("Well", "well", ""),
 ]
 
 CONVERSION_SPECS: list[tuple[str, str, str | None]] = [
-    ("Depth", "length", "ft"),
-    ("Pressure", "pressure", "psi"),
-    ("Weight", "mass", "lbm"),
+    ("Depth", "length", "m"),
+    ("Pressure", "pressure", "Pa"),
+    ("Weight", "mass", "kg"),
 ]
 
 MODIFIED_SPECS: list[tuple[str, str, str | None]] = [
     ("Depth (TVD)", "length", "m"),
-    ("Form. Pr.", "pressure", "psi"),
-    ("Excess Pressure (user import)", "pressure", "psi"),
-    ("Mobility", "mobility", "mD/cP"),
-    ("Comments", "text", ""),
+    ("Form. Pr.", "pressure", "Pa"),
+    ("Excess Pressure (user import)", "pressure", "Pa"),
+    ("Mobility", "mobility", "m²/(Pa.s)"),
     ("Measured Depth", "length", "m"),
-    ("Temperature", "temperature", "°C"),
+    ("Run", "text", ""),
+    ("Temperature", "temperature", "K"),
     ("Well Name", "well", ""),
-]
-
-COLOR_SPECS: list[tuple[str, str, str | None]] = [
-    ("TVDSL", "length", "m"),
-    ("Formation Pressure (user import)", "pressure", "bar"),
 ]
 
 DATASET_SPECS = {
     "Original Data": ORIGINAL_SPECS,
     "Conversion Data": CONVERSION_SPECS,
     "Modified Data": MODIFIED_SPECS,
-    "Color Data": COLOR_SPECS,
 }
 
 COL = MergeDatasetsDialog
@@ -77,11 +76,28 @@ def qapp() -> QApplication:
 
 
 @pytest.fixture
-def merge_project():
-    project = load_project(PROJECT_PATH)
-    # Keep dialog tests focused on the four loaded datasets.
-    project.merged_datasets = []
-    assert len(project.loaded_datasets) == 4
+def merge_project() -> ProjectDataManager:
+    project = ProjectDataManager()
+    load_via_project_data_loader(
+        project,
+        fixture_path=FIXTURES / "original_data.tsv",
+        column_defs=ORIGINAL_COLUMNS,
+        name="Original Data",
+    )
+    load_via_project_data_loader(
+        project,
+        fixture_path=FIXTURES / "conversion_data.tsv",
+        column_defs=CONVERSION_COLUMNS,
+        name="Conversion Data",
+    )
+    load_via_project_data_loader(
+        project,
+        fixture_path=FIXTURES / "modified_data.tsv",
+        column_defs=MODIFIED_COLUMNS,
+        name="Modified Data",
+        ignore_columns={"Result", "Comments"},
+    )
+    assert len(project.loaded_datasets) == 3
     names = [ds.name for ds in project.loaded_datasets]
     assert names == list(DATASET_SPECS.keys())
     return project
@@ -142,6 +158,15 @@ def select_header_dataset(
     qapp.processEvents()
 
 
+def select_base_dataset(
+    dlg: MergeDatasetsDialog, dataset_name: str, qapp: QApplication
+    ) -> None:
+    idx = dlg.base_set_combo.findText(dataset_name)
+    assert idx >= 0
+    dlg.base_set_combo.setCurrentIndex(idx)
+    qapp.processEvents()
+
+
 def assert_dataset_specs_match(
     ds: DataSet, expected: list[tuple[str, str, str | None]]
     ) -> None:
@@ -152,20 +177,41 @@ def assert_dataset_specs_match(
         assert spec.unit == unit
 
 
-def setup_three_merge_columns(
+def setup_two_merge_columns(
     dlg: MergeDatasetsDialog, qapp: QApplication
     ) -> None:
-    dlg.base_set_combo.setCurrentIndex(dlg.base_set_combo.findText("Modified Data"))
-    qapp.processEvents()
+    select_base_dataset(dlg, "Modified Data", qapp)
     select_header_dataset(dlg, COL.COL_FIRST_MERGE, "Original Data", qapp)
     select_header_dataset(dlg, COL.COL_FIRST_MERGE + 1, "Conversion Data", qapp)
-    select_header_dataset(dlg, COL.COL_FIRST_MERGE + 2, "Color Data", qapp)
+
+
+def rename_merged_header(
+    dlg: MergeDatasetsDialog, idx: int, text: str, qapp: QApplication
+    ) -> str:
+    from utilities import unique_name
+
+    others = [h for i, h in enumerate(dlg.row_headers) if i != idx]
+    header = unique_name(text, others)
+    dlg.row_headers[idx] = header
+    row = idx + COL.FIRST_DATA_ROW
+    line_edit = dlg.main_layout.itemAtPosition(row, COL.COL_HEADERS).widget()
+    line_edit.setText(header)
+    line_edit.setToolTip(header)
+    qapp.processEvents()
+    return header
+
+
+def setup_original_conversion_modified(
+    dlg: MergeDatasetsDialog, qapp: QApplication
+    ) -> None:
+    select_header_dataset(dlg, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
+    select_header_dataset(dlg, COL.COL_FIRST_MERGE + 1, "Modified Data", qapp)
 
 
 @pytest.mark.parametrize("dataset_count", [0, 1])
 def test_merge_datasets_blocks_when_fewer_than_two_datasets(
     qapp, merge_project, monkeypatch, dataset_count: int
-) -> None:
+    ) -> None:
     """Merge menu action shows a critical message and does not open the dialog."""
     project = ProjectDataManager()
     project.loaded_datasets = merge_project.loaded_datasets[:dataset_count]
@@ -204,20 +250,28 @@ def test_merge_datasets_blocks_when_fewer_than_two_datasets(
 
 def test_merge_datasets_opens_dialog_when_two_or_more_datasets_exist(
     qapp, merge_project, monkeypatch
-) -> None:
+    ) -> None:
     tree = AllDataSetsTree(merge_project.loaded_datasets, project=merge_project)
-    exec_calls: list[bool] = []
+    show_calls: list[bool] = []
     critical_calls: list[bool] = []
     created_emits: list[bool] = []
+
+    class _AcceptedSignal:
+        def connect(self, slot) -> None:
+            self._slot = slot
+
+        def emit(self) -> None:
+            self._slot()
 
     class FakeMergeDialog:
         def __init__(self, parent, project):
             self.parent = parent
             self.project = project
+            self.accepted = _AcceptedSignal()
 
-        def exec(self):
-            exec_calls.append(True)
-            return QDialog.DialogCode.Accepted
+        def show(self) -> None:
+            show_calls.append(True)
+            self.accepted.emit()
 
     monkeypatch.setattr(
         "ui.main_window.sidebar.all_datasets_tree.MergeDatasetsDialog",
@@ -233,7 +287,7 @@ def test_merge_datasets_opens_dialog_when_two_or_more_datasets_exist(
     qapp.processEvents()
 
     assert critical_calls == []
-    assert exec_calls == [True]
+    assert show_calls == [True]
     assert created_emits == [True]
 
 
@@ -276,7 +330,7 @@ def test_second_merge_header_has_none_option(qapp, dialog: MergeDatasetsDialog) 
 
 def test_available_datasets_excludes_base_and_left_merge_sets(
     qapp, dialog: MergeDatasetsDialog
-) -> None:
+    ) -> None:
     """Col 5 options exclude base and col 4 only — not datasets in cols to the right."""
     select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
     available = dialog._update_list_of_available_datasets(
@@ -285,20 +339,20 @@ def test_available_datasets_excludes_base_and_left_merge_sets(
     names = {ds.name for ds in available}
     assert "Original Data" not in names
     assert "Conversion Data" not in names
-    assert {"Modified Data", "Color Data"} <= names
+    assert names == {"Modified Data"}
 
 
 def test_first_merge_header_includes_datasets_from_right_columns(
     qapp, dialog: MergeDatasetsDialog
-) -> None:
-    """Col 4 must list all non-base datasets even when col 5 already has Color."""
+    ) -> None:
+    """Col 4 must list all non-base datasets even when col 5 already has Modified."""
     select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Color Data", qapp)
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Modified Data", qapp)
     names = {
         ds.name
         for ds in dialog._update_list_of_available_datasets(exclude_col=COL.COL_FIRST_MERGE)
     }
-    assert names == {"Conversion Data", "Modified Data", "Color Data"}
+    assert names == {"Conversion Data", "Modified Data"}
     first_merge_combo = header_combo(dialog, COL.COL_FIRST_MERGE)
     ui_names = {first_merge_combo.itemText(i) for i in range(first_merge_combo.count())}
     assert ui_names == names
@@ -343,7 +397,7 @@ def test_modified_data_fits_base_rows_without_extra_mass(
 
 def test_conversion_data_maps_depth_and_pressure_only(
     qapp, dialog: MergeDatasetsDialog
-        ) -> None:
+    ) -> None:
     select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
     combos = dict(mapping_combos(dialog, COL.COL_FIRST_MERGE))
     assert combos[COL.FIRST_DATA_ROW].currentData().name == "Depth"
@@ -367,37 +421,43 @@ def test_modified_data_maps_all_eight_columns(qapp, dialog: MergeDatasetsDialog)
 def test_later_merge_column_fills_existing_rows_only(
     qapp, dialog: MergeDatasetsDialog
     ) -> None:
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Modified Data", qapp)
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Color Data", qapp)
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Modified Data", qapp)
     combos = dict(mapping_combos(dialog, COL.COL_FIRST_MERGE + 1))
-    assert combos[COL.FIRST_DATA_ROW].currentData().name == "TVDSL"
-    assert combos[COL.FIRST_DATA_ROW + 1].currentData().name == "Formation Pressure (user import)"
-    for row in range(COL.FIRST_DATA_ROW + 2, COL.FIRST_DATA_ROW + 10):
-        assert combos[row].currentData() is None
-        assert combos[row].isVisible() is False
+    assert combos[COL.FIRST_DATA_ROW].currentData().name == "Depth (TVD)"
+    assert combos[COL.FIRST_DATA_ROW + 1].currentData().name == "Form. Pr."
+    assert combos[COL.FIRST_DATA_ROW + 10].currentData() is None
+    assert combos[COL.FIRST_DATA_ROW + 10].isVisible() is False
 
 
 def test_later_merge_column_row_count_matches_row_quantity_keys(
     qapp, dialog: MergeDatasetsDialog
-        ) -> None:
+    ) -> None:
     select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Color Data", qapp)
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Modified Data", qapp)
     combos = mapping_combos(dialog, COL.COL_FIRST_MERGE + 1)
     assert len(combos) == len(dialog.row_quantity_keys)
 
 
 def test_clearing_second_merge_column_shrinks_quantity_labels(
     qapp, dialog: MergeDatasetsDialog
-) -> None:
+    ) -> None:
     """Col 5 = Original expands quantity rows; col 5 = None must shrink them back."""
-    dialog.base_set_combo.setCurrentIndex(
-        dialog.base_set_combo.findText("Color Data")
-    )
-    qapp.processEvents()
+    select_base_dataset(dialog, "Conversion Data", qapp)
 
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
-    assert dialog.row_quantity_keys == ["length", "pressure", "mass"]
-    assert len(quantity_labels(dialog)) == 3
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Modified Data", qapp)
+    assert dialog.row_quantity_keys == [
+        "length",
+        "pressure",
+        "mass",
+        "pressure",
+        "mobility",
+        "length",
+        "text",
+        "temperature",
+        "well",
+    ]
+    assert len(quantity_labels(dialog)) == 9
 
     select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Original Data", qapp)
     assert len(dialog.row_quantity_keys) == 11
@@ -406,13 +466,22 @@ def test_clearing_second_merge_column_shrinks_quantity_labels(
 
     select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "None", qapp)
     assert header_combo(dialog, COL.COL_FIRST_MERGE + 1).currentData() is None
-    assert dialog.row_quantity_keys == ["length", "pressure", "mass"]
-    assert len(quantity_labels(dialog)) == 3
+    assert dialog.row_quantity_keys == [
+        "length",
+        "pressure",
+        "mass",
+        "pressure",
+        "mobility",
+        "length",
+        "text",
+        "temperature",
+        "well",
+    ]
+    assert len(quantity_labels(dialog)) == 9
     assert mapping_combos(dialog, COL.COL_FIRST_MERGE + 1) == []
 
     combos_col4 = mapping_combos(dialog, COL.COL_FIRST_MERGE)
-    assert len(combos_col4) == 3
-    assert combos_col4[-1][1].currentData().name == "Weight"
+    assert len(combos_col4) == 9
 
 
 def test_changing_merge_dataset_rebuilds_that_column(
@@ -425,25 +494,24 @@ def test_changing_merge_dataset_rebuilds_that_column(
     assert combos[COL.FIRST_DATA_ROW].currentData().name == "Depth (TVD)"
 
 
-def test_changing_merge_dataset_restores_right_column_from_prefered_sets(
+def test_second_merge_column_recorded_in_prefered_sets(
     qapp, dialog: MergeDatasetsDialog
-) -> None:
-    """Changing col 4 rebuilds col 5 but restores Color Data from prefered_sets."""
+    ) -> None:
+    """With three loaded sets, col 5 holds the remaining merge dataset in prefered_sets."""
     select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Modified Data", qapp)
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Color Data", qapp)
-    assert header_combo(dialog, COL.COL_FIRST_MERGE + 1).currentText() == "Color Data"
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
-    assert header_combo(dialog, COL.COL_FIRST_MERGE + 1).currentText() == "Color Data"
-    assert dialog.prefered_sets[1].name == "Color Data"
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Conversion Data", qapp)
+    assert header_combo(dialog, COL.COL_FIRST_MERGE + 1).currentText() == "Conversion Data"
+    assert dialog.prefered_sets[1].name == "Conversion Data"
     combos = dict(mapping_combos(dialog, COL.COL_FIRST_MERGE + 1))
     assert len(combos) == len(dialog.row_quantity_keys)
-    assert combos[COL.FIRST_DATA_ROW].currentData().name == "TVDSL"
-    assert combos[COL.FIRST_DATA_ROW + 1].currentData().name == "Formation Pressure (user import)"
+    assert combos[COL.FIRST_DATA_ROW].currentData().name == "Depth"
+    assert combos[COL.FIRST_DATA_ROW + 1].currentData().name == "Pressure"
+
 
 def test_selecting_none_on_second_merge_stays_none(
     qapp, dialog: MergeDatasetsDialog
     ) -> None:
-    setup_three_merge_columns(dialog, qapp)
+    setup_two_merge_columns(dialog, qapp)
     select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "None", qapp)
     assert header_combo(dialog, COL.COL_FIRST_MERGE + 1).currentText() == "None"
     assert header_combo(dialog, COL.COL_FIRST_MERGE + 1).currentData() is None
@@ -453,54 +521,13 @@ def test_selecting_none_on_second_merge_stays_none(
 def test_none_on_second_merge_frees_dataset_for_first_merge_header(
     qapp, dialog: MergeDatasetsDialog
     ) -> None:
-    setup_three_merge_columns(dialog, qapp)
+    setup_two_merge_columns(dialog, qapp)
     select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "None", qapp)
     dialog._populate_merging_dataset_column_options(COL.COL_FIRST_MERGE)
     qapp.processEvents()
     first_merge_combo = header_combo(dialog, COL.COL_FIRST_MERGE)
     names = {first_merge_combo.itemText(i) for i in range(first_merge_combo.count())}
     assert "Conversion Data" in names
-
-
-def select_base_dataset(
-    dlg: MergeDatasetsDialog, dataset_name: str, qapp: QApplication
-) -> None:
-    idx = dlg.base_set_combo.findText(dataset_name)
-    assert idx >= 0
-    dlg.base_set_combo.setCurrentIndex(idx)
-    qapp.processEvents()
-
-
-def rename_merged_header(
-    dlg: MergeDatasetsDialog, idx: int, text: str, qapp: QApplication
-) -> str:
-    from utilities import unique_name
-
-    others = [h for i, h in enumerate(dlg.row_headers) if i != idx]
-    header = unique_name(text, others)
-    dlg.row_headers[idx] = header
-    row = idx + COL.FIRST_DATA_ROW
-    line_edit = dlg.main_layout.itemAtPosition(row, COL.COL_HEADERS).widget()
-    line_edit.setText(header)
-    line_edit.setToolTip(header)
-    qapp.processEvents()
-    return header
-
-
-def setup_original_conversion_modified(
-    dlg: MergeDatasetsDialog, qapp: QApplication
-) -> None:
-    select_header_dataset(dlg, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
-    select_header_dataset(dlg, COL.COL_FIRST_MERGE + 1, "Modified Data", qapp)
-
-
-def setup_color_conversion_original_modified(
-    dlg: MergeDatasetsDialog, qapp: QApplication
-) -> None:
-    select_base_dataset(dlg, "Color Data", qapp)
-    select_header_dataset(dlg, COL.COL_FIRST_MERGE, "Conversion Data", qapp)
-    select_header_dataset(dlg, COL.COL_FIRST_MERGE + 1, "Original Data", qapp)
-    select_header_dataset(dlg, COL.COL_FIRST_MERGE + 2, "Modified Data", qapp)
 
 
 def test_mapping_original_conversion_modified(qapp, dialog: MergeDatasetsDialog) -> None:
@@ -527,13 +554,16 @@ def test_mapping_original_conversion_modified(qapp, dialog: MergeDatasetsDialog)
         "Conversion Data": "Weight",
         "Modified Data": "",
     }
-    assert mapping["Result"]["Modified Data"] == "Comments"
     assert mapping["MD"]["Modified Data"] == "Measured Depth"
+    # Modified has no Result/Comments; its text Run maps onto the first free text row (Result)
+    assert mapping["Result"]["Modified Data"] == "Run"
+    assert mapping["Comments"]["Modified Data"] == ""
+    assert mapping["Run"]["Modified Data"] == ""
 
 
 def test_mapping_original_conversion_modified_renamed_headers(
     qapp, dialog: MergeDatasetsDialog
-) -> None:
+    ) -> None:
     setup_original_conversion_modified(dialog, qapp)
     comments_idx = dialog.row_headers.index("Comments")
     md_idx = dialog.row_headers.index("MD")
@@ -561,55 +591,33 @@ def test_mapping_original_conversion_modified_renamed_headers(
     }
 
 
-def test_mapping_color_conversion_original_modified(
+def test_mapping_conversion_base_with_original_and_modified(
     qapp, dialog: MergeDatasetsDialog
-) -> None:
-    setup_color_conversion_original_modified(dialog, qapp)
+    ) -> None:
+    select_base_dataset(dialog, "Conversion Data", qapp)
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Original Data", qapp)
+    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Modified Data", qapp)
     mapping = dialog._build_mapping_dict()
 
-    assert mapping["TVDSL"] == {
-        "Color Data": "TVDSL",
+    assert mapping["Depth"] == {
         "Conversion Data": "Depth",
         "Original Data": "TVDSL",
         "Modified Data": "Depth (TVD)",
     }
-    assert mapping["Formation Pressure (user import)"] == {
-        "Color Data": "Formation Pressure (user import)",
+    assert mapping["Pressure"] == {
         "Conversion Data": "Pressure",
         "Original Data": "Formation Pressure (user import)",
         "Modified Data": "Form. Pr.",
     }
     assert mapping["Weight"] == {
-        "Color Data": "",
         "Conversion Data": "Weight",
         "Original Data": "",
         "Modified Data": "",
     }
-    assert mapping["Excess Pressure (user import)"]["Color Data"] == ""
-    assert mapping["Mobility"]["Original Data"] == "Mobility"
-
-
-def test_mapping_color_original_conversion(qapp, dialog: MergeDatasetsDialog) -> None:
-    select_base_dataset(dialog, "Color Data", qapp)
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE, "Original Data", qapp)
-    select_header_dataset(dialog, COL.COL_FIRST_MERGE + 1, "Conversion Data", qapp)
-    mapping = dialog._build_mapping_dict()
-
-    assert mapping["TVDSL"] == {
-        "Color Data": "TVDSL",
-        "Original Data": "TVDSL",
-        "Conversion Data": "Depth",
-    }
-    assert mapping["Weight"] == {
-        "Color Data": "",
-        "Original Data": "",
-        "Conversion Data": "Weight",
-    }
-    assert mapping["Excess Pressure (user import)"]["Conversion Data"] == ""
 
 
 def test_header_combo_options_match_available_sets(qapp, dialog: MergeDatasetsDialog) -> None:
-    setup_three_merge_columns(dialog, qapp)
+    setup_two_merge_columns(dialog, qapp)
     dialog._populate_merging_dataset_column_options(COL.COL_FIRST_MERGE)
     qapp.processEvents()
     combo = header_combo(dialog, COL.COL_FIRST_MERGE)

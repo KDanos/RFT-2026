@@ -134,7 +134,7 @@ class FilterableTable(QFrame):
             quantity = STANDARD_QUANTITIES.get(spec.quantity_key)
             if quantity is None or not quantity.is_numeric:
                 continue
-            units_combo = UnitsComboBox(spec.quantity_key, self.project)
+            units_combo = UnitsComboBox(spec.quantity_key, self.project.current_unit_system)
             if spec.unit:
                 unit_idx = units_combo.findText(spec.unit)
                 if unit_idx >= 0:

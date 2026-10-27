@@ -1,6 +1,6 @@
 from typing import Any
 from PyQt6.QtWidgets import QTableWidget
-from project.canonical_names import RESERVED_CANONICAL_NAMES, USER_IMPORT_SUFFIX
+from model.canonical_names import RESERVED_CANONICAL_NAMES, USER_IMPORT_SUFFIX
 from project import ColumnSpec, DataSetLogEntry
 from units import STANDARD_QUANTITIES, normalise_from_user_units
 from utilities import force_numeric, unique_name

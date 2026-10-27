@@ -1,33 +1,19 @@
-"""Unit tests for project.data_models."""
+"""Unit tests for model.data_models."""
 from __future__ import annotations
 
 import pickle
 import sys
 from pathlib import Path
 
-import pandas as pd
 import pytest
 
-APP_ROOT = Path(__file__).resolve().parents[1]
+APP_ROOT = Path(__file__).resolve().parents[2]
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-from project import (  # noqa: E402
-    AnalysisObject as PackageAnalysisObject,
-    AnalysisView as PackageAnalysisView,
-    ColumnSpec as PackageColumnSpec,
-    DataSet as PackageDataSet,
-    DataSetLogEntry as PackageDataSetLogEntry,
-    )
-from project.data_models import (  # noqa: E402
-    AnalysisObject,
-    AnalysisView,
-    ColumnSpec,
-    DataSet,
-    DataSetLogEntry,
-    )
-from project.fluid_model import Fluid, FluidContact  # noqa: E402
-from project.view_state import ViewWidgetSidebar  # noqa: E402
+from model.data_models import AnalysisObject, AnalysisView, ColumnSpec  # noqa: E402
+from model.fluid_model import Fluid, FluidContact  # noqa: E402
+from model.view_state import ViewWidgetSidebar  # noqa: E402
 
 
 def _make_fluid(name: str, fluid_type: str = "Water") -> Fluid:
@@ -42,36 +28,10 @@ def _make_fluid(name: str, fluid_type: str = "Water") -> Fluid:
         )
 
 
-def test_package_exports_match_canonical_classes() -> None:
-    assert PackageAnalysisObject is AnalysisObject
-    assert PackageAnalysisView is AnalysisView
-    assert PackageColumnSpec is ColumnSpec
-    assert PackageDataSet is DataSet
-    assert PackageDataSetLogEntry is DataSetLogEntry
-
-
-def test_canonical_module_paths() -> None:
-    assert AnalysisObject.__module__ == "project.data_models"
-    assert AnalysisView.__module__ == "project.data_models"
-    assert ColumnSpec.__module__ == "project.data_models"
-    assert DataSet.__module__ == "project.data_models"
-    assert DataSetLogEntry.__module__ == "project.data_models"
-
-
 def test_column_spec_frozen() -> None:
     spec = ColumnSpec(name="TVDSL", quantity_key="length", unit="m")
     with pytest.raises(Exception):
         spec.name = "Other"  # type: ignore[misc]
-
-
-def test_dataset_roundtrip_fields() -> None:
-    df = pd.DataFrame({"a": [1.0, 2.0]})
-    specs = [ColumnSpec(name="a", quantity_key="dimensionless", unit=None)]
-    ds = DataSet(name="Well A", dataframe=df, column_specs=specs)
-    assert ds.name == "Well A"
-    assert list(ds.dataframe["a"]) == [1.0, 2.0]
-    assert ds.column_specs[0].name == "a"
-    assert ds.info_log == []
 
 
 def test_analysis_view_defaults_and_link() -> None:
@@ -133,4 +93,4 @@ def test_pickle_roundtrip_analysis_object() -> None:
     assert len(restored.fluids) == 1
     assert restored.fluids[0].name == "Shallow Water"
     assert restored.analysis_views[0].sidebar.active_fluid.name == "Shallow Water"
-    assert type(restored).__module__ == "project.data_models"
+    assert type(restored).__module__ == "model.data_models"

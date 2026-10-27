@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QLayout, QTreeWidget, QTreeWidgetItem, QTreeWidgetI
 import pandas as pd
 from dataclasses import fields
 
-from project.data_models import ColumnSpec, DataSet, DataSetLogEntry
+from model.data_models import ColumnSpec, DataSet, DataSetLogEntry
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
 
 
@@ -68,7 +68,7 @@ def create_dataframe_table( df:pd.DataFrame,
     for c in range(columns):
         #Create the units combo box
         quantity_key = column_specs[c].quantity_key
-        units_combo = UnitsComboBox(quantity_key,project)
+        units_combo = UnitsComboBox(quantity_key, project.current_unit_system)
         data_table.setCellWidget(0,c,units_combo)
         # units_combo.currentIndexChanged.connect (lambda _index, col=c: update_column_values(col))
         
@@ -296,8 +296,8 @@ def limit_decimals(value: Any, limit: int = 3) -> str:
     """Round to at least ``significant_figures`` significant figures as a float.
 
     ``order`` is the power of 10 of the leading digit place:
-    327 → floor(log10(327)) = 2 (because 10**2 ≤ 327 < 10**3);
-    3.27 → 0; 0.0327 → -2.
+    327 ? floor(log10(327)) = 2 (because 10**2 = 327 < 10**3);
+    3.27 ? 0; 0.0327 ? -2.
 
     ``decimals`` is how many digits after the decimal point ``round`` needs
     so that the result still has ``significant_figures`` significant digits:

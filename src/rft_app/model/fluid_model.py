@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING
 from units import convert_from_normalised_to_user_units
 
 if TYPE_CHECKING:
-    from project import ProjectDataManager, AnalysisObject
+    from model.data_models import AnalysisObject
+    from project.manager import ProjectDataManager
 
 
 @dataclass

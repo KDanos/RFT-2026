@@ -323,7 +323,7 @@ class CustomUnitsDialog(QDialog):
         for i in range(len(quantity_list)):
             key, value = quantity_list[i]
             new_label = QLabel(value.label)
-            units_combo = UnitsComboBox(key, self.project)
+            units_combo = UnitsComboBox(key, self.project.current_unit_system)
             # Restore draft unit selection (not only project current system)
             saved = self.quantity_unit_pair_dictionary.get(key)
             if saved:

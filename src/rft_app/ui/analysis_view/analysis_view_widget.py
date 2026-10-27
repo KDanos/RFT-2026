@@ -2,13 +2,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSplitter, QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from project.canonical_names import (
+from model.canonical_names import (
     CANONICAL_EXCESS_PRESSURE,
     CANONICAL_FORMATION_PRESSURE,
     CANONICAL_VERTICAL_DEPTH,
 )
-from project.fluid_model import Fluid
-from project.view_state import ViewWidgetSidebar
+from model.fluid_model import Fluid
+from model.view_state import ViewWidgetSidebar
 from ui.filterable_table.proxy_model import ProxyFilterModel
 from ui.main_window.project_signals import ProjectSignals
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
@@ -84,7 +84,7 @@ class AnalysisViewWidget(QWidget):
         self.main_frame_splitter = QSplitter(Qt.Orientation.Vertical)
         self.main_frame_splitter.addWidget(self.graphical_row_splitter)
         self.main_frame_splitter.addWidget(self.tabular_row_splitter)
-        self.main_frame_splitter.setSizes([5000, 1000])
+        self.main_frame_splitter.setSizes([5000, 2000])
         self.main_frame_splitter.setStretchFactor(0, 1)
         self.main_frame_splitter.setStretchFactor(1, 1)
 

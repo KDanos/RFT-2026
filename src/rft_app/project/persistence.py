@@ -20,7 +20,7 @@ def load_project(path: str | Path) -> ProjectDataManager:
     return project
 
 def _ensure_fluid_contacts(project: ProjectDataManager) -> None:
-    from project.fluid_model import FluidContact
+    from model.fluid_model import FluidContact
     for analysis in project.analyses:
         for fluid in analysis.fluids:
             if fluid.bottom_contact is None:

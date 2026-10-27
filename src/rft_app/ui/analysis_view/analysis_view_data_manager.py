@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from project.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from model.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
-from project.fluid_model import Fluid
+from model.fluid_model import Fluid
 from units import get_project_default_units
 import pandas as pd
 
