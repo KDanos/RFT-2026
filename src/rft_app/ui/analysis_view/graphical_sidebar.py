@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPoint, QSignalBlocker,  Qt, pyqtSignal
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import (QComboBox,QFrame,QGridLayout,QHBoxLayout,QLabel,QLineEdit,
-    QMenu,QScrollArea,QTreeWidget,QTreeWidgetItem,QVBoxLayout,QWidget,)
+from PyQt6.QtWidgets import (QComboBox, QDoubleSpinBox,QFrame,QGridLayout,QHBoxLayout,QLabel,QLineEdit,
+    QMenu,QScrollArea, QSpinBox,QTreeWidget,QTreeWidgetItem,QVBoxLayout,QWidget,)
 
 from project import AnalysisView, ColumnSpec, ProjectDataManager
 from model.canonical_names import (
@@ -18,9 +18,9 @@ from model.view_state import ViewWidgetSidebar
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
 from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.main_window.project_signals import ProjectSignals
-from units import convert_from_normalised_to_user_units
+from units import convert_from_normalised_to_user_units, normalise_from_user_units
 from units.units_combo_box import UnitsComboBox
-from utilities.global_functions import limit_decimals
+from utilities.global_functions import limit_decimals_float, limit_decimals_str
 
 if TYPE_CHECKING:
     from ui.analysis_view import AnalysisViewWidget
@@ -52,7 +52,7 @@ class GraphicalSidebar(QFrame):
         self.active_fluid: Fluid | None = None
         self.pressure_unit: str = ""
         self.depth_unit: str = ""
-        self.unit_combo_value_pairs: dict[QComboBox, tuple[QLineEdit | QLabel, str, str]] = {}
+        self.unit_combo_value_pairs: dict[QComboBox, tuple[QDoubleSpinBox | QLabel, str, str]] = {}
 
         # Initialisation methods
         self._extract_current_table_depth_and_pressure_units()
@@ -131,7 +131,8 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_grid.addWidget(self.active_fluid_plotting_depth_label, 1, 0)
         # Min
         self.active_fluid_min_plotting_depth_label = QLabel("Min:")
-        self.active_fluid_min_plotting_depth_value = QLineEdit(self)
+        self.active_fluid_min_plotting_depth_value = QDoubleSpinBox(self)
+        self.active_fluid_min_plotting_depth_value.setRange(-1000000,1000000)
         self.active_fluid_min_plotting_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.active_fluid_min_plotting_depth_unit = UnitsComboBox("length", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.active_fluid_min_plotting_depth_label, 2, 0)
@@ -139,7 +140,8 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_grid.addWidget(self.active_fluid_min_plotting_depth_unit, 2, 2)
         # Max
         self.active_fluid_max_plotting_depth_label = QLabel("Max:")
-        self.active_fluid_max_plotting_depth_value = QLineEdit(self)
+        self.active_fluid_max_plotting_depth_value = QDoubleSpinBox(self)
+        self.active_fluid_max_plotting_depth_value.setRange(-1000000,1000000)
         self.active_fluid_max_plotting_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.active_fluid_max_plotting_depth_unit = UnitsComboBox("length", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.active_fluid_max_plotting_depth_label, 3, 0)
@@ -157,20 +159,22 @@ class GraphicalSidebar(QFrame):
 
         # Gradient
         self.active_fluid_gradient_label = QLabel("Gradient: ")
-        self.active_fluid_gradient_value = QLineEdit(self)
+        self.active_fluid_gradient_value = QDoubleSpinBox(self)
+        self.active_fluid_gradient_value.setRange(-1000000,1000000)
         self.active_fluid_gradient_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.active_fluid_gradient_unit = UnitsComboBox("pressure_gradient", self.project.current_unit_system)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_label, 6, 0)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_value, 6, 1)
         self.active_fluid_grid.addWidget(self.active_fluid_gradient_unit, 6, 2)
         # Zero Pressure Depth
-        self.active_fluid_zero_pressure_depth_label = QLabel("Zero Pressure Depth: ")
-        self.active_fluid_zero_pressure_depth_value = QLineEdit(self)
-        self.active_fluid_zero_pressure_depth_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.active_fluid_zero_pressure_depth_unit = UnitsComboBox("length", self.project.current_unit_system)
-        self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_label, 7, 0)
-        self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_value, 7, 1)
-        self.active_fluid_grid.addWidget(self.active_fluid_zero_pressure_depth_unit, 7, 2)
+        self.active_fluid_zpd_label = QLabel("Zero Pressure Depth: ")
+        self.active_fluid_zpd_value = QDoubleSpinBox(self)
+        self.active_fluid_zpd_value.setRange(-1000000,1000000)
+        self.active_fluid_zpd_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.active_fluid_zpd_unit = UnitsComboBox("length", self.project.current_unit_system)
+        self.active_fluid_grid.addWidget(self.active_fluid_zpd_label, 7, 0)
+        self.active_fluid_grid.addWidget(self.active_fluid_zpd_value, 7, 1)
+        self.active_fluid_grid.addWidget(self.active_fluid_zpd_unit, 7, 2)
 
         # Contact Fluid:
         self.active_fluid_contact_label = QLabel("Bottom Contact:")
@@ -235,12 +239,14 @@ class GraphicalSidebar(QFrame):
         self.active_fluid_type_combo.currentIndexChanged.connect(
             lambda idx: self._on_active_fluid_type_combo_changed()
             )
-
+        self.active_fluid_min_plotting_depth_value.editingFinished.connect(self._on_active_fluid_min_depth_changed)
+        self.active_fluid_max_plotting_depth_value.editingFinished.connect(self._on_active_fluid_max_depth_changed)
+        self.active_fluid_gradient_value.editingFinished.connect(self._on_active_fluid_gradient_changed)
+        self.active_fluid_zpd_value.editingFinished.connect(self._on_active_fluid_zpd_changed)
+        
         # Visible fluids
         self.visible_fluids_tree.itemChanged.connect(self._on_fluid_visibility_tree_item_change)
-        self.visible_fluids_tree.customContextMenuRequested.connect(
-            self._on_visible_fluid_context_menu_request
-            )
+        self.visible_fluids_tree.customContextMenuRequested.connect(self._on_visible_fluid_context_menu_request)
 
         # Unit combos  
         for combo in self.unit_combo_value_pairs:
@@ -294,8 +300,8 @@ class GraphicalSidebar(QFrame):
             self.active_fluid_gradient_unit:
             (self.active_fluid_gradient_value, "pressure_gradient", "gradient_si"),
 
-            self.active_fluid_zero_pressure_depth_unit:
-            (self.active_fluid_zero_pressure_depth_value, "length", "zero_pressure_depth_si"),
+            self.active_fluid_zpd_unit:
+            (self.active_fluid_zpd_value, "length", "zero_pressure_depth_si"),
 
             self.contact_depth_unit:
             (self.contact_depth_value, "length", "bottom_contact.depth"),
@@ -320,7 +326,7 @@ class GraphicalSidebar(QFrame):
             return
         fluid_type = self.active_fluid_type_combo.currentText()
         self.active_fluid.type = fluid_type
-        self.active_fluid.bottom_contact.set_contact_data()
+        self.active_fluid.refresh_contacts_for_self()
         self.signals.fluids_changed.emit()
         self.project.mark_modified()
 
@@ -568,10 +574,62 @@ class GraphicalSidebar(QFrame):
             self.active_fluid_max_plotting_depth_value,
             self.active_fluid_type_combo,
             self.active_fluid_gradient_value,
-            self.active_fluid_zero_pressure_depth_value,
+            self.active_fluid_zpd_value,
             self.contact_fluid_combo,
             ):
             w.setEnabled(editability)
+
+    def _on_active_fluid_gradient_changed(self)->None:        
+        if self.active_fluid is None: 
+            return
+        mid_depth = (self.active_fluid.plotting_depth_min_si + self.active_fluid.plotting_depth_max_si)/2
+        mid_pressure = self.active_fluid.gradient_si*(mid_depth-self.active_fluid.zero_pressure_depth_si)
+        
+        value = self.active_fluid_gradient_value.value()
+        unit = self.active_fluid_gradient_unit.currentText()
+        value_si = normalise_from_user_units(unit, "pressure_gradient", value)
+        self.active_fluid.gradient_si = value_si
+        # Update the zpd to rotate the line about its mid point
+        self.active_fluid.update_zpd_on_gradient_change(mid_depth, mid_pressure)
+        with QSignalBlocker(self.active_fluid_zpd_value):
+            unit = self.active_fluid_zpd_unit.currentText()
+            value = self.active_fluid.zero_pressure_depth_si
+            zpd = convert_from_normalised_to_user_units(unit, "length", value)
+            self.active_fluid_zpd_value.setValue(zpd)
+        self.active_fluid.refresh_contacts_for_self()
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+
+    def _on_active_fluid_zpd_changed(self)->None:
+        if self.active_fluid is None: 
+            return
+        value = self.active_fluid_zpd_value.value()
+        unit = self.active_fluid_zpd_unit.currentText()
+        value_si = normalise_from_user_units(unit, "length", value)
+        self.active_fluid.zero_pressure_depth_si = value_si
+        self.active_fluid.refresh_contacts_for_self()
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+
+    def _on_active_fluid_max_depth_changed(self) -> None:
+        if self.active_fluid is None: 
+            return
+        value = self.active_fluid_max_plotting_depth_value.value()
+        unit = self.active_fluid_max_plotting_depth_unit.currentText()
+        value_si = normalise_from_user_units(unit, "length", value)
+        self.active_fluid.plotting_depth_max_si = value_si
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+    
+    def _on_active_fluid_min_depth_changed(self) -> None:
+        if self.active_fluid is None: 
+            return
+        value = self.active_fluid_min_plotting_depth_value.value()
+        unit = self.active_fluid_min_plotting_depth_unit.currentText()
+        value_si = normalise_from_user_units(unit, "length", value)
+        self.active_fluid.plotting_depth_min_si = value_si
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
 
     def _update_contact_value_widgets(self) -> None:
         contact_fluid = self.contact_fluid_combo.currentData(Qt.ItemDataRole.UserRole)
@@ -596,8 +654,8 @@ class GraphicalSidebar(QFrame):
                 pressure = convert_from_normalised_to_user_units(
                     pressure_unit, "pressure", pressure_si
                     )
-                self.contact_depth_value.setText(limit_decimals(depth))
-                self.contact_pressure_value.setText(limit_decimals(pressure))
+                self.contact_depth_value.setText(limit_decimals_str(depth))
+                self.contact_pressure_value.setText(limit_decimals_str(pressure))
 
     def _update_identifier_combo(self, sender_combo: QComboBox) -> None:
         # Update the sender persistence attributre:
@@ -646,11 +704,22 @@ class GraphicalSidebar(QFrame):
 
         value_si = attrgetter(attribute_name)(self.active_fluid)
         if value_si is None:
-            widget.setText("")
+            if isinstance(widget, QDoubleSpinBox):
+                widget.setValue(0.0)
+            else:
+                widget.setText("")
             return
         else:
             value = convert_from_normalised_to_user_units(user_unit, quantity_key, value_si)
-            widget.setText(limit_decimals(value))
+            if isinstance(widget, QDoubleSpinBox):
+                result = limit_decimals_float(value)
+                assert result is not None,(
+                    f"limit_decimals_float returned None for {attribute_name} = {value!r}"
+                )
+                widget.setDecimals(result.decimals)
+                widget.setValue(result.value)
+            else: 
+                widget.setText(limit_decimals_str(value))
 
     #--------Public API--------
 
@@ -702,10 +771,10 @@ class GraphicalSidebar(QFrame):
 
         # Active fluid
         if self.active_fluid is None:
-            self.active_fluid_gradient_value.setText("")
-            self.active_fluid_zero_pressure_depth_value.setText("")
-            self.active_fluid_min_plotting_depth_value.setText("")
-            self.active_fluid_max_plotting_depth_value.setText("")
+            self.active_fluid_gradient_value.setValue(0.0)
+            self.active_fluid_zpd_value.setValue(0.0)
+            self.active_fluid_min_plotting_depth_value.setValue(0.0)
+            self.active_fluid_max_plotting_depth_value.setValue(0.0)
 
             with QSignalBlocker(self.contact_fluid_combo):
                 self.contact_fluid_combo.setCurrentText("None")
@@ -713,6 +782,7 @@ class GraphicalSidebar(QFrame):
             self.contact_pressure_value.setText("")
             self.contact_type_value.setText("")
         else:
+            #Gradient
             gradient_si = self.active_fluid.gradient_si
             gradient_unit = self.active_fluid_gradient_unit.currentText()
             gradient = convert_from_normalised_to_user_units(
@@ -720,27 +790,47 @@ class GraphicalSidebar(QFrame):
                 "pressure_gradient",
                 gradient_si,
                 )
-            self.active_fluid_gradient_value.setText(limit_decimals(gradient))
-
-            zero_pressure_depth_si = self.active_fluid.zero_pressure_depth_si
-            zero_pressure_depth_unit = self.active_fluid_zero_pressure_depth_unit.currentText()
-            zero_pressure_depth = convert_from_normalised_to_user_units(
-                zero_pressure_depth_unit,
-                "length",
-                zero_pressure_depth_si,
+            result = limit_decimals_float(gradient)
+            assert result is not None,(
+                f"limit_decimals_float has returned None for active_fluid_gradient = {gradient!r}"
                 )
-            self.active_fluid_zero_pressure_depth_value.setText(limit_decimals(zero_pressure_depth))
+            self.active_fluid_gradient_value.setDecimals(result.decimals)
+            self.active_fluid_gradient_value.setValue(result.value)
+            #Zero pressure depth
+            zpd_si = self.active_fluid.zero_pressure_depth_si
+            zpd_unit = self.active_fluid_zpd_unit.currentText()
+            zpd = convert_from_normalised_to_user_units(
+                zpd_unit,
+                "length",
+                zpd_si,
+                )
+            result = limit_decimals_float(zpd)
+            assert result is not None,(
+                f"limit_decimals_float has returned None for active_fluid_zpd = {zpd!r}"
+                )
+            self.active_fluid_zpd_value.setDecimals(result.decimals)
+            self.active_fluid_zpd_value.setValue(result.value)
 
             # Plotting depths
             unit = self.active_fluid_min_plotting_depth_unit.currentText()
             value_si = self.active_fluid.plotting_depth_min_si
             value = convert_from_normalised_to_user_units(unit, "length", value_si)
-            self.active_fluid_min_plotting_depth_value.setText(limit_decimals(value))
-
+            result = limit_decimals_float(value)
+            assert result is not None, (
+                f"limit_decimals_float returned None for plotting_depth_min_si = {value!r}"
+                )
+            self.active_fluid_min_plotting_depth_value.setDecimals(result.decimals)
+            self.active_fluid_min_plotting_depth_value.setValue(result.value)
+                
             unit = self.active_fluid_max_plotting_depth_unit.currentText()
             value_si = self.active_fluid.plotting_depth_max_si
             value = convert_from_normalised_to_user_units(unit, "length", value_si)
-            self.active_fluid_max_plotting_depth_value.setText(limit_decimals(value))
+            result = limit_decimals_float(value)
+            assert result is not None,(
+                f"limit_decimals_float returned None for plotting_depth_max_si = {value!r}"
+                )
+            self.active_fluid_max_plotting_depth_value.setDecimals(result.decimals)
+            self.active_fluid_max_plotting_depth_value.setValue(result.value)
 
             # Active fluid contact
             self._populate_active_fluid_contact_combo()

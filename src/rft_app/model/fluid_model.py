@@ -53,6 +53,33 @@ class Fluid:
         zpd = self.zero_pressure_depth_si
         return gradient * (depth - zpd)
 
+    def update_zpd_on_gradient_change(self, depth:float, pressure:float)->float:
+        """Update the zpd to rotate the fluid around a point on the graph, rather than keep the same 
+        zpd and draw the line with the new gradient
+            y = mx + c , where: 
+            y = depth
+            x= pressure
+            c  = zpd, 
+            x = slope in depth/pressure,
+            c = zpd, 
+            =>  zpd = y-mx
+                zpd = depth - (1/gradient*pressure) """
+        zpd =depth - (1/self.gradient_si * pressure)
+        self.zero_pressure_depth_si = zpd
+        self.refresh_contacts_for_self()
+
+    def refresh_contacts_for_self(self)->None:
+        self.bottom_contact.set_contact_data()
+        if self.analysis_object is None:
+            return
+        for f in self.analysis_object.fluids:
+            if f is self:
+                continue
+            if self is f.bottom_contact.bottom_fluid:
+                f.bottom_contact.set_contact_data()
+        
+
+
 @dataclass
 class FluidContact:
     top_fluid: Fluid| None = None

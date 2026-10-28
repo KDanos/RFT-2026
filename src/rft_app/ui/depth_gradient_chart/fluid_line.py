@@ -8,7 +8,7 @@ from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.depth_gradient_chart.line_annot import LineAnnot
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
-from utilities.global_functions import limit_decimals
+from utilities.global_functions import limit_decimals_str
 
 
 class FluidLine(LineAnnot):
@@ -107,12 +107,9 @@ class FluidLine(LineAnnot):
         self.fluid.zero_pressure_depth_si = self.calculate_y_intercept_si()
         self.fluid.plotting_depth_min_si = min(self.starting_point[1], self.end_point[1])
         self.fluid.plotting_depth_max_si = max(self.starting_point[1], self.end_point[1])
-        self.fluid.bottom_contact.set_contact_data()
 
-        # Update other fluids contacts that use this fluid as a contact fluid
-        for other in self.analysis.fluids:
-            if other.bottom_contact.bottom_fluid is self.fluid:
-                other.bottom_contact.set_contact_data()
+        # Update other fluids contacts that use this fluid as a contact fluid (including its own contact)
+        self.fluid.refresh_contacts_for_self()
 
         # Pass the information to the sidebar
         self.view_widget.graphical_sidebar.update_active_fluid_widgets()
@@ -153,7 +150,7 @@ class FluidLine(LineAnnot):
             )
         return (
             f"{self.fluid.name}\n"
-            f"Gradient: {limit_decimals(gradient)} ({unit})"
+            f"Gradient: {limit_decimals_str(gradient)} ({unit})"
             )
 
     def setMouseHover(self, hover: bool) -> None:

@@ -18,7 +18,7 @@ from project import ProjectDataManager
 from units.units_combo_box import UnitsComboBox
 from units.units_manager import STANDARD_QUANTITIES
 from units.units_normalisation import convert_from_user_unit_to_user_unit
-from utilities.global_functions import limit_decimals
+from utilities.global_functions import limit_decimals_str
 
 
 class UnitConversionDialog(QDialog):
@@ -127,7 +127,7 @@ class UnitConversionDialog(QDialog):
         if float(value_input):
             value = float(value_input)
             result = convert_from_user_unit_to_user_unit(input_unit, output_unit, value)
-            self.result_value.setText(limit_decimals(result, decimals))
+            self.result_value.setText(limit_decimals_str(result, decimals))
         else:
             QMessageBox.critical(
                 self,
