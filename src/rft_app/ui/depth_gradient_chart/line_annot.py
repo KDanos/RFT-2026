@@ -8,7 +8,7 @@ from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import QMenu, QMessageBox
 import pyqtgraph as pg
 
-from project import AnalysisObject, AnalysisView, ProjectDataManager
+from project import AnalysisObject, AnalysisView, ProjectDataManager, StraightLineAnnotation
 from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units, normalise_from_user_units
 
@@ -49,7 +49,7 @@ class LineAnnot(pg.LineSegmentROI):
             )
 
         # Set project variables
-        self.parent_chart: pg.PlotWidget = parent
+        self.parent_chart: DepthGradientChart | ExcessPressureChart = parent
         self.project: ProjectDataManager = self.parent_chart.project
         self.view: AnalysisView = self.parent_chart.view
         self.analysis: AnalysisObject = self.view.analysis_object
@@ -58,12 +58,14 @@ class LineAnnot(pg.LineSegmentROI):
         # Set module variables
         self.color: QColor | str = color
         self.style: Qt.PenStyle = style
-        self.pen = pen
+        self.pen: object = pen
         self.starting_point: tuple[float, float] | None = starting_point
         self.end_point: tuple[float, float] | None = end_point
         self.is_visible: bool = True
         self.id: str = str(uuid.uuid4())
         self.syncing_peer: bool = False
+        self.is_mirrored: bool = False
+        self.parent_id: str = self.parent_chart.chart_id
 
         from ui.analysis_view import AnalysisViewWidget
         w = self.parent_chart
@@ -99,10 +101,12 @@ class LineAnnot(pg.LineSegmentROI):
     def _connect_signals(self) -> None:
         # Line Movement
         self.sigRegionChangeStarted.connect(self._on_region_change_started)
+        self.sigRegionChanged.connect(self._on_region_changing)
         self.sigRegionChangeFinished.connect(self._on_region_change_finished)
 
         # Menu Actions
         self.actionConvertLineToFluid.triggered.connect(self._convert_line_to_fluid)
+        self.actionMirrorLine.triggered.connect(self._mirror_line_annotation)
         self.actionDuplicateLine.triggered.connect(self._duplicate_self)
         self.actionDeleteLine.triggered.connect(self.delete_self)
 
@@ -165,10 +169,31 @@ class LineAnnot(pg.LineSegmentROI):
     def _define_menu_actions(self) -> None:
         self.actionConvertLineToFluid = QAction("Convert to Fluid", self)
         self.actionDuplicateLine = QAction("Duplicate", self)
+        if self.parent_id == "pressure_plot":
+            text = "Mirror on Excess Pressure Plot"
+        else:
+            text = "Mirror on Pressure Plot"
+        self.actionMirrorLine = QAction(text, self)
         self.actionDeleteLine = QAction("Delete", self)
 
     def _duplicate_self(self) -> None:
-        pass
+        vb = self.parent_chart.getViewBox()
+
+        z_min, z_max = vb.viewRange()[1]
+        dz = z_max - z_min
+        shift = 0.05 * dz
+        shift_si = normalise_from_user_units(self.y_unit, "length", shift)
+
+        x_start, y_start = self.starting_point
+        x_end, y_end = self.end_point
+        starting_point = (x_start, y_start + shift_si)
+        end_point = (x_end, y_end + shift_si)
+
+        self.parent_chart.add_straight_line_annotation(
+            starting_point,
+            end_point,
+            points_are_si=True,
+            )
 
     def _find_peer_line_by_id(self) -> LineAnnot | None:
         """For mirrored line annotations that share self.id."""
@@ -177,7 +202,48 @@ class LineAnnot(pg.LineSegmentROI):
             return None
         return next((ln for ln in other.all_lines if ln.id == self.id), None)
 
+    def _mirror_line_annotation(self) -> None:
+        # Exit if the line is already mirrored — menu does not offer Mirror then
+        if self.is_mirrored:
+            return
+
+        other = self._other_depth_chart()
+        if other is None:
+            return
+
+        if self.parent_id not in ["pressure_plot", "xs_pressure_plot"]:
+            return
+        if self.parent_id == "pressure_plot":
+            p_start, z_start = self.starting_point
+            p_end, z_end = self.end_point
+            xs_start = other.convert_pressure_to_xs_pressure(p_start, z_start)
+            xs_end = other.convert_pressure_to_xs_pressure(p_end, z_end)
+            starting_point = (xs_start, z_start)
+            end_point = (xs_end, z_end)
+        elif self.parent_id == "xs_pressure_plot":
+            xs_start, z_start = self.starting_point
+            xs_end, z_end = self.end_point
+            p_start = self.parent_chart.convert_xs_pressure_to_pressure(
+                xs_start, z_start,
+                )
+            p_end = self.parent_chart.convert_xs_pressure_to_pressure(
+                xs_end, z_end,
+                )
+            starting_point = (p_start, z_start)
+            end_point = (p_end, z_end)
+        other.add_straight_line_annotation(
+            starting_point,
+            end_point,
+            points_are_si=True,
+            is_mirrored=True,
+            uuid=self.id,
+            )
+
+        # Ensure the line is not mirrorable again and linked to its peer
+        self.is_mirrored = True
+
     def _on_position_changed(self) -> None:
+        """Convert the new position from ROI coordinates to view coordinates."""
         p0, p1 = self.listPoints()
         p0 = self.mapToView(p0)
         p1 = self.mapToView(p1)
@@ -186,7 +252,11 @@ class LineAnnot(pg.LineSegmentROI):
 
         self._convert_viewbox_cordinates_to_SI()
         for line in self.parent_chart.view.annotations:
-            if self.id == line.line_id:
+            if (
+                isinstance(line, StraightLineAnnotation)
+                and self.id == line.line_id
+                and line.chart_id == self.parent_id
+                ):
                 line.start_si = self.starting_point
                 line.end_si = self.end_point
                 break
@@ -196,9 +266,22 @@ class LineAnnot(pg.LineSegmentROI):
     def _on_region_change_finished(self, _roi: object) -> None:
         self._on_position_changed()
         self._set_handle_pen_options()
+        # Fallback if mid-drag sync did not run
+        self._sync_peer_line()
 
     def _on_region_change_started(self, _roi: object) -> None:
         self._set_handle_pen_options()
+
+    def _on_region_changing(self, _roi: object) -> None:
+        if not self.is_mirrored or self.syncing_peer:
+            return
+
+        p0, p1 = self.listPoints()
+        if self.mapToView(p0) is None or self.mapToView(p1) is None:
+            return
+        self._on_position_changed()
+
+        self._sync_peer_line()
 
     def _other_depth_chart(self) -> DepthGradientChart | ExcessPressureChart | None:
         if self.view_widget is None:
@@ -234,11 +317,58 @@ class LineAnnot(pg.LineSegmentROI):
 
             handle.update()
 
+    def _sync_peer_line(self) -> None:
+        if not self.is_mirrored or self.syncing_peer:
+            return
+
+        other = self._other_depth_chart()
+        peer = self._find_peer_line_by_id()
+        if peer is None or other is None:
+            return
+
+        if self.parent_id == "pressure_plot":
+            p0, z0 = self.starting_point
+            p1, z1 = self.end_point
+            xs0 = other.convert_pressure_to_xs_pressure(p0, z0)
+            xs1 = other.convert_pressure_to_xs_pressure(p1, z1)
+            if xs0 is None or xs1 is None:
+                return
+            starting_point = (xs0, z0)
+            end_point = (xs1, z1)
+        elif self.parent_id == "xs_pressure_plot":
+            xs0, z0 = self.starting_point
+            xs1, z1 = self.end_point
+            p0 = self.parent_chart.convert_xs_pressure_to_pressure(xs0, z0)
+            p1 = self.parent_chart.convert_xs_pressure_to_pressure(xs1, z1)
+            if p0 is None or p1 is None:
+                return
+            starting_point = (p0, z0)
+            end_point = (p1, z1)
+        else:
+            return
+
+        peer.syncing_peer = True
+        try:
+            peer._apply_si_endpoints_and_refresh(starting_point, end_point)
+            for line in self.view.annotations:
+                if (
+                    isinstance(line, StraightLineAnnotation)
+                    and line.line_id == peer.id
+                    and line.chart_id == peer.parent_id
+                    ):
+                    line.start_si = peer.starting_point
+                    line.end_si = peer.end_point
+                    break
+        finally:
+            peer.syncing_peer = False
+
     #--------Public API--------
 
     def build_menu(self) -> QMenu:
         menu = QMenu(self.parent_chart)
         menu.addAction(self.actionConvertLineToFluid)
+        if not self.is_mirrored and self.view.sidebar.ref_fluid:
+            menu.addAction(self.actionMirrorLine)
         menu.addAction(self.actionDuplicateLine)
         menu.addAction(self.actionDeleteLine)
         return menu
@@ -274,26 +404,37 @@ class LineAnnot(pg.LineSegmentROI):
         return None
 
     def delete_self(self) -> None:
+        if self.is_mirrored:
+            other = self._other_depth_chart()
+            peer = self._find_peer_line_by_id()
+
         for line in self.parent_chart.all_lines:
             if line.id == self.id:
                 self.parent_chart.all_lines.remove(line)
+                if self.is_mirrored and other is not None and peer is not None:
+                    other.all_lines.remove(peer)
                 break
 
-        for line in self.parent_chart.view.annotations:
-            if line.line_id == self.id:
+        for line in list(self.parent_chart.view.annotations):
+            if (
+                isinstance(line, StraightLineAnnotation)
+                and line.line_id == self.id
+                ):
                 self.parent_chart.view.annotations.remove(line)
-                break
 
         self.parent_chart.removeItem(self)
         self.deleteLater()
+        if self.is_mirrored and other is not None and peer is not None:
+            other.removeItem(peer)
+            peer.deleteLater()
         self.parent_chart.project.mark_modified()
 
     def extract_units_and_quantities(self) -> None:
         parent = self.parent_chart
-        self.x_quantity_key = parent.x_quantity_key
-        self.y_quantity_key = parent.y_quantity_key
-        self.x_unit = parent.x_unit
-        self.y_unit = parent.y_unit
+        self.x_quantity_key: str = parent.x_quantity_key
+        self.y_quantity_key: str = parent.y_quantity_key
+        self.x_unit: str = parent.x_unit
+        self.y_unit: str = parent.y_unit
 
     def refresh_geometry(self) -> None:
         x0 = convert_from_normalised_to_user_units(

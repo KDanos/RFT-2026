@@ -40,11 +40,24 @@ class ScatterItemKD(pg.ScatterPlotItem):
       only runs if hoverPen / hoverBrush / hoverSize / hoverSymbol are set
     - sigHovered.emit(...): available for listeners; chart does not connect it
     """
-    
-    def __init__(self,*args, **kwargs)->None: 
+
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def hoverEvent(self, ev)->None:
+    #--------Public API--------
+
+    def hoverEvent(self, ev) -> None:
         if not self.opts["hoverable"]: 
             return
 
@@ -79,6 +92,7 @@ class ScatterItemKD(pg.ScatterPlotItem):
                 self._toolTipCleared = True 
 
         self.sigHovered.emit(self, points, ev)
+
 
 class DepthGradientChart(pg.PlotWidget):
     TOOL_ARROW = "arrow"
@@ -164,7 +178,6 @@ class DepthGradientChart(pg.PlotWidget):
             menu.addMenu(ctrl)
         return menu
 
-        
     def _build_ui(self) -> None:
         self._format_chart()
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -177,6 +190,11 @@ class DepthGradientChart(pg.PlotWidget):
         self.all_rectangles.clear()
         assert self.view is not None, "DepthGradientChart requires a view"
 
+        line_ids = [
+            ann.line_id for ann in self.view.annotations
+            if isinstance(ann, StraightLineAnnotation)
+            ]
+
         for a in self.view.annotations:
             if isinstance(a, StraightLineAnnotation) and a.chart_id == self.chart_id:
                 new_line = LineAnnot(
@@ -187,7 +205,10 @@ class DepthGradientChart(pg.PlotWidget):
                     points_are_si=True,
                     color=a.color,
                     )
+                # Restore the uuid from the persisted one, overwrite the one generated on LineAnnot.__init__
                 new_line.id = a.line_id
+                # Identify if the line has a mirror on the other chart
+                new_line.is_mirrored = line_ids.count(a.line_id) > 1
                 self.all_lines.append(new_line)
             elif isinstance(a, RectAnnotation) and a.chart_id == self.chart_id:
                 new_rect = RectangleAnnotation(
@@ -200,7 +221,6 @@ class DepthGradientChart(pg.PlotWidget):
                 new_rect.id = a.rect_id
                 self.all_rectangles.append(new_rect)
         
-
     def _clear_draw_preview_item(self) -> None:
         if self.preview_drawing_item is not None:
             self.removeItem(self.preview_drawing_item)
@@ -259,28 +279,13 @@ class DepthGradientChart(pg.PlotWidget):
             self.annotations_bar.clear_tool_selection()
 
     def _end_draw_straight_line(self) -> None:
-        new_line = LineAnnot(
-            parent=self,
-            signals=self.signals,
+        self.add_straight_line_annotation(
             starting_point=self.first_click,
             end_point=self.line_end,
             )
-        self.addItem(new_line)
-        self.all_lines.append(new_line)
-        new_line.refresh_geometry()
 
         self.draw_tool = None
         self._clear_draw_preview_item()
-
-        to_save = StraightLineAnnotation(
-            start_si=new_line.starting_point,
-            end_si=new_line.end_point,
-            color=str(new_line.color),
-            chart_id=self.chart_id,
-            line_id=new_line.id,
-            )
-        self.view.annotations.append(to_save)
-        self.project.mark_modified()
 
         if self.annotations_bar is not None:
             self.annotations_bar.clear_tool_selection()
@@ -419,17 +424,15 @@ class DepthGradientChart(pg.PlotWidget):
             self.addItem(scatter)
 
     def _point_tip(self, x: float, y: float, data) -> str:
-        lines:list[str] = []
+        lines: list[str] = []
         if data.primary_key is not None:
             lines.append(f"{data.primary_key}: {data.primary_value}")
         if data.secondary_key is not None:
             lines.append(f"{data.secondary_key}: {data.secondary_value}")
-        if len(lines)>0:
+        if len(lines) > 0:
             lines.append("")
         lines.append(f"{CANONICAL_VERTICAL_DEPTH}: {y:.3g} ({self.y_unit})")
         lines.append(f"{self.x_axis}: {x:.3g} ({self.x_unit})")
-
-        
         return "\n".join(lines)
             
     def _show_menu(self, pos: QPoint) -> None:
@@ -485,6 +488,46 @@ class DepthGradientChart(pg.PlotWidget):
 
     #--------Public API--------
 
+    def add_straight_line_annotation(
+        self,
+        starting_point: tuple[float, float],
+        end_point: tuple[float, float],
+        points_are_si: bool = False,
+        is_mirrored: bool = False,
+        uuid: str = "",
+        ) -> None:
+        """Start and end point tuples are in order x and y values."""
+
+        # Create the LineAnnotation visible on the chart
+        new_line = LineAnnot(
+            parent=self,
+            signals=self.signals,
+            starting_point=starting_point,
+            end_point=end_point,
+            points_are_si=points_are_si,
+            )
+        new_line.is_mirrored = is_mirrored
+
+        # Match the uuid of the original line
+        if new_line.is_mirrored and uuid != "":
+            new_line.id = uuid
+
+        self.addItem(new_line)
+        self.all_lines.append(new_line)
+        new_line.refresh_geometry()
+
+        # Add a StraightLineAnnotation object for persistance on the view object
+        to_save = StraightLineAnnotation(
+            start_si=new_line.starting_point,
+            end_si=new_line.end_point,
+            color=str(new_line.color),
+            chart_id=self.chart_id,
+            line_id=new_line.id,
+            )
+        self.view.annotations.append(to_save)
+        self.project.mark_modified()
+
+    
     def create_all_scatter_plot_items(
         self,
         scatter_definitions: list[ScatterSeriesDefinition],
