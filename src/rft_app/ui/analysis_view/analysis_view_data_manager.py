@@ -132,7 +132,7 @@ def calculate_excess_pressure_column(
     p_ref =  reference_fluid.gradient_si * (
         z - reference_fluid.zero_pressure_depth_si
         )
-    df [CANONICAL_EXCESS_PRESSURE] =(p-p_ref).where(p.notna() & (p>0))
+    df [CANONICAL_EXCESS_PRESSURE] =(p-p_ref).where(p.notna() & z.notna())
 
 def build_scatter_series(
     df:pd.DataFrame, 

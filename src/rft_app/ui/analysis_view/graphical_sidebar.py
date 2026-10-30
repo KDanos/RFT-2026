@@ -1,20 +1,20 @@
 from operator import attrgetter
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPoint, QSignalBlocker,  Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, QSignalBlocker, Qt, pyqtSignal
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import (QComboBox, QDoubleSpinBox,QFrame,QGridLayout,QHBoxLayout,QLabel,QLineEdit,
-    QMenu,QScrollArea, QSpinBox,QTreeWidget,QTreeWidgetItem,QVBoxLayout,QWidget,)
+from PyQt6.QtWidgets import (QComboBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
+    QMenu, QScrollArea, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,)
 
-from project import AnalysisView, ColumnSpec, ProjectDataManager
 from model.canonical_names import (
     CANONICAL_EXCESS_PRESSURE,
     CANONICAL_FORMATION_PRESSURE,
     CANONICAL_VERTICAL_DEPTH,
     )
-from model.fluid_model import STANDARD_FLUIDS, Fluid
 from model.data_models import AnalysisObject
+from model.fluid_model import STANDARD_FLUIDS, Fluid
 from model.view_state import ViewWidgetSidebar
+from project import AnalysisView, ColumnSpec, ProjectDataManager
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
 from ui.analysis_view.fluid_actions import confirm_delete_fluid
 from ui.main_window.project_signals import ProjectSignals
@@ -29,13 +29,24 @@ if TYPE_CHECKING:
 class GraphicalSidebar(QFrame):
     reference_fluid_changed = pyqtSignal(object)  # object instead of Fluid | None
 
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
-            self,
+        self,
         parent: QWidget,
         project: ProjectDataManager,
         col_specs: list[ColumnSpec],
         signals: ProjectSignals,
-            ) -> None:
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -321,11 +332,68 @@ class GraphicalSidebar(QFrame):
         self.update_active_fluid_widgets()
         self.project.mark_modified()
 
+    def _on_active_fluid_gradient_changed(self) -> None:
+        if self.active_fluid is None:
+            return
+        mid_depth = (
+            self.active_fluid.plotting_depth_min_si
+            + self.active_fluid.plotting_depth_max_si
+            ) / 2
+        mid_pressure = self.active_fluid.gradient_si * (
+            mid_depth - self.active_fluid.zero_pressure_depth_si
+            )
+        
+        value = self.active_fluid_gradient_value.value()
+        unit = self.active_fluid_gradient_unit.currentText()
+        value_si = normalise_from_user_units(unit, "pressure_gradient", value)
+        self.active_fluid.gradient_si = value_si
+        # Update the zpd to rotate the line about its mid point
+        self.active_fluid.update_zpd_on_gradient_change(mid_depth, mid_pressure)
+        with QSignalBlocker(self.active_fluid_zpd_value):
+            unit = self.active_fluid_zpd_unit.currentText()
+            value = self.active_fluid.zero_pressure_depth_si
+            zpd = convert_from_normalised_to_user_units(unit, "length", value)
+            self.active_fluid_zpd_value.setValue(zpd)
+        self.active_fluid.refresh_contacts_for_self()
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+
+    def _on_active_fluid_max_depth_changed(self) -> None:
+        if self.active_fluid is None:
+            return
+        value = self.active_fluid_max_plotting_depth_value.value()
+        unit = self.active_fluid_max_plotting_depth_unit.currentText()
+        value_si = normalise_from_user_units(unit, "length", value)
+        self.active_fluid.plotting_depth_max_si = value_si
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+
+    def _on_active_fluid_min_depth_changed(self) -> None:
+        if self.active_fluid is None:
+            return
+        value = self.active_fluid_min_plotting_depth_value.value()
+        unit = self.active_fluid_min_plotting_depth_unit.currentText()
+        value_si = normalise_from_user_units(unit, "length", value)
+        self.active_fluid.plotting_depth_min_si = value_si
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+
     def _on_active_fluid_type_combo_changed(self) -> None:
         if self.active_fluid is None:
             return
         fluid_type = self.active_fluid_type_combo.currentText()
         self.active_fluid.type = fluid_type
+        self.active_fluid.refresh_contacts_for_self()
+        self.signals.fluids_changed.emit()
+        self.project.mark_modified()
+
+    def _on_active_fluid_zpd_changed(self) -> None:
+        if self.active_fluid is None:
+            return
+        value = self.active_fluid_zpd_value.value()
+        unit = self.active_fluid_zpd_unit.currentText()
+        value_si = normalise_from_user_units(unit, "length", value)
+        self.active_fluid.zero_pressure_depth_si = value_si
         self.active_fluid.refresh_contacts_for_self()
         self.signals.fluids_changed.emit()
         self.project.mark_modified()
@@ -578,58 +646,6 @@ class GraphicalSidebar(QFrame):
             self.contact_fluid_combo,
             ):
             w.setEnabled(editability)
-
-    def _on_active_fluid_gradient_changed(self)->None:        
-        if self.active_fluid is None: 
-            return
-        mid_depth = (self.active_fluid.plotting_depth_min_si + self.active_fluid.plotting_depth_max_si)/2
-        mid_pressure = self.active_fluid.gradient_si*(mid_depth-self.active_fluid.zero_pressure_depth_si)
-        
-        value = self.active_fluid_gradient_value.value()
-        unit = self.active_fluid_gradient_unit.currentText()
-        value_si = normalise_from_user_units(unit, "pressure_gradient", value)
-        self.active_fluid.gradient_si = value_si
-        # Update the zpd to rotate the line about its mid point
-        self.active_fluid.update_zpd_on_gradient_change(mid_depth, mid_pressure)
-        with QSignalBlocker(self.active_fluid_zpd_value):
-            unit = self.active_fluid_zpd_unit.currentText()
-            value = self.active_fluid.zero_pressure_depth_si
-            zpd = convert_from_normalised_to_user_units(unit, "length", value)
-            self.active_fluid_zpd_value.setValue(zpd)
-        self.active_fluid.refresh_contacts_for_self()
-        self.signals.fluids_changed.emit()
-        self.project.mark_modified()
-
-    def _on_active_fluid_zpd_changed(self)->None:
-        if self.active_fluid is None: 
-            return
-        value = self.active_fluid_zpd_value.value()
-        unit = self.active_fluid_zpd_unit.currentText()
-        value_si = normalise_from_user_units(unit, "length", value)
-        self.active_fluid.zero_pressure_depth_si = value_si
-        self.active_fluid.refresh_contacts_for_self()
-        self.signals.fluids_changed.emit()
-        self.project.mark_modified()
-
-    def _on_active_fluid_max_depth_changed(self) -> None:
-        if self.active_fluid is None: 
-            return
-        value = self.active_fluid_max_plotting_depth_value.value()
-        unit = self.active_fluid_max_plotting_depth_unit.currentText()
-        value_si = normalise_from_user_units(unit, "length", value)
-        self.active_fluid.plotting_depth_max_si = value_si
-        self.signals.fluids_changed.emit()
-        self.project.mark_modified()
-    
-    def _on_active_fluid_min_depth_changed(self) -> None:
-        if self.active_fluid is None: 
-            return
-        value = self.active_fluid_min_plotting_depth_value.value()
-        unit = self.active_fluid_min_plotting_depth_unit.currentText()
-        value_si = normalise_from_user_units(unit, "length", value)
-        self.active_fluid.plotting_depth_min_si = value_si
-        self.signals.fluids_changed.emit()
-        self.project.mark_modified()
 
     def _update_contact_value_widgets(self) -> None:
         contact_fluid = self.contact_fluid_combo.currentData(Qt.ItemDataRole.UserRole)

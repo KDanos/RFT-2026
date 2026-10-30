@@ -296,7 +296,11 @@ def round_value_to_decimal_points(
         value = round(float(value),decimal_points)
     return(str(value))
 
-def limit_decimals_float(value: Any, significant_figures_limit: int = 3, decimal_figures_limit = 3) -> LimitedDecimal | None:
+def limit_decimals_float(
+    value: Any,
+    significant_figures_limit: int = 3,
+    decimal_figures_limit: int = 3,
+    ) -> LimitedDecimal | None:
     """Round to ``limit`` significant figures.
 
     Returns text (no scientific notation), numeric value, and decimal places,
@@ -321,37 +325,19 @@ def limit_decimals_float(value: Any, significant_figures_limit: int = 3, decimal
     return LimitedDecimal(text=text, value=rounded, decimals=decimals)
 
 
-def limit_decimals_str(value: Any, significant_figures_limit: int = 3, decimal_figures_limit = 3) -> str:
+def limit_decimals_str(
+    value: Any,
+    significant_figures_limit: int = 3,
+    decimal_figures_limit: int = 3,
+    ) -> str:
     """Format ``value`` to ``limit`` significant figures without scientific notation."""
-    result = limit_decimals_float(value, significant_figures_limit,decimal_figures_limit = 3)
+    result = limit_decimals_float(
+        value,
+        significant_figures_limit,
+        decimal_figures_limit=decimal_figures_limit,
+        )
     return "" if result is None else result.text
 
-
-# def limit_decimals_str(value: Any, limit: int = 3) -> str:
-#     "Avoid Python default behaviour to retun str in scientific notation"
-    
-#     """Round to at least ``significant_figures`` significant figures as a float.
-
-#     ``order`` is the power of 10 of the leading digit place:
-#     327 ? floor(log10(327)) = 2 (because 10**2 = 327 < 10**3);
-#     3.27 ? 0; 0.0327 ? -2.
-
-#     ``decimals`` is how many digits after the decimal point ``round`` needs
-#     so that the result still has ``significant_figures`` significant digits:
-#     decimals = max(0, significant_figures - 1 - order).
-#     """
-#     from math import floor, log10
-
-#     number = force_numeric(value)
-#     if number is None:
-#         return ""
-#     if number == 0:
-#         return "0"
-        
-#     order = floor(log10(abs(number)))
-#     decimals = max(0, limit - 1 - order)
-    
-#     return f"{number:.{decimals}f}"
 
 def show_dataframe_table_dialog(
     df:pd.DataFrame,

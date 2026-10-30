@@ -44,11 +44,79 @@ Same rule for project imports and any other multi-name `from … import (…)`.
 ## Order
 
 1. **Class signals / class attributes** — `pyqtSignal`s and other class-level attrs (before any methods)
-2. `__init__` first among methods
-3. `#--------Private UI--------` — private `_` methods, alphabetical by name
-4. `#--------Public API--------` — public methods, alphabetical by name
+2. **`# Inherited variables`** — always present on boilerplate (see below); declaration-only annotations / docs for attrs and init calls set by bases
+3. `__init__` first among methods
+4. `#--------Private UI--------` — private `_` methods, alphabetical by name
+5. `#--------Public API--------` — public methods, alphabetical by name
 
 Do not alphabetize across the whole class; section first, then alpha within each section.
+
+## Inherited variables (class body, always in boilerplate)
+
+Place this block **after** class signals / other class attrs and **before** `__init__`. Headings use the same green `#` comment style as `# Set project variables` / `# Set module variables` / `# Initialisation methods`.
+
+Always include the top heading and the three sub-headings. If this class inherits nothing in a section, put a simple `# None` under that heading (do not omit the heading).
+
+Structure:
+
+1. `# Inherited variables` (optionally: `(declared here for readability / typing; set by bases)`)
+2. `# Project` — then a `# <BaseClass>` subheading per base that contributes **project variables**, then **declaration-only** annotations (`name: Type`, no assignment)
+3. `# Module` — same pattern for **module variables** (group by `# <BaseClass>`)
+4. `# Initialisation Methods` — only for init calls coming from **project-owned bases** (KD subclasses you created), not framework/`super` noise. Under each `# <BaseClass>`, list method names in a **docstring** (not `#` comments), e.g. `"""\n(toggle_editable)\n"""`. If none: `# None`.
+
+Do **not** reassign these inherited attrs in the subclass `__init__` unless intentionally overriding. Own assignments stay under `# Set project variables` / `# Set module variables` inside `__init__`.
+
+```python
+class FluidLineXsPressure(FluidLinePressure):
+    # Inherited variables (declared here for readability / typing; set by bases)
+
+    # Project
+    # LineAnnot
+    parent_chart: pg.PlotWidget
+    project: ProjectDataManager
+    view: AnalysisView
+    analysis: AnalysisObject
+    signals: ProjectSignals
+
+    # Module
+    # LineAnnot
+    color: QColor | str
+    starting_point: tuple[float, float] | None
+    # ...
+
+    # FluidLinePressure
+    fluid: Fluid
+
+    # Initialisation Methods
+    # FluidLinePressure
+    """
+    (toggle_editable)
+    """
+
+    def __init__(self, ...) -> None:
+        super().__init__(...)
+        # Set project variables
+        # Set module variables
+        # Initialisation methods
+        ...
+```
+
+Boilerplate when nothing is inherited:
+
+```python
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+```
+
+**Naming in conversation:** these KD `self.*` values are **project variables** and **module variables** (together: **KD variables**). When documenting ones set by a base: **inherited KD variables** (or **inherited project/module variables**). Init helpers listed under Inherited → Initialisation Methods are **inherited initialisation methods**. Prefer those terms over “Python/PyQt attributes” when you mean this inventory.
 
 ## Class signals
 
@@ -139,6 +207,17 @@ class SomeWidget(...):
     # Class signals / class attributes
     something_changed = pyqtSignal()
 
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
@@ -167,4 +246,4 @@ class SomeWidget(...):
 ## How to invoke
 
 User may say: "apply KD class module format" or "reformat to my class module format".
-Reorder methods, wrap multi-name imports as above (not single-column), add missing return annotations, annotate `__init__` instance attributes, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.
+Reorder methods, wrap multi-name imports as above (not single-column), add missing return annotations, annotate `__init__` instance attributes, add/update the `# Inherited variables` boilerplate block, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.

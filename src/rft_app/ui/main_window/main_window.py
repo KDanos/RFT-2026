@@ -463,6 +463,7 @@ class MainWindowKD(QMainWindow):
                     widget.graphical_sidebar.refresh_self()
                     if source_chart is not widget.graphical_frame.pressure_chart:
                         widget.graphical_frame.pressure_chart.refresh_self()
+                        widget.graphical_frame.xs_pressure_chart.refresh_self()
 
     def on_project_units_changed(self) -> None:
         self.project_sidebar.all_analyses_tree.refresh_self()

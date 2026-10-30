@@ -14,9 +14,22 @@ from units import convert_from_normalised_to_user_units, normalise_from_user_uni
 
 if TYPE_CHECKING:
     from ui.analysis_view import AnalysisViewWidget
+    from ui.depth_gradient_chart.depth_gradient_chart import DepthGradientChart
+    from ui.depth_gradient_chart.excess_pressure_chart import ExcessPressureChart
 
 
 class LineAnnot(pg.LineSegmentROI):
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
         self,
         parent: pg.PlotWidget,
@@ -50,6 +63,7 @@ class LineAnnot(pg.LineSegmentROI):
         self.end_point: tuple[float, float] | None = end_point
         self.is_visible: bool = True
         self.id: str = str(uuid.uuid4())
+        self.syncing_peer: bool = False
 
         from ui.analysis_view import AnalysisViewWidget
         w = self.parent_chart
@@ -68,41 +82,29 @@ class LineAnnot(pg.LineSegmentROI):
 
     #--------Private UI--------
 
-    def _build_ui(self)->None:
-        
-        # Hover Pen
-        self.hoverPen = pg.mkPen(self.pen)
-        self.hoverPen.setWidth(4)      
-        
-    def _set_handle_pen_options(self)->None:
-        self.handlePen = pg.mkPen(color = (0,0,0,0), width = 2)
-        self.handleHoverPen = pg.mkPen(self.pen)
-        self.handleHoverPen.setStyle(Qt.PenStyle.SolidLine)
-        self.handleHoverPen.sides = 12
-        self.handleHoverPen.radius = 10
+    def _apply_si_endpoints_and_refresh(
+        self,
+        starting_point: tuple[float, float],
+        end_point: tuple[float, float],
+        ) -> None:
+        self.starting_point = starting_point
+        self.end_point = end_point
+        self.extract_units_and_quantities()
+        self.refresh_geometry()
 
-        for handle in self.getHandles():
-            handle.sides = 12
-            handle.radius = 10
-            handle.buildPath()
-            
-            handle.pen = self.handlePen
-            handle.currentPen = self.handlePen
-            handle.hoverPen = self.handleHoverPen
-            
-            handle.update()
-    
+    def _build_ui(self) -> None:
+        self.hoverPen = pg.mkPen(self.pen)
+        self.hoverPen.setWidth(4)
+
     def _connect_signals(self) -> None:
         # Line Movement
         self.sigRegionChangeStarted.connect(self._on_region_change_started)
         self.sigRegionChangeFinished.connect(self._on_region_change_finished)
-        
-        # Menu Actions 
+
+        # Menu Actions
         self.actionConvertLineToFluid.triggered.connect(self._convert_line_to_fluid)
         self.actionDuplicateLine.triggered.connect(self._duplicate_self)
         self.actionDeleteLine.triggered.connect(self.delete_self)
-        
-        self.sigRegionChangeStarted.connect(self._on_region_change_started)
 
     def _convert_line_to_fluid(self) -> None:
         from ui.analysis_view.new_fluid_dialog import NewFluidDialog
@@ -168,6 +170,13 @@ class LineAnnot(pg.LineSegmentROI):
     def _duplicate_self(self) -> None:
         pass
 
+    def _find_peer_line_by_id(self) -> LineAnnot | None:
+        """For mirrored line annotations that share self.id."""
+        other = self._other_depth_chart()
+        if other is None:
+            return None
+        return next((ln for ln in other.all_lines if ln.id == self.id), None)
+
     def _on_position_changed(self) -> None:
         p0, p1 = self.listPoints()
         p0 = self.mapToView(p0)
@@ -188,8 +197,42 @@ class LineAnnot(pg.LineSegmentROI):
         self._on_position_changed()
         self._set_handle_pen_options()
 
-    def _on_region_change_started(self, _roi:object) -> None: 
+    def _on_region_change_started(self, _roi: object) -> None:
         self._set_handle_pen_options()
+
+    def _other_depth_chart(self) -> DepthGradientChart | ExcessPressureChart | None:
+        if self.view_widget is None:
+            return None
+
+        frame = self.view_widget.graphical_frame
+        if self.parent_chart is frame.pressure_chart:
+            other = frame.xs_pressure_chart
+        elif self.parent_chart is frame.xs_pressure_chart:
+            other = frame.pressure_chart
+        else:
+            return None
+
+        if not other.isVisible():
+            return None
+        return other
+
+    def _set_handle_pen_options(self) -> None:
+        self.handlePen = pg.mkPen(color=(0, 0, 0, 0), width=2)
+        self.handleHoverPen = pg.mkPen(self.pen)
+        self.handleHoverPen.setStyle(Qt.PenStyle.SolidLine)
+        self.handleHoverPen.sides = 12
+        self.handleHoverPen.radius = 10
+
+        for handle in self.getHandles():
+            handle.sides = 12
+            handle.radius = 10
+            handle.buildPath()
+
+            handle.pen = self.handlePen
+            handle.currentPen = self.handlePen
+            handle.hoverPen = self.handleHoverPen
+
+            handle.update()
 
     #--------Public API--------
 
@@ -270,6 +313,6 @@ class LineAnnot(pg.LineSegmentROI):
         self.movePoint(handles[0], (x0, y0), finish=False)
         self.movePoint(handles[1], (x1, y1), finish=False)
 
-    def setMouseHover(self, hover: bool)-> None: 
+    def setMouseHover(self, hover: bool) -> None:
         super().setMouseHover(hover)
         self._set_handle_pen_options()

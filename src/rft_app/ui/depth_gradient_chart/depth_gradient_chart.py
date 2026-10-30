@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtCore import QPoint, QSignalBlocker, Qt
 from PyQt6.QtWidgets import QMenu, QWidget
 import numpy as np
 import pandas as pd
@@ -11,9 +11,8 @@ import pyqtgraph as pg
 from project import AnalysisView, ColumnSpec, ProjectDataManager
 from model.canonical_names import CANONICAL_VERTICAL_DEPTH
 from model.view_state import RectAnnotation, StraightLineAnnotation
-from ui.analysis_view.analysis_view_data_manager import ScatterSeriesDefinition
 from ui.depth_gradient_chart.depth_chart_menu import DepthChartMenu
-from ui.depth_gradient_chart.fluid_line import FluidLine
+from ui.depth_gradient_chart.fluid_line_pressure import FluidLinePressure
 from ui.depth_gradient_chart.line_annot import LineAnnot
 from ui.depth_gradient_chart.rectangle_annotation import RectangleAnnotation
 from ui.main_window.project_signals import ProjectSignals
@@ -26,6 +25,7 @@ from units.units_normalisation import (
 
 if TYPE_CHECKING:
     from ui.annotations.annotations_bar import AnnotationsBar
+    from ui.analysis_view.analysis_view_data_manager import ScatterSeriesDefinition
 
 class ScatterItemKD(pg.ScatterPlotItem):
     """Scatter series with a single-spot ViewBox tooltip.
@@ -40,7 +40,6 @@ class ScatterItemKD(pg.ScatterPlotItem):
       only runs if hoverPen / hoverBrush / hoverSize / hoverSymbol are set
     - sigHovered.emit(...): available for listeners; chart does not connect it
     """
-    
     
     def __init__(self,*args, **kwargs)->None: 
         super().__init__(*args, **kwargs)
@@ -81,13 +80,23 @@ class ScatterItemKD(pg.ScatterPlotItem):
 
         self.sigHovered.emit(self, points, ev)
 
-
 class DepthGradientChart(pg.PlotWidget):
     TOOL_ARROW = "arrow"
     TOOL_CIRCLE = "circle"
     TOOL_LINE = "straight_line"
     TOOL_SQUARE = "square"
     TOOL_TEXT = "text_box"
+
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
 
     def __init__(
         self,
@@ -114,7 +123,7 @@ class DepthGradientChart(pg.PlotWidget):
         self.df: pd.DataFrame | None = None
         self.all_scatter_plot_items: list[pg.ScatterPlotItem] = []
         self.all_lines: list[LineAnnot] = []
-        self.all_visible_fluids: list[FluidLine] = []
+        self.all_visible_fluids: list[FluidLinePressure] = []
         self.all_rectangles: list[RectangleAnnotation] = []
         self.annotations_bar: AnnotationsBar | None = None
         self.fluid_tip_active: bool = False
@@ -155,6 +164,7 @@ class DepthGradientChart(pg.PlotWidget):
             menu.addMenu(ctrl)
         return menu
 
+        
     def _build_ui(self) -> None:
         self._format_chart()
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -189,11 +199,7 @@ class DepthGradientChart(pg.PlotWidget):
                     )
                 new_rect.id = a.rect_id
                 self.all_rectangles.append(new_rect)
-        self.all_visible_fluids.clear()
-        for fluid in self.view.sidebar.visible_fluids:
-            self.all_visible_fluids.append(
-                FluidLine(parent=self, fluid=fluid, signals=self.signals)
-                )
+        
 
     def _clear_draw_preview_item(self) -> None:
         if self.preview_drawing_item is not None:
@@ -353,7 +359,7 @@ class DepthGradientChart(pg.PlotWidget):
         p_near = vb.mapViewToScene(pg.Point(nearest_x, nearest_y))
         dist_px = ((p_mouse.x() - p_near.x()) ** 2 + (p_mouse.y() - p_near.y()) ** 2) ** 0.5
         return dist_px <= px_tol
-
+                
     def _on_plot_left_click_rebuild(self, event) -> None:
         if not self.draw_tool or event.button() != Qt.MouseButton.LeftButton:
             return
@@ -368,7 +374,7 @@ class DepthGradientChart(pg.PlotWidget):
 
     def _on_plot_mouse_move(self, pos: QPoint) -> None:
         # If over a fluid line, activate its tip
-        self._update_fluid_line_tip(pos)
+        self._update_fluid_line_pressure_tip(pos)
 
         # Exit if annotation drawing has not been initiated
         if self.first_click is None or self.preview_drawing_item is None:
@@ -384,7 +390,7 @@ class DepthGradientChart(pg.PlotWidget):
         self.all_visible_fluids.clear()
         for fluid in self.view.sidebar.visible_fluids:
             self.all_visible_fluids.append(
-                FluidLine(parent=self, fluid=fluid, signals=self.signals)
+                FluidLinePressure(parent=self, fluid=fluid, signals=self.signals)
                 )
 
         for line in self.all_visible_fluids:
@@ -465,7 +471,7 @@ class DepthGradientChart(pg.PlotWidget):
         self.preview_drawing_item.setSize(size)
         self.preview_drawing_item.show()
 
-    def _update_fluid_line_tip(self, scene_pos: QPoint) -> None:
+    def _update_fluid_line_pressure_tip(self, scene_pos: QPoint) -> None:
         vb = self.getViewBox()
         mouse = vb.mapSceneToView(scene_pos)
         for line in self.all_visible_fluids:
@@ -540,9 +546,19 @@ class DepthGradientChart(pg.PlotWidget):
         self.draw_tool = self.TOOL_LINE
 
     def refresh_self(self) -> None:
-        self.clear()
-        self._paint_all_scatter_items()
-        self._paint_all_lines()
-        self._paint_all_fluids()
-        self._paint_all_rectangles()
+        vb = self.getViewBox()
+        vb.enableAutoRange(enable=False)
+        
+        # Avoid axis range changes during clear and rebuild, to stop syncing during paint operations
+        with QSignalBlocker(self):
+            self.clear()
+            self._paint_all_scatter_items()
+            self._paint_all_lines()
+            self._paint_all_fluids()
+            self._paint_all_rectangles()
 
+        # Trial and error result to avoid syncing of graphs to explode the y-axis
+        if self.all_scatter_plot_items:
+            vb.autoRange(items=list(self.all_scatter_plot_items))
+        else:
+            vb.autoRange()

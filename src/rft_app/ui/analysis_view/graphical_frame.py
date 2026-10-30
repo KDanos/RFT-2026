@@ -6,31 +6,41 @@ import pandas as pd
 from project import AnalysisView, ColumnSpec, ProjectDataManager
 from model.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE
 from ui.analysis_view.analysis_view_data_manager import build_scatter_series
-from utilities import print_current_location_function
 from ui.main_window.project_signals import ProjectSignals
 from ui.depth_gradient_chart.depth_gradient_chart import DepthGradientChart
+from ui.depth_gradient_chart.excess_pressure_chart import ExcessPressureChart
 
 
 class GraphicalFrame(QFrame):
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
-            self,
-            parent: QWidget,
-            project: ProjectDataManager,
-            col_specs: list[ColumnSpec],
-            view: AnalysisView,
-            signals: ProjectSignals,
-            ) -> None:
+        self,
+        parent: QWidget,
+        project: ProjectDataManager,
+        col_specs: list[ColumnSpec],
+        view: AnalysisView,
+        signals: ProjectSignals,
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
         self.project: ProjectDataManager = project
         self.view: AnalysisView = view
         self.col_specs: list[ColumnSpec] = col_specs
-        self.signals = signals
-
+        self.signals: ProjectSignals = signals
 
         # Set module variables
-        self.all_plots:list[pg.PlotWidget] = []
+        self.all_plots: list[pg.PlotWidget] = []
 
         # Initialisation methods
         self._build_ui()
@@ -50,7 +60,7 @@ class GraphicalFrame(QFrame):
             parent=self.pressure_frame,
             view=self.view,
             project=self.project,
-            signals= self.signals,
+            signals=self.signals,
             x_axis=CANONICAL_FORMATION_PRESSURE,
             col_specs=self.col_specs,
             chart_id="pressure_plot",
@@ -73,7 +83,7 @@ class GraphicalFrame(QFrame):
         
         self.xs_pressure_layout = QVBoxLayout(self.xs_pressure_frame)
         self.xs_pressure_layout.setContentsMargins(0, 0, 0, 0)
-        self.xs_pressure_chart = DepthGradientChart(
+        self.xs_pressure_chart = ExcessPressureChart(
             parent=self.xs_pressure_frame,
             view=self.view,
             project=self.project,
@@ -101,20 +111,27 @@ class GraphicalFrame(QFrame):
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding,
             )
 
-    def _connect_signals(self)-> None:
+    def _connect_signals(self) -> None:
         for plot in self.all_plots:
             plot.sigRangeChanged.connect(self._sync_depth_axis)
- 
-    def _sync_depth_axis(self, plot_widget:pg.PlotWidget, view_range:list[[float, float],[float, float]])->None:
-        
+
+    def _sync_depth_axis(
+        self,
+        plot_widget: pg.PlotWidget,
+        view_range: list[[float, float], [float, float]],
+        ) -> None:
         # range is [[xmin, xmax], [ymin, ymax]]
         y_range = view_range[1]
-        plots_to_adjust = [plot for plot in self.all_plots if plot is not plot_widget and plot.isVisible()]
+        plots_to_adjust = [
+            plot for plot in self.all_plots
+            if plot is not plot_widget and plot.isVisible()
+            ]
         for plot in plots_to_adjust:
             with QSignalBlocker(plot):
                 plot.getViewBox().setYRange(*y_range)
-       
+
     #--------Public API--------
+
     def refresh_charts(
         self,
         df: pd.DataFrame,
@@ -123,9 +140,9 @@ class GraphicalFrame(QFrame):
         show_xs: bool,
         ) -> None:
         series = build_scatter_series(df, primary_identifier, secondary_identifier)
-        self.pressure_chart.df= df
+        self.pressure_chart.df = df
         self.pressure_chart.create_all_scatter_plot_items(series)
-        self.pressure_chart.refresh_self
+        self.pressure_chart.refresh_self()
 
         self.xs_pressure_frame.setVisible(show_xs)
         self.xs_pressure_chart.setVisible(show_xs)

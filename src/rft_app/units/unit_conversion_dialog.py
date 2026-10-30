@@ -1,18 +1,7 @@
 from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QSpinBox,
-    QVBoxLayout,
-    QWidget,
-    )
+from PyQt6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QGridLayout, QHBoxLayout,
+    QLabel, QLineEdit, QMessageBox, QSpinBox, QVBoxLayout, QWidget,)
 
 from project import ProjectDataManager
 from units.units_combo_box import UnitsComboBox
