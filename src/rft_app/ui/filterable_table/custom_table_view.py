@@ -10,26 +10,37 @@ import pandas as pd
 
 class CustomTableView(QTableView):
     MIN_COL_WIDTH_PX = 80
- 
+
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
-            self,
-            parent: QObject,
-            project: ProjectDataManager,
-            df: pd.DataFrame,
-            column_specs: list[ColumnSpec],
-            decimals_check_box: QCheckBox,
-            decimal_limit_spin: QSpinBox,
-            ) -> None:
+        self,
+        parent: QObject,
+        project: ProjectDataManager,
+        df: pd.DataFrame,
+        column_specs: list[ColumnSpec],
+        decimals_check_box: QCheckBox,
+        decimal_limit_spin: QSpinBox,
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.project = project
+        self.project: ProjectDataManager = project
 
         # Set module variables
-        self.df = df
-        self.column_specs = column_specs
-        self.decimals_check_box = decimals_check_box
-        self.decimal_limit_spin = decimal_limit_spin
+        self.df: pd.DataFrame = df
+        self.column_specs: list[ColumnSpec] = column_specs
+        self.decimals_check_box: QCheckBox = decimals_check_box
+        self.decimal_limit_spin: QSpinBox = decimal_limit_spin
 
         # Initialisation methods
         self._build_ui()
@@ -40,25 +51,25 @@ class CustomTableView(QTableView):
         self.setHorizontalHeader(FilterableHeaderView(Qt.Orientation.Horizontal, self))
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
-        self.table_model = PandasTableModel(self, self.decimals_check_box, self.decimal_limit_spin)
+        self.pandas_model = PandasTableModel(self, self.decimals_check_box, self.decimal_limit_spin)
 
         self.proxy_model = ProxyFilterModel(self)
-        self.proxy_model.setSourceModel(self.table_model)
+        self.proxy_model.setSourceModel(self.pandas_model)
         self.setSortingEnabled(True)
         self.setModel(self.proxy_model)
 
     #--------Public API--------
 
-    def load_data(
-            self,
-            df: pd.DataFrame,
-            column_specs: list[ColumnSpec],
-            column_filters: dict | None = None,
-            ) -> None:
+    def apply_dataframe(
+        self,
+        df: pd.DataFrame,
+        column_specs: list[ColumnSpec],
+        column_filters: dict | None = None,
+        ) -> None:
         self.df = df
         self.column_specs = column_specs
         self.proxy_model.column_filters = column_filters
-        self.table_model.set_dataframe(
+        self.pandas_model.set_dataframe(
             self.df,
             self.column_specs,
             self.project,

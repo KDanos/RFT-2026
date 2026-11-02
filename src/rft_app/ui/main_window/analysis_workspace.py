@@ -1,25 +1,34 @@
 from PyQt6.QtCore import QObject, QSignalBlocker
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget, QTabWidget
-
+from PyQt6.QtWidgets import QFrame, QTabWidget, QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from ui.main_window.project_signals import ProjectSignals
 from ui.analysis_view import AnalysisViewWidget
+from ui.main_window.project_signals import ProjectSignals
 
 
 class AnalysisWorkspace(QFrame):
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
         self,
-        parent:QObject,
+        parent: QObject,
         project: ProjectDataManager,
-        signals:ProjectSignals,
+        signals: ProjectSignals,
         ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        
-        self.project = project
-        self.signals = signals
+        self.project: ProjectDataManager = project
+        self.signals: ProjectSignals = signals
 
         # Set module variables
         self._current_analysis: AnalysisObject | None = None
@@ -240,8 +249,8 @@ class AnalysisWorkspace(QFrame):
             project=self.project,
             analysis=analysis,
             analysis_view_object=view,
-            signals= self.signals,
-        )
+            signals=self.signals,
+            )
 
         idx = analysis_tab.addTab(widget, view.name)
 
@@ -261,19 +270,20 @@ class AnalysisWorkspace(QFrame):
             if widget is not None:
                 widget.deleteLater()
 
-    def on_project_units_changed(self)-> None: 
+    def on_project_units_changed(self) -> None:
         for i in range(self.analyses_tabs.count()):
             page = self.analyses_tabs.widget(i)
             if page is None:
                 continue
-            inner_tabs= page.findChild(QTabWidget)
-            if inner_tabs is None: 
+            inner_tabs = page.findChild(QTabWidget)
+            if inner_tabs is None:
                 continue
             for j in range(inner_tabs.count()):
                 widget = inner_tabs.widget(j)
                 if isinstance(widget, AnalysisViewWidget):
                     widget.on_project_units_changed()
-    
+
+   
     def refresh_tabs_from_project(
         self,
         target_analysis: AnalysisObject | None = None,

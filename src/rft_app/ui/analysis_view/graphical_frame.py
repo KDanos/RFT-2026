@@ -80,7 +80,6 @@ class GraphicalFrame(QFrame):
 
         # Excess-pressure pane (stretch 4)
         self.xs_pressure_frame = QFrame(self)
-        
         self.xs_pressure_layout = QVBoxLayout(self.xs_pressure_frame)
         self.xs_pressure_layout.setContentsMargins(0, 0, 0, 0)
         self.xs_pressure_chart = ExcessPressureChart(
@@ -94,7 +93,7 @@ class GraphicalFrame(QFrame):
         )
         self.xs_pressure_layout.addWidget(self.xs_pressure_chart)
         # Hide the xs pressure chart on load when no reference fluid is defined
-        self.xs_pressure_frame.setVisible(False) # if not hidden, it takes space and remains empty. An option if desired
+        self.xs_pressure_frame.setVisible(False)  # if not hidden, it takes space and remains empty. An option if desired
         self.xs_pressure_chart.setVisible(False)
 
         self.main_layout.addWidget(self.pressure_frame, 4)
@@ -132,21 +131,22 @@ class GraphicalFrame(QFrame):
 
     #--------Public API--------
 
-    def refresh_charts(
-        self,
-        df: pd.DataFrame,
-        primary_identifier: str | None,
-        secondary_identifier: str | None,
-        show_xs: bool,
-        ) -> None:
-        series = build_scatter_series(df, primary_identifier, secondary_identifier)
-        self.pressure_chart.df = df
-        self.pressure_chart.create_all_scatter_plot_items(series)
-        self.pressure_chart.refresh_self()
+    # Abandoned method, investigate further
+    # def refresh_charts(
+    #     self,
+    #     df: pd.DataFrame,
+    #     primary_identifier: str | None,
+    #     secondary_identifier: str | None,
+    #     show_xs: bool,
+    #     ) -> None:
+    #     series = build_scatter_series(df, primary_identifier, secondary_identifier)
+    #     self.pressure_chart.df = df
+    #     self.pressure_chart.create_all_scatter_plot_items(series)
+    #     self.pressure_chart.refresh_self()
 
-        self.xs_pressure_frame.setVisible(show_xs)
-        self.xs_pressure_chart.setVisible(show_xs)
-        if show_xs:
-            self.xs_pressure_chart.df = df
-            self.xs_pressure_chart.create_all_scatter_plot_items(series)
-            self.xs_pressure_chart.refresh_self()
+    #     self.xs_pressure_frame.setVisible(show_xs)
+    #     self.xs_pressure_chart.setVisible(show_xs)
+    #     if show_xs:
+    #         self.xs_pressure_chart.df = df
+    #         self.xs_pressure_chart.create_all_scatter_plot_items(series)
+    #         self.xs_pressure_chart.refresh_self()

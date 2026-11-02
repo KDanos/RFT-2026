@@ -1,43 +1,46 @@
 import pandas as pd
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QVBoxLayout,
-)
+from PyQt6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
+    QLineEdit, QVBoxLayout, QWidget,)
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
-from ..analysis_view.analysis_view_data_manager import insert_excess_pressure_column
+from ui.analysis_view.analysis_view_data_manager import insert_excess_pressure_column
 from utilities import unique_name
 
 
 class NewViewDialog(QDialog):
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         analysis: AnalysisObject | None = None,
         project: ProjectDataManager | None = None,
-    ) -> None:
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.project = project
-        self.analysis = analysis
+        self.project: ProjectDataManager | None = project
+        self.analysis: AnalysisObject | None = analysis
 
         # Set module variables
         self.copy_from: AnalysisView | None = None
-        self.new_view_name = ""
+        self.new_view_name: str = ""
         self.df: pd.DataFrame | None = None
         self.column_specs: list[ColumnSpec] = []
         self.result_view: AnalysisView | None = None
-        self._has_existing_views = (
+        self._has_existing_views: bool = (
             analysis is not None and len(analysis.analysis_views) > 0
-        )
-        
+            )
 
         # Initialisation methods
         self._build_ui()
@@ -140,9 +143,7 @@ class NewViewDialog(QDialog):
                 self.df, self.column_specs, self.project
             )
 
-        #Make sure the new view name is unique
         self._make_name_unique()
-        #Create the new view instance
         new_view = self._create_new_view_instance()
         self.analysis.analysis_views.append(new_view)
         self.result_view = new_view
@@ -155,7 +156,7 @@ class NewViewDialog(QDialog):
         self.column_specs = list(self.analysis.analysis_dataset.column_specs)
         self.df, self.column_specs = insert_excess_pressure_column(
             self.df, self.column_specs, self.project
-        )
+            )
         self._make_name_unique()
         new_view = self._create_new_view_instance()
         self.analysis.analysis_views.append(new_view)
@@ -165,5 +166,4 @@ class NewViewDialog(QDialog):
     #--------Public API--------
 
     def reject(self) -> None:
-        #no append
         super().reject()

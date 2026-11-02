@@ -11,12 +11,23 @@ from utilities import round_value_to_decimal_points
 class PandasTableModel(QAbstractTableModel):
     """QT table model over a normalised view dataframe (display-only)."""
 
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
-            self,
-            parent: QObject,
-            decimals_check_box: QCheckBox,
-            decimal_limit_spin: QSpinBox,
-            ) -> None:
+        self,
+        parent: QObject,
+        decimals_check_box: QCheckBox,
+        decimal_limit_spin: QSpinBox,
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -26,8 +37,8 @@ class PandasTableModel(QAbstractTableModel):
         self.df: pd.DataFrame = pd.DataFrame()
         self.column_specs: list[ColumnSpec] = []
         self.project: ProjectDataManager | None = None
-        self.decimals_check_box = decimals_check_box
-        self.decimal_limit_spin = decimal_limit_spin
+        self.decimals_check_box: QCheckBox = decimals_check_box
+        self.decimal_limit_spin: QSpinBox = decimal_limit_spin
 
         # Initialisation methods
         # (none)
@@ -45,10 +56,10 @@ class PandasTableModel(QAbstractTableModel):
         return self.df.shape[1]
 
     def data(
-            self,
-            index: QModelIndex,
-            role: int = Qt.ItemDataRole.DisplayRole,
-            ) -> str | float | Qt.AlignmentFlag | None:
+        self,
+        index: QModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+        ) -> str | float | Qt.AlignmentFlag | None:
         if not index.isValid() or self.df.empty:
             return None
         row, col = index.row(), index.column()
@@ -91,11 +102,11 @@ class PandasTableModel(QAbstractTableModel):
         return None
 
     def headerData(
-            self,
-            section: int,
-            orientation: Qt.Orientation,
-            role: int = Qt.ItemDataRole.DisplayRole,
-            ) -> str | None:
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+        ) -> str | None:
         if role != Qt.ItemDataRole.DisplayRole:
             return None
 
@@ -125,11 +136,11 @@ class PandasTableModel(QAbstractTableModel):
         return len(self.df)
 
     def set_dataframe(
-            self,
-            df: pd.DataFrame,
-            column_specs: list[ColumnSpec],
-            project: ProjectDataManager,
-            ) -> None:
+        self,
+        df: pd.DataFrame,
+        column_specs: list[ColumnSpec],
+        project: ProjectDataManager,
+        ) -> None:
         self.beginResetModel()
         self.df = df.copy() if df is not None else pd.DataFrame()
         self.column_specs = column_specs

@@ -3,9 +3,7 @@ from PyQt6.QtWidgets import QSplitter, QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
 from model.canonical_names import (
-    CANONICAL_EXCESS_PRESSURE,
-    CANONICAL_FORMATION_PRESSURE,
-    CANONICAL_VERTICAL_DEPTH,
+    CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH,
 )
 from model.fluid_model import Fluid
 from model.view_state import ViewWidgetSidebar
@@ -13,7 +11,9 @@ from ui.filterable_table.proxy_model import ProxyFilterModel
 from ui.main_window.project_signals import ProjectSignals
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
 from ui.filterable_table.filterable_table import FilterableTable
-from .analysis_view_data_manager import calculate_excess_pressure_column, refresh_view_object_from_column_tree_selection
+from .analysis_view_data_manager import (
+    calculate_excess_pressure_column, refresh_view_object_from_column_tree_selection,
+)
 from .graphical_frame import GraphicalFrame
 from .graphical_sidebar import GraphicalSidebar
 from .tabular_sidebar import TabularSidebar
@@ -21,26 +21,37 @@ import pandas as pd
 
 
 class AnalysisViewWidget(QWidget):
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
-            self,
-            parent: QWidget,
-            project: ProjectDataManager,
-            analysis: AnalysisObject,
-            analysis_view_object: AnalysisView,
-            signals:ProjectSignals,           
-            ) -> None:
+        self,
+        parent: QWidget,
+        project: ProjectDataManager,
+        analysis: AnalysisObject,
+        analysis_view_object: AnalysisView,
+        signals: ProjectSignals,
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
         self.project: ProjectDataManager = project
         self.analysis: AnalysisObject = analysis
         self.view: AnalysisView = analysis_view_object
-        self.signals:ProjectSignals = signals
+        self.signals: ProjectSignals = signals
         self.sidebar_summary: ViewWidgetSidebar = self.view.sidebar
 
         # Set module variables
         self.new_fluid_dialog: NewFluidDialog | None = None
-        self.visible_fluids:list[Fluid] = list(self.view.sidebar.visible_fluids)
+        self.visible_fluids: list[Fluid] = list(self.view.sidebar.visible_fluids)
 
         # Initialisation methods
         self._build_ui()
@@ -54,14 +65,14 @@ class AnalysisViewWidget(QWidget):
         self.tabular_sidebar = TabularSidebar(self, self.project, self.analysis, self.view)
 
         self._load_filterable_table()
-        self.proxy = self.tabular_frame.table.proxy_model
+        self.proxy = self.filterable_table.custom_table_view.proxy_model
 
         self.graphical_frame = GraphicalFrame(
             parent=self,
             project=self.project,
             col_specs=self.view.column_specs,
             view=self.view,
-            signals=self.signals
+            signals=self.signals,
             )
 
         self.graphical_sidebar = GraphicalSidebar(
@@ -78,7 +89,7 @@ class AnalysisViewWidget(QWidget):
 
         self.tabular_row_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.tabular_row_splitter.addWidget(self.tabular_sidebar)
-        self.tabular_row_splitter.addWidget(self.tabular_frame)
+        self.tabular_row_splitter.addWidget(self.filterable_table)
         self.tabular_row_splitter.setSizes([1000, 5000])
 
         self.main_frame_splitter = QSplitter(Qt.Orientation.Vertical)
@@ -89,19 +100,20 @@ class AnalysisViewWidget(QWidget):
         self.main_frame_splitter.setStretchFactor(1, 1)
 
         main_layout.addWidget(self.main_frame_splitter)
-        
-        # Check if the excess pressure column should be calculated. 
+
+        # Check if the excess pressure column should be calculated.
         ref_fluid = self.graphical_sidebar.ref_fluid_combo.currentData()
         self._on_reference_fluid_change(ref_fluid)
 
+        # Pass the filtered dataframe to the plots
         self._pass_df_to_plots()
-        
-        #Ensure the series are plotted on load
+
+        # Ensure the series are plotted on load
         self.graphical_sidebar.define_scatters_for_plotting()
 
     def _connect_signals(self) -> None:
         self.tabular_sidebar.view_df_changed.connect(self._on_view_df_change)
-        self.tabular_frame.column_unit_change.connect(self._on_column_unit_change)
+        self.filterable_table.column_unit_change.connect(self._on_column_unit_change)
         self.proxy.filters_changed.connect(self._pass_df_to_plots)
         self.proxy.filters_changed.connect(self.graphical_sidebar.define_scatters_for_plotting)
         self.graphical_sidebar.reference_fluid_changed.connect(self._on_reference_fluid_change)
@@ -111,10 +123,10 @@ class AnalysisViewWidget(QWidget):
         refresh_view_object_from_column_tree_selection(
             self.view, self.analysis, self.project, selected_columns
         )
-        self.tabular_frame = FilterableTable(
+        self.filterable_table = FilterableTable(
             self, self.project, self.view.df, self.view.column_specs
         )
-        self.tabular_frame.load_data(
+        self.filterable_table.reload_view_data(
             self.view.df, self.view.column_specs, self.view.column_filters
         )
 
@@ -131,13 +143,13 @@ class AnalysisViewWidget(QWidget):
             ]:
                 plot._extract_quantity_and_units()
                 plot._format_chart()
-            
+
         self._pass_df_to_plots()
         self.graphical_sidebar.define_scatters_for_plotting()
-        
+
         self.project.mark_modified()
 
-    def _on_reference_fluid_change(self, reference_fluid:Fluid| None) -> None:
+    def _on_reference_fluid_change(self, reference_fluid: Fluid | None) -> None:
         calculate_excess_pressure_column(self.view.df, reference_fluid)
 
         # Make the excess pressure chart visible
@@ -145,40 +157,39 @@ class AnalysisViewWidget(QWidget):
         self.graphical_frame.xs_pressure_frame.setVisible(show_xs)
         self.graphical_frame.xs_pressure_chart.setVisible(show_xs)
 
-        # Update the table 
-        self.tabular_frame.load_data(
-                self.view.df, 
-                self.view.column_specs, 
-                self.view.column_filters
+        # Update the table
+        self.filterable_table.reload_view_data(
+            self.view.df,
+            self.view.column_specs,
+            self.view.column_filters,
             )
-        
-        #Ensure that all plots are refreshed (cheating, we only need to refresh the xs-pressure plot)
+
+        # Ensure that all plots are refreshed (cheating, we only need to refresh the xs-pressure plot)
         self._pass_df_to_plots()
-        
+
         self.graphical_sidebar.define_scatters_for_plotting()
-        
+
         self.project.mark_modified()
-    
+
     def _on_view_df_change(self) -> None:
-        
         # Extract the names of the columns selected from the tree
         selected_columns = self.tabular_sidebar.get_selected_columns_names()
-        
+
         # Rebuild the persisted view object (df and column specs)
         refresh_view_object_from_column_tree_selection(
             self.view, self.analysis, self.project, selected_columns
         )
-        
+
         # Recalculate the excess pressure values
         calculate_excess_pressure_column(self.view.df, self.graphical_sidebar.ref_fluid)
-        
+
         # Load the rebuild view into the filterable table
-        self.tabular_frame.load_data(
-            self.view.df, 
-            self.view.column_specs, 
-            self.view.column_filters
+        self.filterable_table.reload_view_data(
+            self.view.df,
+            self.view.column_specs,
+            self.view.column_filters,
         )
-        
+
         # Push the changes to the plots
         self._pass_df_to_plots()
         self.project.mark_modified()
@@ -186,21 +197,17 @@ class AnalysisViewWidget(QWidget):
     def _pass_df_to_plots(self) -> None:
         df = self.extract_visible_df_from_proxy()
         for plot in [
-            self.graphical_frame.pressure_chart, 
+            self.graphical_frame.pressure_chart,
             self.graphical_frame.xs_pressure_chart]:
-            
-            #Pass on the updated df from the proxy model
+
+            # Pass on the updated df from the proxy model
             plot.df = df
-            #Update all items
+            # Update all items
             plot.refresh_self()
-        
+
     #--------Public API--------
 
-    def on_project_units_changed(self)->None:
-        if self.new_fluid_dialog is not None:
-            self.new_fluid_dialog.on_project_units_changed()
-    
-    def extract_visible_df_from_proxy(self, proxy:ProxyFilterModel| None=None) -> pd.DataFrame:
+    def extract_visible_df_from_proxy(self, proxy: ProxyFilterModel | None = None) -> pd.DataFrame:
         # Default to avoid finding the proxy when this method is called from other modules
         if proxy is None:
             proxy = self.proxy
@@ -211,3 +218,7 @@ class AnalysisViewWidget(QWidget):
             for r in range(proxy.rowCount())
         ]
         return source.df.iloc[rows]
+
+    def on_project_units_changed(self) -> None:
+        if self.new_fluid_dialog is not None:
+            self.new_fluid_dialog.on_project_units_changed()

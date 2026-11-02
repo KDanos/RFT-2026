@@ -1,7 +1,8 @@
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import (QButtonGroup,QCheckBox,QFrame,QHBoxLayout,QRadioButton,QSpinBox,
-    QTableWidget,QVBoxLayout,)
-from PyQt6.QtWidgets import QLabel, QPushButton
+from PyQt6.QtWidgets import (
+    QButtonGroup, QCheckBox, QFrame, QHBoxLayout, QLabel, QPushButton, QRadioButton,
+    QSpinBox, QTableWidget, QVBoxLayout,
+)
 
 from project import ColumnSpec, ProjectDataManager
 from ui import app_icon
@@ -15,21 +16,32 @@ import pandas as pd
 class FilterableTable(QFrame):
     column_unit_change = pyqtSignal(int, str, str)  # column index, column header and new unit
 
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
-            self,
-            parent: QObject,
-            project: ProjectDataManager,
-            df: pd.DataFrame,
-            column_specs: list[ColumnSpec],
-            ) -> None:
+        self,
+        parent: QObject,
+        project: ProjectDataManager,
+        df: pd.DataFrame,
+        column_specs: list[ColumnSpec],
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.project = project
+        self.project: ProjectDataManager = project
 
         # Set module variables
-        self.df = df
-        self.column_specs = column_specs
+        self.df: pd.DataFrame = df
+        self.column_specs: list[ColumnSpec] = column_specs
         self.arithmetic_ops_src_model: str = "full"
 
         # Initialisation methods
@@ -91,7 +103,7 @@ class FilterableTable(QFrame):
         self.table_layout.setSpacing(0)
         self.main_layout.addWidget(self.table_frame)
 
-        self.table = CustomTableView(
+        self.custom_table_view = CustomTableView(
             self,
             self.project,
             self.df,
@@ -100,7 +112,7 @@ class FilterableTable(QFrame):
             self.decimal_limit_spin,
         )
 
-        self.table_layout.addWidget(self.table, 1)
+        self.table_layout.addWidget(self.custom_table_view, 1)
 
         self.clear_filters_btn = QPushButton("Clear all filters")
         self.clear_filters_btn.setIcon(app_icon("mdi.filter-off-outline"))
@@ -111,11 +123,15 @@ class FilterableTable(QFrame):
     def _connect_signals(self) -> None:
         self.decimal_limit_spin.valueChanged.connect(self.filterable_table_refresh)
         self.decimals_check_box.toggled.connect(self.filterable_table_refresh)
-        self.table.horizontalHeader().sectionResized.connect(
+        self.custom_table_view.horizontalHeader().sectionResized.connect(
             lambda *_: self._sync_units_table_column_widths()
         )
-        self.table.horizontalScrollBar().valueChanged.connect(self._sync_units_horizontal_scroll)
-        self.table.proxy_model.filters_changed.connect(self._update_clear_filters_button)
+        self.custom_table_view.horizontalScrollBar().valueChanged.connect(
+            self._sync_units_horizontal_scroll
+            )
+        self.custom_table_view.proxy_model.filters_changed.connect(
+            self._update_clear_filters_button
+            )
 
     def _create_or_update_units_combos(self) -> None:
         if hasattr(self, "units_table"):
@@ -153,12 +169,12 @@ class FilterableTable(QFrame):
         self.units_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
     def _on_clear_all_filters(self) -> None:
-        self.table.proxy_model.clear_all_filters()
+        self.custom_table_view.proxy_model.clear_all_filters()
         self.project.mark_modified()
 
     def _on_radio_button_change(self, button: QRadioButton) -> None:
         use_filtered = button is self.filtered_dataset_radio
-        self.table.proxy_model.use_filtered_rows_for_stats = use_filtered
+        self.custom_table_view.proxy_model.use_filtered_rows_for_stats = use_filtered
         self.arithmetic_ops_src_model = "filtered" if use_filtered else "full"
 
     def _on_units_change(self, idx: int) -> None:
@@ -181,38 +197,37 @@ class FilterableTable(QFrame):
         if not hasattr(self, "units_table"):
             return
 
-        data_cols = self.table.table_model.columnCount()
+        data_cols = self.custom_table_view.pandas_model.columnCount()
         units_cols = self.units_table.columnCount()
         sync_cols = min(data_cols, units_cols)
 
         for i in range(sync_cols):
-            column_width = self.table.columnWidth(i)
+            column_width = self.custom_table_view.columnWidth(i)
             self.units_table.setColumnWidth(i, column_width)
 
-        v_header_width = self.table.verticalHeader().width()
+        v_header_width = self.custom_table_view.verticalHeader().width()
         self.units_table.verticalHeader().setFixedWidth(v_header_width)
 
     def _update_clear_filters_button(self) -> None:
-        has_filters = bool(self.table.proxy_model.active_filters)
+        has_filters = bool(self.custom_table_view.proxy_model.active_filters)
         self.clear_filters_btn.setEnabled(has_filters)
 
     #--------Public API--------
 
-    def load_data(
-            self,
-            df: pd.DataFrame,
-            column_specs: list[ColumnSpec],
-            column_filters: dict | None = None,
-            ) -> None:
+    def filterable_table_refresh(self) -> None:
+        self.custom_table_view.pandas_model.refresh_display()
+        self._sync_units_table_column_widths()
+
+    def reload_view_data(
+        self,
+        df: pd.DataFrame,
+        column_specs: list[ColumnSpec],
+        column_filters: dict | None = None,
+        ) -> None:
         self.df = df
         self.column_specs = column_specs
 
-        self.table.load_data(df, column_specs, column_filters)
+        self.custom_table_view.apply_dataframe(df, column_specs, column_filters)
         self._create_or_update_units_combos()
         self._sync_units_table_column_widths()
         self._update_clear_filters_button()
-
-    def filterable_table_refresh(self) -> None:
-        self.table.table_model.refresh_display()
-        self._sync_units_table_column_widths()
-

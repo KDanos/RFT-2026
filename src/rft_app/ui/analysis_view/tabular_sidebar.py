@@ -9,19 +9,30 @@ from ui.widgets import DataframeTree
 class TabularSidebar(QFrame):
     view_df_changed = pyqtSignal()
 
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
-            self,
-            parent: QWidget | None = None,
-            project: ProjectDataManager | None = None,
-            analysis: AnalysisObject | None = None,
-            view: AnalysisView | None = None,
-            ) -> None:
+        self,
+        parent: QWidget | None = None,
+        project: ProjectDataManager | None = None,
+        analysis: AnalysisObject | None = None,
+        view: AnalysisView | None = None,
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.project = project
-        self.analysis = analysis
-        self.view = view
+        self.project: ProjectDataManager | None = project
+        self.analysis: AnalysisObject | None = analysis
+        self.view: AnalysisView | None = view
 
         # Set module variables
         # (none)
@@ -47,11 +58,11 @@ class TabularSidebar(QFrame):
         self.data_tree.itemChanged.connect(self._on_column_selection_change)
 
     def _make_items_not_selectable(
-            self,
-            tree: QTreeWidget,
-            node: QTreeWidgetItem,
-            count: int,
-            ) -> None:
+        self,
+        tree: QTreeWidget,
+        node: QTreeWidgetItem,
+        count: int,
+        ) -> None:
         for i in range(count):
             item = node.child(i)
             item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)

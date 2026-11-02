@@ -527,7 +527,34 @@ class DepthGradientChart(pg.PlotWidget):
         self.view.annotations.append(to_save)
         self.project.mark_modified()
 
-    
+    def convert_pressure_to_xs_pressure(
+        self,
+        pressure: float,
+        depth: float,
+        ) -> float | None:
+        ref_fluid = self.view.sidebar.ref_fluid
+        if ref_fluid is None:
+            return None
+
+        gradient = ref_fluid.gradient_si
+        zpd = ref_fluid.zero_pressure_depth_si
+        expected_p = (depth - zpd) * gradient
+        return pressure - expected_p
+
+    def convert_xs_pressure_to_pressure(
+        self,
+        xs_pressure: float,
+        depth: float,
+        ) -> float | None:
+        ref_fluid = self.view.sidebar.ref_fluid
+        if ref_fluid is None:
+            return None
+
+        gradient = ref_fluid.gradient_si
+        zpd = ref_fluid.zero_pressure_depth_si
+        expected_p = (depth - zpd) * gradient
+        return expected_p + xs_pressure
+
     def create_all_scatter_plot_items(
         self,
         scatter_definitions: list[ScatterSeriesDefinition],

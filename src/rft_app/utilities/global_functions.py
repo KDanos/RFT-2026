@@ -324,7 +324,6 @@ def limit_decimals_float(
         text = f"{rounded:.{decimals}f}"
     return LimitedDecimal(text=text, value=rounded, decimals=decimals)
 
-
 def limit_decimals_str(
     value: Any,
     significant_figures_limit: int = 3,
@@ -337,7 +336,6 @@ def limit_decimals_str(
         decimal_figures_limit=decimal_figures_limit,
         )
     return "" if result is None else result.text
-
 
 def show_dataframe_table_dialog(
     df:pd.DataFrame,
@@ -361,7 +359,7 @@ def show_dataframe_table_dialog(
     )
     # _,table_window,_ = create_table_view_frame(df, column_specs,parent, project)
     table_window = FilterableTable(parent, project, df, column_specs)
-    table_window.load_data(df, column_specs)
+    table_window.reload_view_data(df, column_specs)
     
     window_layout = QVBoxLayout(window)
     window_layout.setContentsMargins(0,0,0,0)

@@ -16,6 +16,17 @@ class AnalysesTree(QTreeWidget):
     analysis_visibility_changed = pyqtSignal(object, object)  # (AnalysisObject | None, AnalysisView | None)
     new_view_requested = pyqtSignal(AnalysisObject)
 
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
         self,
         parent: QWidget,

@@ -3,36 +3,34 @@ from pathlib import Path
   
 from PyQt6.QtCore import QSize, Qt, QSignalBlocker
 from PyQt6.QtGui import QAction, QCloseEvent, QIcon
-from PyQt6.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QFrame,
-    QHBoxLayout,
-    QLabel,
-    QMainWindow,
-    QMessageBox,
-    QSizePolicy,
-    QSplitter,
-    QTabWidget,
-    QToolBar,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtWidgets import (QComboBox, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow,
+    QMessageBox, QSizePolicy, QSplitter, QTabWidget, QToolBar, QVBoxLayout, QWidget,)
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager, load_project, save_project
-from units.unit_conversion_dialog import UnitConversionDialog
-from ui.main_window.project_signals import ProjectSignals
-from units.custom_units_dialog import CustomUnitsDialog
+from ui import app_icon, load_qss, open_project_dialog, save_project_as
 from ui.analysis_view import AnalysisViewWidget, insert_excess_pressure_column
-from ui.widgets import DataLoaderDialogAnalysis, NewViewDialog
-from ui.project_data_loader import DataLoaderDialogProject
 from ui.main_window.analysis_workspace import AnalysisWorkspace
+from ui.main_window.project_signals import ProjectSignals
 from ui.main_window.sidebar import ProjectSidebar
-from ui import app_icon, load_qss, save_project_as, open_project_dialog
+from ui.project_data_loader import DataLoaderDialogProject
+from ui.widgets import DataLoaderDialogAnalysis, NewViewDialog
+from units.custom_units_dialog import CustomUnitsDialog
+from units.unit_conversion_dialog import UnitConversionDialog
 
 
 class MainWindowKD(QMainWindow):
-    def __init__(self, parent=None) -> None:
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -40,13 +38,15 @@ class MainWindowKD(QMainWindow):
         self.project_path: Path | None = None
 
         # Set module variables
-        self.signals:ProjectSignals = ProjectSignals(self)
+        self.signals: ProjectSignals = ProjectSignals(self)
 
         # Initialisation methods
         self._build_ui()
         self._connect_signals()
         self._check_if_project_has_path()
-        self._load_default_project_on_startup("261027 Tested Data Load Merge and New Analysis KD")
+        self._load_default_project_on_startup(
+            "261027 Tested Data Load Merge and New Analysis KD"
+            )
 
     #--------Private UI--------
 

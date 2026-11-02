@@ -1,10 +1,8 @@
-from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, pyqtSignal
+from PyQt6.QtCore import QModelIndex, QObject, QSortFilterProxyModel, pyqtSignal
+from PyQt6.QtWidgets import QCheckBox, QSpinBox
 
 from ui.filterable_table.filter_specs import (
-    FilterSpec,
-    FilterSpecNumber,
-    filter_spec_from_dict,
-    filter_spec_to_dict,
+    FilterSpec, FilterSpecNumber, filter_spec_from_dict, filter_spec_to_dict,
 )
 from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units, normalise_from_user_units
 from utilities import round_value_to_decimal_points
@@ -15,7 +13,18 @@ import pandas as pd
 class ProxyFilterModel(QSortFilterProxyModel):
     filters_changed = pyqtSignal()
 
-    def __init__(self, parent=None) -> None:
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
 
         # Set project variables
@@ -24,9 +33,9 @@ class ProxyFilterModel(QSortFilterProxyModel):
         # Set module variables
         self.active_filters: dict[int, FilterSpec] = {}
         self.column_filters: dict | None = None  # None = preview (no persist); dict = mutate in place
-        self.use_filtered_rows_for_stats = True
-        self.decimals_check_box = parent.decimals_check_box
-        self.decimal_limit_spin = parent.decimal_limit_spin
+        self.use_filtered_rows_for_stats: bool = True
+        self.decimals_check_box: QCheckBox = parent.decimals_check_box
+        self.decimal_limit_spin: QSpinBox = parent.decimal_limit_spin
 
         # Initialisation methods
         # (none)
@@ -42,11 +51,11 @@ class ProxyFilterModel(QSortFilterProxyModel):
         return bool(operators & {"==", "!="})
 
     def _to_display_rounded_si(
-            self,
-            source_model,
-            col: int,
-            raw_cell_value,
-            ):
+        self,
+        source_model,
+        col: int,
+        raw_cell_value,
+        ):
         if raw_cell_value is None or pd.isna(raw_cell_value):
             return raw_cell_value
         col_spec = source_model.column_specs[col]

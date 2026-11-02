@@ -322,7 +322,7 @@ class GraphicalSidebar(QFrame):
             }
 
     def _extract_current_table_depth_and_pressure_units(self) -> None:
-        table_unit = self.parent.tabular_frame.units_table
+        table_unit = self.parent.filterable_table.units_table
         self.pressure_unit = table_unit.cellWidget(0, 1).currentText()
         self.depth_unit = table_unit.cellWidget(0, 0).currentText()
 
@@ -741,7 +741,7 @@ class GraphicalSidebar(QFrame):
 
     def define_scatters_for_plotting(self) -> None:
         # Access the proxy model which filters the view.df with the filterable table active filters
-        proxy_model = self.parent.tabular_frame.table.proxy_model
+        proxy_model = self.parent.filterable_table.custom_table_view.proxy_model
         df = self.parent.extract_visible_df_from_proxy(proxy_model)
 
         primary_identifier = self.primary_identifier_combo.currentText()

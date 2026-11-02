@@ -1,44 +1,47 @@
 from PyQt6.QtCore import QSignalBlocker, Qt
-from PyQt6.QtWidgets import (QComboBox,QDialog,QFrame,QGridLayout,QLabel,QLineEdit,
-    QMessageBox,QPushButton,QSplitter,QTreeWidget,QTreeWidgetItem,QTreeWidgetItemIterator,
-    QVBoxLayout,QWidget,
-    )
+from PyQt6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QLabel, QLineEdit,
+    QMessageBox, QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem, QTreeWidgetItemIterator,
+    QVBoxLayout, QWidget,)
 import pandas as pd
 
-from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
 from model.canonical_names import CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
+from project import AnalysisObject, ColumnSpec, DataSet, ProjectDataManager
 from ui.filterable_table.filterable_table import FilterableTable
-from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
-from utilities import (
-    get_tree_item_by_name,
-    get_tree_top_level_item_by_name,
-    is_numeric,
-    round_value_to_decimal_points,
-    unique_name,
-    update_tree_ancestors,
-    update_tree_descendants,
-)
-from units.units_combo_box import UnitsComboBox
 from ui.main_window.sidebar import AllDataSetsTree
+from units import STANDARD_QUANTITIES, convert_from_normalised_to_user_units
+from units.units_combo_box import UnitsComboBox
+from utilities import (get_tree_item_by_name, get_tree_top_level_item_by_name, is_numeric,
+    round_value_to_decimal_points, unique_name, update_tree_ancestors, update_tree_descendants,)
 
 
 class DataLoaderDialogAnalysis(QDialog):
+    # Inherited variables
+
+    # Project
+    # None
+
+    # Module
+    # None
+
+    # Initialisation Methods
+    # None
+
     def __init__(
         self,
         parent: QWidget | None = None,
         project: ProjectDataManager | None = None,
-    ) -> None:
+        ) -> None:
         super().__init__(parent)
 
         # Set project variables
-        self.project = project
+        self.project: ProjectDataManager | None = project
 
         # Set module variables
         self.analysis_dataset: DataSet | None = None
-        self.selected_dataset = None
-        self.selected_columns: list = []
-        self.selected_columns_specs: list = []
-        self.result_analysis = None
+        self.selected_dataset: DataSet | None = None
+        self.selected_columns: list[str] = []
+        self.selected_columns_specs: list[ColumnSpec] = []
+        self.result_analysis: AnalysisObject | None = None
 
         # Initialisation methods
         self._build_ui()
@@ -151,7 +154,7 @@ class DataLoaderDialogAnalysis(QDialog):
             []
         )
         table_layout.addWidget(self.preview_table)
-        self.preview_table.load_data(pd.DataFrame(),[])
+        self.preview_table.reload_view_data(pd.DataFrame(), [])
 
     def _connect_signals(self) -> None:
         self.loaded_data_tree.itemChanged.connect(self._on_tree_item_changed)
@@ -361,11 +364,13 @@ class DataLoaderDialogAnalysis(QDialog):
             or not self.selected_columns
             or self.analysis_dataset is None
             ):
-            self.preview_table.load_data(pd.DataFrame(), [])
+            self.preview_table.reload_view_data(pd.DataFrame(), [])
             return
 
-        self.preview_table.load_data(
+        self.preview_table.reload_view_data(
             self.analysis_dataset.dataframe,
-            self.analysis_dataset.column_specs
-        )
+            self.analysis_dataset.column_specs,
+            )
+
     #--------Public API--------
+    # (none)

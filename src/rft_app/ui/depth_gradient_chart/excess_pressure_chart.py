@@ -103,31 +103,4 @@ class ExcessPressureChart(DepthGradientChart):
             self.addItem(line)
 
     #--------Public API--------
-
-    def convert_pressure_to_xs_pressure(
-        self,
-        pressure: float,
-        depth: float,
-        ) -> float | None:
-        ref_fluid = self.view.sidebar.ref_fluid
-        if ref_fluid is None:
-            return None
-
-        gradient = ref_fluid.gradient_si
-        zpd = ref_fluid.zero_pressure_depth_si
-        expected_p = (depth - zpd) * gradient
-        return pressure - expected_p
-
-    def convert_xs_pressure_to_pressure(
-        self,
-        xs_pressure: float,
-        depth: float,
-        ) -> float | None:
-        ref_fluid = self.view.sidebar.ref_fluid
-        if ref_fluid is None:
-            return None
-
-        gradient = ref_fluid.gradient_si
-        zpd = ref_fluid.zero_pressure_depth_si
-        expected_p = (depth - zpd) * gradient
-        return expected_p + xs_pressure
+    # (none)

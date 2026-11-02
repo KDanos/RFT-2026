@@ -1,28 +1,33 @@
 from dataclasses import dataclass
-from model.canonical_names import CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH
-from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
-from model.fluid_model import Fluid
-from units import get_project_default_units
+
 import pandas as pd
 
+from model.canonical_names import (CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE,
+    CANONICAL_VERTICAL_DEPTH,)
+from model.fluid_model import Fluid
+from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
+from units import get_project_default_units
+
 SERIES_COLORS = [
-    "blue", "red", "green",  "purple", "cyan",
+    "blue", "red", "green", "purple", "cyan",
     "magenta", "brown", "olive", "teal", "navy", "maroon", "orange",
 ]
 SERIES_SYMBOLS = [
     "o", "s", "t", "d", "+", "x", "p", "h", "star", "t1", "t2", "t3",
 ]
 
+
 @dataclass
 class ScatterSeriesDefinition:
-    name:str
-    mask:pd.Series
-    color:str
-    symbol:str
+    name: str
+    mask: pd.Series
+    color: str
+    symbol: str
     primary_key: str | None = None
     primary_value: str | None = None
     secondary_key: str | None = None
-    secondary_value: str |None = None
+    secondary_value: str | None = None
+
 
 #--------Public API--------
 
@@ -41,6 +46,7 @@ def build_view_df_and_col_specs_from_column_selection(
     # Calculate excess pressure
 
     return df, col_specs
+
 
 def insert_excess_pressure_column(
         df: pd.DataFrame,
@@ -67,6 +73,7 @@ def insert_excess_pressure_column(
     col_specs.insert(2, new_spec)
     return df, col_specs
 
+
 def on_column_unit_change(
         view: AnalysisView,
         col: int,
@@ -82,13 +89,13 @@ def on_column_unit_change(
             updated.append(spec)
     view.column_specs = updated
 
+
 def refresh_view_object_from_column_tree_selection(
         view: AnalysisView,
         analysis: AnalysisObject,
         project: ProjectDataManager,
         selected_columns: list[str],
         ) -> None:
-    
     units_by_name = {s.name: s.unit for s in view.column_specs}
     new_df, new_col_specs = build_view_df_and_col_specs_from_column_selection(
         analysis.analysis_dataset.dataframe,
@@ -102,10 +109,11 @@ def refresh_view_object_from_column_tree_selection(
         for s in new_col_specs
     ]
 
+
 def calculate_excess_pressure_column(
-    df:pd.DataFrame,
-    reference_fluid:Fluid| None,
-    )->None: 
+        df: pd.DataFrame,
+        reference_fluid: Fluid | None,
+        ) -> None:
     """
     y = mx + c, where   y = pressure of fluid at depth x
                         m = slope in pressure/length
@@ -115,38 +123,37 @@ def calculate_excess_pressure_column(
         0 = m * d_0 + c
         c = -m.d_0
 
-        y = m(x - d_0)    
+        y = m(x - d_0)
     """
     if CANONICAL_EXCESS_PRESSURE not in df.columns:
         raise KeyError(
             f"{CANONICAL_EXCESS_PRESSURE!r} missing from dataframe; "
             "insert_excess_pressure_column must run first"
         )
-    
-    if reference_fluid is None: 
+
+    if reference_fluid is None:
         df[CANONICAL_EXCESS_PRESSURE] = pd.NA
         return
 
     p = df[CANONICAL_FORMATION_PRESSURE]
-    z= df[CANONICAL_VERTICAL_DEPTH]
-    p_ref =  reference_fluid.gradient_si * (
+    z = df[CANONICAL_VERTICAL_DEPTH]
+    p_ref = reference_fluid.gradient_si * (
         z - reference_fluid.zero_pressure_depth_si
         )
-    df [CANONICAL_EXCESS_PRESSURE] =(p-p_ref).where(p.notna() & z.notna())
+    df[CANONICAL_EXCESS_PRESSURE] = (p - p_ref).where(p.notna() & z.notna())
+
 
 def build_scatter_series(
-    df:pd.DataFrame, 
-    primary_identifier:str|None, 
-    secondary_identifier:str|None
-    )-> list[tuple[str, pd.Series, str, str]]:
-    
+        df: pd.DataFrame,
+        primary_identifier: str | None,
+        secondary_identifier: str | None,
+        ) -> list[tuple[str, pd.Series, str, str]]:
     """Return [(display_name, boolean_mask, color, symbol, primary_identifier_key, primary_identifier_value, secondary_identifier_key, secondary_identifier_value)]"""
-    
     if df is None or df.empty:
         return []
 
-    primary = (primary_identifier 
-        if primary_identifier and primary_identifier != "None" 
+    primary = (primary_identifier
+        if primary_identifier and primary_identifier != "None"
         else None)
     secondary = (
         secondary_identifier
@@ -155,14 +162,14 @@ def build_scatter_series(
     )
 
     if primary is None and secondary is None:
-        return[
+        return [
             ScatterSeriesDefinition
-            ("All Data", 
-            pd.Series(True, index= df.index),
-            SERIES_COLORS[0], 
+            ("All Data",
+            pd.Series(True, index=df.index),
+            SERIES_COLORS[0],
             SERIES_SYMBOLS[0])
         ]
-    
+
     primary_values = list(df[primary].unique()) if primary else [None]
     secondary_values = list(df[secondary].unique()) if secondary else [None]
     color_count = min(len(SERIES_COLORS), len(primary_values)) if primary else 1
@@ -192,18 +199,17 @@ def build_scatter_series(
                 name = str(primary_value)
             else:
                 name = str(secondary_value)
-            
+
             new_scatter = ScatterSeriesDefinition(
-                    name, 
-                    mask, 
-                    SERIES_COLORS[c], 
+                    name,
+                    mask,
+                    SERIES_COLORS[c],
                     SERIES_SYMBOLS[s],
-                    primary_key = primary,
-                    primary_value = primary_value, 
-                    secondary_key= secondary, 
+                    primary_key=primary,
+                    primary_value=primary_value,
+                    secondary_key=secondary,
                     secondary_value=secondary_value,
                     )
-            
+
             series_defition.append(new_scatter)
     return series_defition
-        
