@@ -1,23 +1,17 @@
+import copy
 import pandas as pd
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
     QLineEdit, QVBoxLayout, QWidget,)
 
 from project import AnalysisObject, AnalysisView, ColumnSpec, ProjectDataManager
+from model import ViewWidgetSidebar
 from ui.analysis_view.analysis_view_data_manager import insert_excess_pressure_column
 from utilities import unique_name
 
 
 class NewViewDialog(QDialog):
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -129,11 +123,24 @@ class NewViewDialog(QDialog):
             self.new_view_name = (
                 self.name_line_edit.text().strip() or self.views_combo.currentText()
             )
-            self.df = self.copy_from.df.copy()
-            self.column_specs = list(self.copy_from.column_specs)
-            self.df, self.column_specs = insert_excess_pressure_column(
-                self.df, self.column_specs, self.project
-            )  # just in case something went wrong and a view ended up with the wrong content
+            self._make_name_unique()
+            src = self.copy_from
+            sb = src.sidebar
+            new_view = AnalysisView(
+                name=self.new_view_name,
+                analysis_object=self.analysis,
+                df=src.df.copy(),
+                column_specs=list(src.column_specs),
+                column_filters=copy.deepcopy(src.column_filters),
+                annotations=copy.deepcopy(src.annotations),
+                sidebar=ViewWidgetSidebar(
+                    ref_fluid=sb.ref_fluid,
+                    primary_series_identifier=sb.primary_series_identifier,
+                    secondary_series_identifier=sb.secondary_series_identifier,
+                    active_fluid=sb.active_fluid,
+                    visible_fluids=list(sb.visible_fluids),
+                ),
+            )
         else:
             self.copy_from = None
             self.new_view_name = self.name_line_edit.text().strip()
@@ -142,9 +149,8 @@ class NewViewDialog(QDialog):
             self.df, self.column_specs = insert_excess_pressure_column(
                 self.df, self.column_specs, self.project
             )
-
-        self._make_name_unique()
-        new_view = self._create_new_view_instance()
+            self._make_name_unique()
+            new_view = self._create_new_view_instance()
         self.analysis.analysis_views.append(new_view)
         self.result_view = new_view
         self.accept()

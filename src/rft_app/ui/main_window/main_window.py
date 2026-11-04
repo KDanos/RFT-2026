@@ -20,14 +20,6 @@ from units.unit_conversion_dialog import UnitConversionDialog
 
 class MainWindowKD(QMainWindow):
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -141,7 +133,6 @@ class MainWindowKD(QMainWindow):
 
         # Data
         self.menu_data = menubar.addMenu("Data")
-        # self.menu_data.addAction(self.actionLoadData)
 
         # Edit (placeholder, no actions yet)
         self.menu_edit = menubar.addMenu("Edit")
@@ -151,12 +142,9 @@ class MainWindowKD(QMainWindow):
 
         # Settings
         self.menu_settings = menubar.addMenu("Settings")
-        # self.menu_settings.addAction(self.actionChangeProjecUnits)
 
         # Help
         self.menu_help = menubar.addMenu("Help")
-        # self.menu_help.addAction(self.actionAbout)
-        # self.menu_help.addAction(self.actionContact_Us)
 
     def _build_statusbar(self) -> None:
         pass
@@ -293,7 +281,8 @@ class MainWindowKD(QMainWindow):
         # Project Signals
         self.signals.fluids_changed.connect(self.on_fluids_changed)
         self.signals.project_units_changed.connect(self._on_project_units_changed_main_window)
-
+        self.signals.analysis_dataset_changed.connect(self._on_analysis_dataset_changed)
+    
     def _create_default_analysis_view(
         self,
         analysis: AnalysisObject,
@@ -367,6 +356,43 @@ class MainWindowKD(QMainWindow):
     def _load_unit_converter(self) -> None:
         converter = UnitConversionDialog(self)
         converter.show()
+
+    def _on_analysis_dataset_changed(self, analysis:AnalysisObject)->None:
+        # Update the project sidebar
+        self.project_sidebar.all_analyses_tree.refresh_self()
+
+        # Update all the view objects of the analysis
+        for view in analysis.analysis_views:
+            view.df = analysis.analysis_dataset.dataframe.copy()
+            view.column_specs = list(analysis.analysis_dataset.column_specs)
+            view.df, view.column_specs = insert_excess_pressure_column(
+                view.df, 
+                view.column_specs,
+                self.project
+                    )
+            # Clear any filters
+            view.column_filters.clear()
+            
+            # Reset the persisted series identifiers to None
+            view.sidebar.primary_series_identifier = "None"
+            view.sidebar.secondary_series_identifier = "None"
+
+        # Identify the Analyis View Widgets and update
+        outer = self.analysis_workspace.analyses_tabs
+        for i in range(outer.count()):
+            page = outer.widget(i)
+            if page is None: 
+                continue
+            if page.property("analysis_object") is not analysis: 
+                continue
+
+            inner_tabs = page.findChild(QTabWidget)
+            if inner_tabs is None:
+                continue
+            for j in range(inner_tabs.count()):
+                view_widget = inner_tabs.widget(j)
+                if isinstance(view_widget, AnalysisViewWidget):
+                    view_widget.refresh_self_after_dataset_change()
 
     def _on_project_units_changed_main_window(self, index: int) -> None:
         if index == 0:

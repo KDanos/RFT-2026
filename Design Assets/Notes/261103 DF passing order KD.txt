@@ -1,0 +1,26 @@
+When the AnalyisObject is created, a dataset is attached to it. 
+When _create_new_analysis_view is requested on the MainWindowKD, a new AnalysisViewObject is instantiated, passing in the dataframe and column_specs that have been selected in the NewViewDialog
+Therefore every AnalysisViewObject starts with a dataframe and a column_specs. 
+When an new AnalysisViewWidget is created, the add_view_tab method passes the AnalysisViewObject to the AnalysisViewWidget. 
+Threfore the SSOT for the dataframe is the AnalysisObject, which then passes it on to the AnalysisViewObject. 
+
+The AnalysisViewWidget holds the filterable_table, a QFrame, containing itself a TableView ()
+AnalysisViewWidget:
+    
+    -_load_filterable_table syncs the view.df, view_columns_specs to what is selected in the tabular_sideframe of the filterable_table. 
+    -filterable_table.tabular_frame is the FilterableTable instance
+    -The filterable_table(QFrame) holds filterable_table.table which is a CustomTableView instance(QTableView)
+    -QTableView (self.filterable_table.table):
+        
+        -the self.table (QTableView) takes as an arument (self.setModel) the proxy_model. 
+        -the proxy_model takes as a source model a PandasTableModel (filterable_table.table.table_model) 
+        -self.table.table_model is a PandasTableModel. 
+        -LOAD_DATA IS METHOD THAT EXISTS ON THE FilterableTable AND ON THE TableView (filterable_table.table). THEY HAVE TO BE RENAMED TO MAKE THE CODE READABLE
+        -when the filterable table (tabular_frame) method load_data is called, the view.df, view_columns_specs and view.column_filters are passed into 
+        the self.filterable_table.table (TableView) via the load_data method of the TableView(self.filterable_table.table)
+        -the load_data method of the CustomTableView passed the self.df, self.column_specs and self.column_filters to the proxy_model and the table_model(PandasModel)
+
+    -_pass_df_to_plots extracts the final table from the proxy_model and returns it as a df to the plots
+
+
+

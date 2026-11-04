@@ -6,11 +6,8 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (QComboBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QMenu, QScrollArea, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,)
 
-from model.canonical_names import (
-    CANONICAL_EXCESS_PRESSURE,
-    CANONICAL_FORMATION_PRESSURE,
-    CANONICAL_VERTICAL_DEPTH,
-    )
+from model.canonical_names import (CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE,
+    CANONICAL_VERTICAL_DEPTH,)
 from model.data_models import AnalysisObject
 from model.fluid_model import STANDARD_FLUIDS, Fluid
 from model.view_state import ViewWidgetSidebar
@@ -30,14 +27,6 @@ class GraphicalSidebar(QFrame):
     reference_fluid_changed = pyqtSignal(object)  # object instead of Fluid | None
 
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -103,8 +92,7 @@ class GraphicalSidebar(QFrame):
         self.horizontal_layout.addLayout(self.grid_layout)
         self.horizontal_layout.addStretch()
         self.main_layout.addStretch()
-        
-        # self.setLayout(self.main_layout)
+
         self.main_container.setLayout(self.main_layout)
 
         # Reference fluid selection
@@ -122,8 +110,8 @@ class GraphicalSidebar(QFrame):
         self.grid_layout.addWidget(self.primary_identifier_combo, 1, 1)
         self.grid_layout.addWidget(self.secondary_identifier_label, 2, 0)
         self.grid_layout.addWidget(self.secondary_identifier_combo, 2, 1)
-        self._populate_identifier_combo(self.primary_identifier_combo)
-        self._populate_identifier_combo(self.secondary_identifier_combo)
+        self.populate_identifier_combo(self.primary_identifier_combo)
+        self.populate_identifier_combo(self.secondary_identifier_combo)
 
         # Active Fluid Selection
         self.grid_layout.setRowMinimumHeight(3, 20)
@@ -528,48 +516,6 @@ class GraphicalSidebar(QFrame):
                 for fluid in self.analysis.fluids:
                     combo.addItem(fluid.name, fluid)
 
-    def _populate_identifier_combo(self, sender_combo: QComboBox) -> None:
-        headers = self.view.df.columns
-        options = ["None"] + [
-            header for header in headers
-            if (
-                header != CANONICAL_EXCESS_PRESSURE
-                and header != CANONICAL_FORMATION_PRESSURE
-                and header != CANONICAL_VERTICAL_DEPTH
-                )
-            ]
-        for option in options:
-            sender_combo.addItem(option)
-
-    def _populate_primary_identifier_combo(self) -> None:
-        self.primary_identifier_combo.clear()
-        headers = self.view.df.columns
-        options = ["None"] + [
-            header for header in headers
-            if (
-                header != CANONICAL_EXCESS_PRESSURE
-                and header != CANONICAL_FORMATION_PRESSURE
-                and header != CANONICAL_VERTICAL_DEPTH
-                )
-            ]
-        for option in options:
-            self.primary_identifier_combo.addItem(option)
-
-    def _populate_secondary_identifier_combo(self) -> None:
-        self.secondary_identifier_combo.clear()
-        headers = self.view.df.columns
-        options = ["None"] + [
-            header for header in headers
-            if (
-                header != self.primary_identifier_combo.currentText()
-                and header != CANONICAL_EXCESS_PRESSURE
-                and header != CANONICAL_FORMATION_PRESSURE
-                and header != CANONICAL_VERTICAL_DEPTH
-                )
-            ]
-        for option in options:
-            self.secondary_identifier_combo.addItem(option)
-
     def _populate_widgets_from_persisted_data(self) -> None:
         saved_state = self.sidebar_summary
         # Reference fluid combo, color and series combos
@@ -773,6 +719,27 @@ class GraphicalSidebar(QFrame):
         self.view.sidebar.visible_fluids.append(new_fluid)
         self.project.mark_modified()
         self.signals.fluids_changed.emit()
+
+    def populate_identifier_combo(self, sender_combo: QComboBox) -> None:
+        # Clear any existing items
+        sender_combo.clear()
+
+        # Create a list of options
+        headers = self.view.df.columns
+        options = ["None"] + [
+            header for header in headers
+            if (
+                header != CANONICAL_EXCESS_PRESSURE
+                and header != CANONICAL_FORMATION_PRESSURE
+                and header != CANONICAL_VERTICAL_DEPTH
+                )
+            ]
+        # Add the items to the combo
+        for option in options:
+            sender_combo.addItem(option)
+
+        # Force the original identifier selection to None
+        sender_combo.setCurrentIndex(0)
 
     def refresh_self(self) -> None:
         self._populate_all_fluid_combos()

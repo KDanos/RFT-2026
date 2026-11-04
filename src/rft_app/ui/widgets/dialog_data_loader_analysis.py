@@ -16,14 +16,6 @@ from utilities import (get_tree_item_by_name, get_tree_top_level_item_by_name, i
 
 class DataLoaderDialogAnalysis(QDialog):
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -56,7 +48,7 @@ class DataLoaderDialogAnalysis(QDialog):
         *,
         vert_depth_src_col: str,
         formation_pres_src_col: str,
-    ) -> tuple[pd.DataFrame, list[ColumnSpec]]:
+        ) -> tuple[pd.DataFrame, list[ColumnSpec]]:
         #Map the original name -> ColumnSpec for quick Lookup
         spec_by_name = {spec.name: spec for spec in column_specs}
 
@@ -184,7 +176,7 @@ class DataLoaderDialogAnalysis(QDialog):
             self.analysis_dataset.column_specs,
             vert_depth_src_col=vert_depth_src_col,
             formation_pres_src_col=formation_pres_src_col,
-        )
+            )
 
         #Re-create the dataset
         self.analysis_dataset = DataSet(self.analysis_dataset.name, df, specs)
@@ -195,7 +187,7 @@ class DataLoaderDialogAnalysis(QDialog):
             analysis_dataset=self.analysis_dataset,
             vert_depth_src_col=vert_depth_src_col,
             formation_pres_src_col=formation_pres_src_col,
-        )
+            )
 
         return new_analysis_object
 
@@ -310,7 +302,7 @@ class DataLoaderDialogAnalysis(QDialog):
                 self,
                 "Start New Analysis",
                 "No columns have been selected. Check at least on column in the tree",
-            )
+                )
             return None
         if not self.depth_combo.currentText().strip():
             QMessageBox.warning(
@@ -318,7 +310,7 @@ class DataLoaderDialogAnalysis(QDialog):
                 "Start New Analysis",
                 """Ensure that a column defined as a 'length' quantity has been selected to serve 
                 as the base depth axis for the analysis""",
-            )
+                )
             return None
         if not self.pressure_combo.currentText().strip():
             QMessageBox.warning(

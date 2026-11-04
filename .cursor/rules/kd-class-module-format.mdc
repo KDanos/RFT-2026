@@ -1,5 +1,5 @@
 ---
-description: KD class module format — Private UI / Public API, alpha sort, typed returns, __init__ blocks
+description: KD class module format — layout, Inherited variables, and empty boilerplate stub
 globs: src/rft_app/**/*.py
 alwaysApply: false
 ---
@@ -7,6 +7,7 @@ alwaysApply: false
 # KD class module format
 
 When creating or reformatting a class in this project, follow this layout.
+When the user asks to **boilerplate** a class (or “KD boilerplate”), use the **Boilerplate** section below instead of inventing domain logic.
 
 ## Imports
 
@@ -44,25 +45,33 @@ Same rule for project imports and any other multi-name `from … import (…)`.
 ## Order
 
 1. **Class signals / class attributes** — `pyqtSignal`s and other class-level attrs (before any methods)
-2. **`# Inherited variables`** — always present on boilerplate (see below); declaration-only annotations / docs for attrs and init calls set by bases
+2. **`# Inherited variables`** — always present; declaration-only annotations / docs for attrs and init calls set by bases
 3. `__init__` first among methods
 4. `#--------Private UI--------` — private `_` methods, alphabetical by name
 5. `#--------Public API--------` — public methods, alphabetical by name
 
 Do not alphabetize across the whole class; section first, then alpha within each section.
 
-## Inherited variables (class body, always in boilerplate)
+## Inherited variables
 
 Place this block **after** class signals / other class attrs and **before** `__init__`. Headings use the same green `#` comment style as `# Set project variables` / `# Set module variables` / `# Initialisation methods`.
 
-Always include the top heading and the three sub-headings. If this class inherits nothing in a section, put a simple `# None` under that heading (do not omit the heading).
+Always include the top heading `# Inherited variables` (optionally: `(declared here for readability / typing; set by bases)`).
 
-Structure:
+**If nothing is inherited** in Project, Module, *and* Initialisation Methods, use a single `# None` under the top heading — do **not** emit three empty sub-headings:
 
-1. `# Inherited variables` (optionally: `(declared here for readability / typing; set by bases)`)
-2. `# Project` — then a `# <BaseClass>` subheading per base that contributes **project variables**, then **declaration-only** annotations (`name: Type`, no assignment)
-3. `# Module` — same pattern for **module variables** (group by `# <BaseClass>`)
-4. `# Initialisation Methods` — only for init calls coming from **project-owned bases** (KD subclasses you created), not framework/`super` noise. Under each `# <BaseClass>`, list method names in a **docstring** (not `#` comments), e.g. `"""\n(toggle_editable)\n"""`. If none: `# None`.
+```python
+    # Inherited variables
+    # None
+```
+
+**If anything is inherited**, use the three sub-headings. Under any empty sub-heading among those, put `# None` (do not omit that sub-heading when siblings have content).
+
+Structure when there is inherited content:
+
+1. `# Project` — then a `# <BaseClass>` subheading per base that contributes **project variables**, then **declaration-only** annotations (`name: Type`, no assignment)
+2. `# Module` — same pattern for **module variables** (group by `# <BaseClass>`)
+3. `# Initialisation Methods` — only for init calls coming from **project-owned bases** (KD subclasses you created), not framework/`super` noise. Under each `# <BaseClass>`, list method names in a **docstring** (not `#` comments), e.g. `"""\n(toggle_editable)\n"""`. If none in this section while others have content: `# None`.
 
 Do **not** reassign these inherited attrs in the subclass `__init__` unless intentionally overriding. Own assignments stay under `# Set project variables` / `# Set module variables` inside `__init__`.
 
@@ -99,21 +108,6 @@ class FluidLineXsPressure(FluidLinePressure):
         # Set module variables
         # Initialisation methods
         ...
-```
-
-Boilerplate when nothing is inherited:
-
-```python
-    # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
-    # None
 ```
 
 **Naming in conversation:** these KD `self.*` values are **project variables** and **module variables** (together: **KD variables**). When documenting ones set by a base: **inherited KD variables** (or **inherited project/module variables**). Init helpers listed under Inherited → Initialisation Methods are **inherited initialisation methods**. Prefer those terms over “Python/PyQt attributes” when you mean this inventory.
@@ -200,7 +194,7 @@ Do **not** align the closing `)` with `def`:
 - Do not remove intentional user-facing messages (e.g. `QMessageBox`)
 - Do not remove non-print utilities from that module (e.g. `DevReloadMixin` / `reload_app`) unless the user asks
 
-## Skeleton
+## Skeleton (full format)
 
 ```python
 class SomeWidget(...):
@@ -208,14 +202,6 @@ class SomeWidget(...):
     something_changed = pyqtSignal()
 
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(self, parent=None) -> None:
@@ -243,7 +229,52 @@ class SomeWidget(...):
         ...
 ```
 
+## Boilerplate
+
+When the user asks to **boilerplate** a class (or “KD boilerplate”), apply this stub to the **current class**. Do not invent domain logic, extra private methods, or init calls beyond what is shown.
+
+Keep the existing class name and base class(es). Keep existing imports that are still needed for the base type (and for types used in the Inherited variables block). Replace the class body with:
+
+```python
+class ClassName(BaseClass):
+    # Inherited variables
+    # None
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        # Set project variables
+
+        # Set module variables
+
+        # Initialisation methods
+        self._build_ui()
+        self._connect_signals()
+
+    #--------Private UI--------
+
+    def _build_ui(self) -> None:
+        pass
+
+    def _connect_signals(self) -> None:
+        pass
+
+    #--------Public API--------
+    # (none)
+```
+
+If the class subclasses a project-owned base that sets KD variables / init helpers, fill the Inherited variables block per **Inherited variables** above (declaration-only annotations; do not reassign those attrs in this class’s `__init__` unless intentionally overriding).
+
+### Boilerplate rules
+
+- `__init__` starts empty of domain code: only `super().__init__()`, the three comment blocks, and `_build_ui()` / `_connect_signals()`.
+- Under Initialisation methods: **only** those two calls (no `_define_menu_actions`, no refresh, no `exec`).
+- Private UI stubs: **only** `_build_ui` and `_connect_signals`, each with `pass`.
+- Do not add other private/public methods in the boilerplate pass.
+- Parameters on `__init__` / `super().__init__(...)` may be filled in a later step when the user asks; the boilerplate itself stays empty `self` / bare `super().__init__()` unless the base class requires arguments to construct (then pass the minimum required to keep the file importable, still with empty project/module variable sections).
+- Boilerplate is the starting stub only. Full alpha sort, typed own attrs, import wrapping, and debug cleanup belong to “apply KD class module format”, not this stub pass.
+
 ## How to invoke
 
-User may say: "apply KD class module format" or "reformat to my class module format".
-Reorder methods, wrap multi-name imports as above (not single-column), add missing return annotations, annotate `__init__` instance attributes, add/update the `# Inherited variables` boilerplate block, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.
+- **"boilerplate" / "KD boilerplate"** — apply the **Boilerplate** section stub (empty domain logic).
+- **"apply KD class module format" / "reformat to my class module format"** — reorder methods, wrap multi-name imports as above (not single-column), add missing return annotations, annotate `__init__` instance attributes, add/update the `# Inherited variables` block, and remove debug prints (including `print_current_location_function` and similar); do not change behavior.

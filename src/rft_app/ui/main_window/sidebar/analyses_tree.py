@@ -1,3 +1,4 @@
+
 from PyQt6.QtCore import QPoint, QSignalBlocker, Qt, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
@@ -9,6 +10,7 @@ from ui.main_window.project_signals import ProjectSignals
 from units import convert_from_normalised_to_user_units
 from utilities import show_dataframe_table_dialog, unique_name
 
+import copy
 
 class AnalysesTree(QTreeWidget):
     analysis_renamed = pyqtSignal(AnalysisObject)
@@ -17,14 +19,6 @@ class AnalysesTree(QTreeWidget):
     new_view_requested = pyqtSignal(AnalysisObject)
 
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -43,6 +37,9 @@ class AnalysesTree(QTreeWidget):
         # Set module variables
         self.depth_unit: str = self.project.current_unit_system.units_by_quantity["length"]
         self.pressure_unit: str = self.project.current_unit_system.units_by_quantity["pressure"]
+        self.pressure_gradient_unit: str = (
+            self.project.current_unit_system.units_by_quantity["pressure_gradient"]
+            )
 
         # Initialisation methods
         self.setHeaderLabel("Analyses")
@@ -231,23 +228,32 @@ class AnalysesTree(QTreeWidget):
 
     def _create_analysis_menu_actions(self, item: QTreeWidgetItem) -> list[QAction]:
         list_of_actions: list[QAction] = []
-
+        # Rename
         rename_analysis_action = QAction("Rename", self)
         rename_analysis_action.triggered.connect(
             lambda _checked=False, item=item: self._start_rename_analysis(item)
-        )
+            )
         list_of_actions.append(rename_analysis_action)
-
+        
+        #Duplicate
+        actionDuplicateAnalysis = QAction("Duplicate",self)
+        actionDuplicateAnalysis.triggered.connect(
+            lambda _checked = False, item = item: self._duplicate_analysis(item)
+            )
+        list_of_actions.append(actionDuplicateAnalysis)
+        
+        #Delete
         delete_analysis_action = QAction("Delete", self)
         delete_analysis_action.triggered.connect(
             lambda _checked=False, item=item: self._confirm_delete_analysis(item)
-        )
+            )
         list_of_actions.append(delete_analysis_action)
-
+        
+        # Show data table
         show_data_table_action = QAction("Show Data", self)
         show_data_table_action.triggered.connect(
             lambda _checked=False, item=item: self._show_data(item)
-        )
+            )
         list_of_actions.append(show_data_table_action)
 
         list_of_actions.extend(self._create_all_views_menu_actions(item))
@@ -345,12 +351,30 @@ class AnalysesTree(QTreeWidget):
         self.project.mark_modified()
         self.analysis_visibility_changed.emit(analysis, None)
 
+    def _duplicate_analysis(self, item: QTreeWidgetItem) -> None:
+        analysis = item.data(0, Qt.ItemDataRole.UserRole)
+
+        if analysis is None or not isinstance(analysis, AnalysisObject):
+            return
+        # Create a new name
+        new_name = unique_name(analysis.name, [a.name for a in self.project.analyses])
+        # Copy the analysis object
+        new_analysis = copy.deepcopy(analysis)
+        new_analysis.name = new_name
+        for view in new_analysis.analysis_views:
+            view.is_visible = False
+
+        # Save the new analysis object to the project and cascade change
+        self.project.analyses.append(new_analysis)
+        self.refresh_self()
+        self.project.mark_modified()
+
     def _duplicate_single_fluid(self, item: QTreeWidgetItem) -> None:
         fluid = item.data(0, Qt.ItemDataRole.UserRole)
         if fluid is None or not isinstance(fluid, Fluid):
             return
         analysis = fluid.analysis_object
-        analysis.duplicate_fluid(fluid,100)
+        analysis.duplicate_fluid(fluid, 100)
         self.signals.fluids_changed.emit()
         self.project.mark_modified()
 

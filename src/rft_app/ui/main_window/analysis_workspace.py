@@ -8,14 +8,6 @@ from ui.main_window.project_signals import ProjectSignals
 
 class AnalysisWorkspace(QFrame):
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -213,12 +205,12 @@ class AnalysisWorkspace(QFrame):
         inner_tabs.tabCloseRequested.connect(
             lambda idx, tabs=inner_tabs, analysis=analysis:
             self._on_view_tab_close_requested(tabs, analysis, idx)
-        )
+            )
 
         inner_tabs.currentChanged.connect(
             lambda _idx, analysis=analysis, tabs=inner_tabs:
             self._on_inner_tab_changed(analysis, tabs)
-        )
+            )   
         layout.addWidget(inner_tabs)
         idx = self.analyses_tabs.addTab(page, analysis.name)
 

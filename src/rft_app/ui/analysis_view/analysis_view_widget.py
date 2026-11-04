@@ -2,18 +2,17 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSplitter, QVBoxLayout, QWidget
 
 from project import AnalysisObject, AnalysisView, ProjectDataManager
-from model.canonical_names import (
-    CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE, CANONICAL_VERTICAL_DEPTH,
-)
+from model.canonical_names import (CANONICAL_EXCESS_PRESSURE, CANONICAL_FORMATION_PRESSURE,
+    CANONICAL_VERTICAL_DEPTH,)
 from model.fluid_model import Fluid
 from model.view_state import ViewWidgetSidebar
+
 from ui.filterable_table.proxy_model import ProxyFilterModel
 from ui.main_window.project_signals import ProjectSignals
 from ui.analysis_view.new_fluid_dialog import NewFluidDialog
 from ui.filterable_table.filterable_table import FilterableTable
-from .analysis_view_data_manager import (
-    calculate_excess_pressure_column, refresh_view_object_from_column_tree_selection,
-)
+from .analysis_view_data_manager import (calculate_excess_pressure_column,
+    refresh_view_object_from_column_tree_selection,)
 from .graphical_frame import GraphicalFrame
 from .graphical_sidebar import GraphicalSidebar
 from .tabular_sidebar import TabularSidebar
@@ -22,14 +21,6 @@ import pandas as pd
 
 class AnalysisViewWidget(QWidget):
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -62,7 +53,12 @@ class AnalysisViewWidget(QWidget):
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
 
-        self.tabular_sidebar = TabularSidebar(self, self.project, self.analysis, self.view)
+        self.tabular_sidebar = TabularSidebar(
+            parent = self, 
+            project = self.project, 
+            analysis = self.analysis, 
+            view = self.view,
+            signals = self.signals)
 
         self._load_filterable_table()
         self.proxy = self.filterable_table.custom_table_view.proxy_model
@@ -222,3 +218,18 @@ class AnalysisViewWidget(QWidget):
     def on_project_units_changed(self) -> None:
         if self.new_fluid_dialog is not None:
             self.new_fluid_dialog.on_project_units_changed()
+
+    def refresh_self_after_dataset_change(self)->None:
+        
+        # Rebuild the tabular sidebar
+        self.tabular_sidebar.build_analysis_data_tree()
+        self.tabular_sidebar.connect_analysis_data_tree_signals()
+
+        # Rebuild the primary and secondary series identifiers of the GUI sidebar
+        self.graphical_sidebar.populate_identifier_combo(self.graphical_sidebar.primary_identifier_combo)
+        self.graphical_sidebar.populate_identifier_combo(self.graphical_sidebar.secondary_identifier_combo)
+        # Ensure that the plots are re-generated with no identifiers
+        self.graphical_sidebar.define_scatters_for_plotting()
+
+        #Update the view widget
+        self._on_view_df_change()
