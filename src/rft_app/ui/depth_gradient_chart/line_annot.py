@@ -20,14 +20,6 @@ if TYPE_CHECKING:
 
 class LineAnnot(pg.LineSegmentROI):
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -404,29 +396,40 @@ class LineAnnot(pg.LineSegmentROI):
         return None
 
     def delete_self(self) -> None:
-        if self.is_mirrored:
-            other = self._other_depth_chart()
-            peer = self._find_peer_line_by_id()
+        other = self._other_depth_chart() if self.is_mirrored else None
+        peer = self._find_peer_line_by_id() if self.is_mirrored else None
 
-        for line in self.parent_chart.all_lines:
-            if line.id == self.id:
-                self.parent_chart.all_lines.remove(line)
-                if self.is_mirrored and other is not None and peer is not None:
-                    other.all_lines.remove(peer)
-                break
+        # Drop this line_id from this chart's all_lines (filter rebuild, not from SSOT)
+        self.parent_chart.all_lines = [
+            ln for ln in self.parent_chart.all_lines if ln.id != self.id
+            ]
+        # Drop the same line_id from the mirrored chart's all_lines if present
+        if other is not None:
+            other.all_lines = [
+                ln for ln in other.all_lines if ln.id != self.id
+                ]
 
-        for line in list(self.parent_chart.view.annotations):
-            if (
-                isinstance(line, StraightLineAnnotation)
-                and line.line_id == self.id
-                ):
-                self.parent_chart.view.annotations.remove(line)
+        # Drop both charts' StraightLineAnnotation rows with this line_id from view.annotations
+        self.parent_chart.view.annotations = [
+            ann for ann in self.parent_chart.view.annotations
+            if not (
+                isinstance(ann, StraightLineAnnotation)
+                and ann.line_id == self.id
+                )
+            ]
 
+        # Remove the line from the chart
         self.parent_chart.removeItem(self)
-        self.deleteLater()
-        if self.is_mirrored and other is not None and peer is not None:
+
+        # Remove the peer from the mirrored chart if present
+        if peer is not None and other is not None:
             other.removeItem(peer)
+
+        # Schedule destruction of the Qt/pyqtgraph ROI (and peer if any)
+        self.deleteLater()
+        if peer is not None:
             peer.deleteLater()
+
         self.parent_chart.project.mark_modified()
 
     def extract_units_and_quantities(self) -> None:

@@ -42,14 +42,6 @@ class ScatterItemKD(pg.ScatterPlotItem):
     """
 
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(self, *args, **kwargs) -> None:
@@ -102,14 +94,6 @@ class DepthGradientChart(pg.PlotWidget):
     TOOL_TEXT = "text_box"
 
     # Inherited variables
-
-    # Project
-    # None
-
-    # Module
-    # None
-
-    # Initialisation Methods
     # None
 
     def __init__(
@@ -141,8 +125,7 @@ class DepthGradientChart(pg.PlotWidget):
         self.all_rectangles: list[RectangleAnnotation] = []
         self.annotations_bar: AnnotationsBar | None = None
         self.fluid_tip_active: bool = False
-        self.can_emit_y_range:bool = False
-        
+        self.can_emit_y_range: bool = False
 
         # Initialisation methods
         self._extract_quantity_and_units()
@@ -187,46 +170,13 @@ class DepthGradientChart(pg.PlotWidget):
         # Keep pyqtgraph default menu for nesting; disable auto-popup on right-click
         self.vb_menu = self.getViewBox().menu
         self.getPlotItem().setMenuEnabled(False)
-
-        # Clear the attributes existing lines and rectangles, to rebuild later on
-        self.all_lines.clear()
-        self.all_rectangles.clear()
-        
-        # Error call if no ViewObject is allocated to the graph
+       
+        # Error if no AnalysisView is allocated to the graph
         assert self.view is not None, "DepthGradientChart requires a view"
 
-        # Extract a list of line id from the persisted data, to check for mirroring
-        line_ids = [
-            ann.line_id for ann in self.view.annotations
-            if isinstance(ann, StraightLineAnnotation)
-            ]
-
-        # Create the annotations from the persisted data
-        for a in self.view.annotations:
-            if isinstance(a, StraightLineAnnotation) and a.chart_id == self.chart_id:
-                new_line = LineAnnot(
-                    parent=self,
-                    signals=self.signals,
-                    starting_point=a.start_si,
-                    end_point=a.end_si,
-                    points_are_si=True,
-                    color=a.color,
-                    )
-                # Restore the uuid from the persisted one, overwrite the one generated on LineAnnot.__init__
-                new_line.id = a.line_id
-                # Identify if the line has a mirror on the other chart
-                new_line.is_mirrored = line_ids.count(a.line_id) > 1
-                self.all_lines.append(new_line)
-            elif isinstance(a, RectAnnotation) and a.chart_id == self.chart_id:
-                new_rect = RectangleAnnotation(
-                    parent=self,
-                    position=a.pos_si,
-                    size=a.size_si,
-                    color=a.color,
-                    points_are_si=True,
-                    )
-                new_rect.id = a.rect_id
-                self.all_rectangles.append(new_rect)
+        # Build chart widgets from SSOT annotations on the AnalysisView
+        self._rebuild_all_lines_from_annotations()
+        self._rebuild_all_rectangles_from_annotations()
         
     def _clear_draw_preview_item(self) -> None:
         if self.preview_drawing_item is not None:
@@ -412,15 +362,16 @@ class DepthGradientChart(pg.PlotWidget):
             self.addItem(line)
 
     def _paint_all_lines(self) -> None:
+        self._rebuild_all_lines_from_annotations()
         for line in self.all_lines:
-            self.removeItem(line)
             line.extract_units_and_quantities()
             line.refresh_geometry()
             self.addItem(line)
 
     def _paint_all_rectangles(self) -> None:
+        
+        self._rebuild_all_rectangles_from_annotations()        
         for rect in self.all_rectangles:
-            self.removeItem(rect)
             rect.extract_units_and_quantities()
             rect.refresh_geometry()
             self.addItem(rect)
@@ -441,7 +392,58 @@ class DepthGradientChart(pg.PlotWidget):
         lines.append(f"{CANONICAL_VERTICAL_DEPTH}: {y:.3g} ({self.y_unit})")
         lines.append(f"{self.x_axis}: {x:.3g} ({self.x_unit})")
         return "\n".join(lines)
-            
+    
+    def _rebuild_all_lines_from_annotations(self) -> None:
+        """Rebuild this chart's all_lines from view.annotations
+        (StraightLineAnnotation rows for this chart_id)."""
+        # Clear the existing lines list
+        self.all_lines.clear()
+
+        # line_ids across the view; same id on more than one row means mirrored
+        line_ids = [
+            ann.line_id for ann in self.view.annotations
+            if isinstance(ann, StraightLineAnnotation)
+            ]
+
+        # Create a LineAnnot for each StraightLineAnnotation belonging to this chart
+        for a in self.view.annotations:
+            if isinstance(a, StraightLineAnnotation) and a.chart_id == self.chart_id:
+                new_line = LineAnnot(
+                    parent=self,
+                    signals=self.signals,
+                    starting_point=a.start_si,
+                    end_point=a.end_si,
+                    points_are_si=True,
+                    color=a.color,
+                    )
+                # Assign the SSOT persisted line_id (not part of the constructor)
+                new_line.id = a.line_id
+                # Set is_mirrored if the same line_id appears more than once in view annotations
+                new_line.is_mirrored = line_ids.count(a.line_id) > 1
+                # Update the all_lines list
+                self.all_lines.append(new_line)
+
+    def _rebuild_all_rectangles_from_annotations(self) -> None:
+        """Rebuild this chart's all_rectangles from view.annotations
+        (RectAnnotation rows for this chart_id)."""
+        # Clear the existing rectangle list
+        self.all_rectangles.clear()
+
+        # Create a RectangleAnnotation for each RectAnnotation belonging to this chart
+        for a in self.view.annotations:
+            if isinstance(a, RectAnnotation) and a.chart_id == self.chart_id:
+                new_rect = RectangleAnnotation(
+                    parent=self,
+                    position=a.pos_si,
+                    size=a.size_si,
+                    color=a.color,
+                    points_are_si=True,
+                    )
+                # Assign the SSOT persisted rect_id (not part of the constructor)
+                new_rect.id = a.rect_id
+                # Update the all_rectangles list
+                self.all_rectangles.append(new_rect)
+
     def _show_menu(self, pos: QPoint) -> None:
         scene_pos = self.mapToScene(pos)
         mouse = self.getViewBox().mapSceneToView(scene_pos)
