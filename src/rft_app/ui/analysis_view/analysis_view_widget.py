@@ -200,6 +200,10 @@ class AnalysisViewWidget(QWidget):
             plot.df = df
             # Update all items
             plot.refresh_self()
+        
+        #Sync the y-axis of the plots
+        self.graphical_frame.fit_and_sync_y_from_pressure_plots()
+
 
     #--------Public API--------
 

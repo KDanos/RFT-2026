@@ -707,6 +707,8 @@ class GraphicalSidebar(QFrame):
             chart.create_all_scatter_plot_items(scatter_item_list)
             chart.refresh_self()
 
+        self.parent.graphical_frame.fit_and_sync_y_from_pressure_plots()
+        
     def delete_fluid(self, fluid: Fluid) -> None:
         if not confirm_delete_fluid(self, self.analysis, fluid):
             return

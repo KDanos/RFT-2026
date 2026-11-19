@@ -141,6 +141,8 @@ class DepthGradientChart(pg.PlotWidget):
         self.all_rectangles: list[RectangleAnnotation] = []
         self.annotations_bar: AnnotationsBar | None = None
         self.fluid_tip_active: bool = False
+        self.can_emit_y_range:bool = False
+        
 
         # Initialisation methods
         self._extract_quantity_and_units()
@@ -186,15 +188,20 @@ class DepthGradientChart(pg.PlotWidget):
         self.vb_menu = self.getViewBox().menu
         self.getPlotItem().setMenuEnabled(False)
 
+        # Clear the attributes existing lines and rectangles, to rebuild later on
         self.all_lines.clear()
         self.all_rectangles.clear()
+        
+        # Error call if no ViewObject is allocated to the graph
         assert self.view is not None, "DepthGradientChart requires a view"
 
+        # Extract a list of line id from the persisted data, to check for mirroring
         line_ids = [
             ann.line_id for ann in self.view.annotations
             if isinstance(ann, StraightLineAnnotation)
             ]
 
+        # Create the annotations from the persisted data
         for a in self.view.annotations:
             if isinstance(a, StraightLineAnnotation) and a.chart_id == self.chart_id:
                 new_line = LineAnnot(
@@ -231,7 +238,7 @@ class DepthGradientChart(pg.PlotWidget):
         self.customContextMenuRequested.connect(self._show_menu)
         self.scene().sigMouseClicked.connect(self._on_plot_left_click_rebuild)
         self.scene().sigMouseMoved.connect(self._on_plot_mouse_move)
-
+        
     def _convert_array_to_user_units(
         self,
         data: np.ndarray,
@@ -390,7 +397,7 @@ class DepthGradientChart(pg.PlotWidget):
             self._track_preview_line(pos)
         elif self.draw_tool == self.TOOL_SQUARE:
             self._track_rectangle_size(pos)
-
+   
     def _paint_all_fluids(self) -> None:
         self.all_visible_fluids.clear()
         for fluid in self.view.sidebar.visible_fluids:
@@ -616,9 +623,9 @@ class DepthGradientChart(pg.PlotWidget):
         self.draw_tool = self.TOOL_LINE
 
     def refresh_self(self) -> None:
+        self.can_emit_y_range = False
         vb = self.getViewBox()
-        vb.enableAutoRange(enable=False)
-        
+         
         # Avoid axis range changes during clear and rebuild, to stop syncing during paint operations
         with QSignalBlocker(self):
             self.clear()
@@ -627,8 +634,6 @@ class DepthGradientChart(pg.PlotWidget):
             self._paint_all_fluids()
             self._paint_all_rectangles()
 
-        # Trial and error result to avoid syncing of graphs to explode the y-axis
-        if self.all_scatter_plot_items:
-            vb.autoRange(items=list(self.all_scatter_plot_items))
-        else:
-            vb.autoRange()
+        # Keep axes manual so pan works in X and Y; reopen Y-sync gate after paint
+        vb.enableAutoRange(x=False, y=False)
+        self.can_emit_y_range = True
